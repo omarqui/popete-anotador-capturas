@@ -23,7 +23,8 @@ sealed partial class EditorWindow
 
     Canvas BuildNumbersLayer()
     {
-        _numbersLayer = new Canvas { IsHitTestVisible = false };
+        // Sin fondo: solo los círculos reciben clics (seleccionan su trazo); el resto pasa a la tinta
+        _numbersLayer = new Canvas();
         // Si cambia el tamaño de los números en Ajustes, se redibujan al momento
         Action onSettings = RefreshNumbers;
         AppSettings.Changed += onSettings;
@@ -73,18 +74,18 @@ sealed partial class EditorWindow
         // El número va pegado a ese punto, hacia arriba a la izquierda: así queda
         // en esa zona del trazo pero siempre junto a él (en un círculo, sobre el
         // arco superior izquierdo, no en la esquina vacía de su recuadro).
-        var items = new List<(long order, Point at, double halfWidth, Color color)>();
+        var items = new List<(long order, Point at, double halfWidth, Color color, object target)>();
         foreach (var s in _ink.Strokes)
         {
             if (s == _preview || s.StylusPoints.Count == 0) continue;
             var corner = s.StylusPoints.Select(p => p.ToPoint()).MinBy(p => p.X + p.Y);
             var da = s.DrawingAttributes;
-            items.Add((OrderOf(s), corner, Math.Max(da.Width, da.Height) / 2, da.Color));
+            items.Add((OrderOf(s), corner, Math.Max(da.Width, da.Height) / 2, da.Color, s));
         }
         foreach (var tb in TextBlocks)
         {
             var color = (tb.Foreground as SolidColorBrush)?.Color ?? Palette[0].color;
-            items.Add((tb.Tag is long o ? o : long.MaxValue, new Point(Canvas.GetLeft(tb), Canvas.GetTop(tb)), 0, color));
+            items.Add((tb.Tag is long o ? o : long.MaxValue, new Point(Canvas.GetLeft(tb), Canvas.GetTop(tb)), 0, color, tb));
         }
 
         double r = NumberRadius;
@@ -96,6 +97,10 @@ sealed partial class EditorWindow
             // Borde del círculo a 2 px del borde del trazo
             var center = item.at + upLeft * (r + item.halfWidth + 2);
             var badge = NumberBadge(n++, item.color, r);
+            var target = item.target;
+            badge.Cursor = Cursors.Hand;
+            badge.MouseLeftButtonDown += (s, e) => NumberClicked(target, e);
+            badge.MouseRightButtonUp += (s, e) => { SwapColors(); e.Handled = true; }; // como sobre la imagen
             Canvas.SetLeft(badge, center.X - r);
             Canvas.SetTop(badge, center.Y - r);
             _numbersLayer.Children.Add(badge);

@@ -71,15 +71,76 @@ sealed class CaptureHost : IDisposable
         var sig = ClipboardHelper.Signature(img);
         if (History.IsKnown(sig)) return;
 
-        OpenEditor(History.Create(img, sig));
+        OpenEditor(History.Create(img, sig), autoClose: true);
         PruneHistory();
+    }
+
+    // ------------------------------------------------------------------ arrastrar imágenes
+    static readonly string[] ImageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".ico" };
+
+    /// <summary>¿Lo que se arrastra trae alguna imagen? (archivos de imagen o una imagen en sí)</summary>
+    public static bool HasImages(IDataObject data) =>
+        data.GetDataPresent(DataFormats.FileDrop)
+            ? ((string[])data.GetData(DataFormats.FileDrop)).Any(f => ImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            : data.GetDataPresent("PNG") || data.GetDataPresent(DataFormats.Bitmap);
+
+    /// <summary>Las imágenes de lo que se soltó: archivos (Explorador) o una imagen (navegador, otras apps).</summary>
+    static List<BitmapSource> ImagesFrom(IDataObject data)
+    {
+        var images = new List<BitmapSource>();
+        if (data.GetDataPresent(DataFormats.FileDrop))
+        {
+            foreach (var f in (string[])data.GetData(DataFormats.FileDrop))
+            {
+                if (!ImageExtensions.Contains(Path.GetExtension(f).ToLowerInvariant())) continue;
+                try { images.Add(History.LoadImage(f)); } catch { /* formato que Windows no sabe abrir */ }
+            }
+        }
+        else if (data.GetData("PNG") is MemoryStream png)
+        {
+            images.Add(ClipboardHelper.Decode(png));
+        }
+        else if (data.GetData(DataFormats.Bitmap) is BitmapSource bmp)
+        {
+            images.Add(bmp);
+        }
+        return images;
+    }
+
+    /// <summary>
+    /// Abre en el editor las imágenes soltadas. Si <paramref name="target"/> es un editor que
+    /// todavía no tiene anotaciones, la primera lo reemplaza (misma ventana); las demás, y
+    /// todas si el editor ya tiene algo dibujado, se abren en ventanas nuevas.
+    /// Una imagen que ya está en el historial abre esa sesión en vez de duplicarla.
+    /// </summary>
+    public static int OpenDropped(IDataObject data, EditorWindow target)
+    {
+        int opened = 0;
+        foreach (var img in ImagesFrom(data))
+        {
+            var sig = ClipboardHelper.Signature(img);
+            var session = History.FindBySignature(sig) ?? History.Create(img, sig);
+            if (target != null && target.IsEmpty && !EditorWindow.Open.ContainsKey(session.Meta.Id))
+            {
+                target.ReplaceWith(session);
+                target = null; // solo la primera reusa la ventana
+            }
+            else
+            {
+                OpenEditor(session);
+            }
+            opened++;
+        }
+        if (opened > 0) PruneHistory();
+        return opened;
     }
 
     /// <summary>Aplica el límite de capturas del historial, sin tocar las que están abiertas.</summary>
     public static void PruneHistory() =>
         History.Prune(AppSettings.Current.MaxCapturas, s => EditorWindow.Open.ContainsKey(s.Meta.Id));
 
-    public static void OpenEditor(Session s)
+    /// <param name="autoClose">Captura nueva del portapapeles: se cierra sola si se deja sin tocar.</param>
+    public static void OpenEditor(Session s, bool autoClose = false)
     {
         if (EditorWindow.Open.TryGetValue(s.Meta.Id, out var existing))
         {
@@ -89,12 +150,13 @@ sealed class CaptureHost : IDisposable
         }
         try
         {
-            new EditorWindow(s).Show();
+            var editor = new EditorWindow(s);
+            if (autoClose) editor.EnableAutoClose();
+            editor.Show();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"No se pudo abrir la captura:\n{ex.Message}", AppInfo.Name,
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            ConfirmDialog.Inform(null, "No se pudo abrir la captura", ex.Message);
         }
     }
 
@@ -116,7 +178,7 @@ sealed class CaptureHost : IDisposable
     {
         if (_historyWindow == null)
         {
-            _historyWindow = new HistoryWindow(OpenEditor);
+            _historyWindow = new HistoryWindow(s => OpenEditor(s));
             _historyWindow.Closed += (s, e) => _historyWindow = null;
             _historyWindow.Show();
         }
@@ -149,6 +211,12 @@ sealed class CaptureHost : IDisposable
         menu.Opening += (s, e) => _startupItem.Checked = StartupHelper.IsEnabled();
         menu.Items.Add("Salir", null, (s, e) => _app.Shutdown());
 
+        // Colores del tema también en el menú de la bandeja (es de WinForms: va aparte)
+        menu.Font = new System.Drawing.Font("Segoe UI", 9.5f);
+        menu.Padding = new System.Windows.Forms.Padding(2, 4, 2, 4);
+        ApplyTrayTheme(menu);
+        Theme.Changed += () => ApplyTrayTheme(menu);
+
         _tray = new System.Windows.Forms.NotifyIcon
         {
             Icon = AppInfo.TrayIcon(),
@@ -164,6 +232,49 @@ sealed class CaptureHost : IDisposable
         };
         _tray.ShowBalloonTip(2500, AppInfo.FullName,
             "Activo. Toma una captura con Impr Pant o Win+Shift+S.", System.Windows.Forms.ToolTipIcon.Info);
+    }
+
+    void ApplyTrayTheme(System.Windows.Forms.ContextMenuStrip menu)
+    {
+        var colors = new TrayColors(Theme.IsDark);
+        menu.Renderer = new System.Windows.Forms.ToolStripProfessionalRenderer(colors) { RoundedEdges = true };
+        menu.BackColor = colors.Back;
+        menu.ForeColor = colors.Fore;
+        _resumeItem.DropDown.BackColor = colors.Back;
+        _resumeItem.DropDown.ForeColor = colors.Fore;
+    }
+
+    /// <summary>Paleta del menú de la bandeja: la misma del tema claro/oscuro de las ventanas.</summary>
+    sealed class TrayColors : System.Windows.Forms.ProfessionalColorTable
+    {
+        public readonly System.Drawing.Color Back, Fore, Hover, Border, Line;
+
+        public TrayColors(bool dark)
+        {
+            UseSystemColors = false;
+            Back = dark ? System.Drawing.Color.FromArgb(0x32, 0x33, 0x38) : System.Drawing.Color.White;
+            Fore = dark ? System.Drawing.Color.FromArgb(0xF3, 0xF3, 0xF3) : System.Drawing.Color.FromArgb(0x1B, 0x1B, 0x1F);
+            Hover = dark ? System.Drawing.Color.FromArgb(0x44, 0x46, 0x4D) : System.Drawing.Color.FromArgb(0xEB, 0xED, 0xF0);
+            Border = dark ? System.Drawing.Color.FromArgb(0x50, 0x52, 0x59) : System.Drawing.Color.FromArgb(0xD1, 0xD4, 0xDA);
+            Line = dark ? System.Drawing.Color.FromArgb(0x3D, 0x3E, 0x44) : System.Drawing.Color.FromArgb(0xE1, 0xE3, 0xE8);
+        }
+
+        public override System.Drawing.Color ToolStripDropDownBackground => Back;
+        public override System.Drawing.Color ImageMarginGradientBegin => Back;
+        public override System.Drawing.Color ImageMarginGradientMiddle => Back;
+        public override System.Drawing.Color ImageMarginGradientEnd => Back;
+        public override System.Drawing.Color MenuBorder => Border;
+        public override System.Drawing.Color MenuItemBorder => Hover;
+        public override System.Drawing.Color MenuItemSelected => Hover;
+        public override System.Drawing.Color MenuItemSelectedGradientBegin => Hover;
+        public override System.Drawing.Color MenuItemSelectedGradientEnd => Hover;
+        public override System.Drawing.Color MenuItemPressedGradientBegin => Hover;
+        public override System.Drawing.Color MenuItemPressedGradientEnd => Hover;
+        public override System.Drawing.Color CheckBackground => Hover;
+        public override System.Drawing.Color CheckSelectedBackground => Hover;
+        public override System.Drawing.Color CheckPressedBackground => Hover;
+        public override System.Drawing.Color SeparatorDark => Line;
+        public override System.Drawing.Color SeparatorLight => Back;
     }
 
     void BuildResumeMenu()

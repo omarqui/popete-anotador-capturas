@@ -153,11 +153,10 @@ sealed partial class EditorWindow
     {
         var deletable = History.List().Where(s => !Open.ContainsKey(s.Meta.Id)).ToList();
         if (deletable.Count == 0) return;
-        var text = deletable.Count == 1
-            ? "¿Eliminar 1 captura del historial con sus anotaciones?"
-            : $"¿Eliminar {deletable.Count} capturas del historial con sus anotaciones?";
-        if (MessageBox.Show(this, text + "\n\nLas que están abiertas se conservan.", AppInfo.Name,
-                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        var title = deletable.Count == 1 ? "¿Eliminar 1 captura?" : $"¿Eliminar {deletable.Count} capturas?";
+        if (!ConfirmDialog.Ask(this, title,
+                "Se borran del historial con sus anotaciones, y no se puede deshacer. Las que están abiertas se conservan.",
+                "Eliminar"))
             return;
 
         int failed = 0;

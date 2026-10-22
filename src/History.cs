@@ -27,6 +27,8 @@ sealed class TextNote
     public string Color { get; set; }
     /// <summary>Orden de creación entre trazos y textos (para numerarlos). 0 = desconocido.</summary>
     public long Orden { get; set; }
+    /// <summary>Estilo etiqueta: fondo del color del texto (ver NoteText).</summary>
+    public bool Fondo { get; set; }
 }
 
 sealed class Session

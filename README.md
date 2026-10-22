@@ -34,19 +34,27 @@ Usa el `.exe` publicado si vas a activar **Iniciar con Windows**. Con `dotnet ru
 
 Todo se guarda automáticamente en el historial mientras editas.
 
+Si una captura nueva se abre y te vas a otra ventana sin anotar nada (por ejemplo, porque solo querías pegarla en otro lado), el editor se cierra solo a los 4 segundos. Si vuelves antes, se queda. La captura sigue en el historial. Las capturas que retomas no se cierran solas.
+
+El botón de la papelera quita todas las anotaciones, después de pedir confirmación; se deshace con Ctrl+Z.
+
 ### Herramientas
 
 | Herramienta | Tecla | Notas |
 |---|---|---|
-| Seleccionar | `V` | Clic en un trazo para cambiarle color o grosor; `Supr` lo borra |
-| Lápiz | `P` | Trazo libre |
+| Seleccionar | `V` | Clic en un trazo o texto, o arrastra un recuadro para elegir varios; `Supr` los borra |
+| Lápiz | `P` | Trazo libre (un clic suelto o un trazo de menos de 5 px no se aplica) |
 | Resaltador | `H` | Semitransparente; tiene su propio color (amarillo por defecto) |
 | Línea | `L` | `Shift` para ángulos de 45° |
-| Flecha | `A` | `Shift` para ángulos de 45° |
+| Flecha | `A` | Sigue el mouse (curva); si sale casi recta se endereza sola. `Shift`: recta a 45° |
 | Rectángulo | `R` | `Shift` para cuadrado |
 | Texto | `T` | Clic para escribir; `Esc` o clic fuera para terminar |
 | Borrador | `E` | Borra trazos completos |
-| Recortar | `C` | Arrastra sobre la captura; ver «Recortar» más abajo |
+| Recortar | `C` | Arrastra los bordes de la captura; ver «Recortar» más abajo |
+
+Línea, Rectángulo, Texto y «Texto con fondo» están en el botón **Otras herramientas** (el de las figuras, con una flechita), al lado de la flecha. El botón muestra la que esté activa. Sus teclas (`L`, `R`, `T`) siguen funcionando.
+
+Los trazos llevan un borde blanco fino para que se destaquen sobre cualquier fondo (también en la imagen copiada); el resaltador no.
 
 Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4 grosores, con las teclas `1` a `4`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo, cuatro marcas de retícula y el grosor ("4 px"), y se ve tanto en fondos claros como oscuros.
 
@@ -66,13 +74,29 @@ Cada trazo y cada texto lleva un círculo con su número, en el color del trazo,
 
 Después de cada trazo, el color pasa solo al siguiente: rojo → azul → verde → morado → naranja (el resaltador: amarillo → verde → azul). Así cada paso numerado queda de un color distinto. Si eliges un color a mano, el próximo trazo lo usa y la rotación sigue desde ahí. Se apaga en Ajustes.
 
+### Mover lo dibujado
+
+Con **Seleccionar** (`V`), un clic sobre un trazo o un texto lo elige y arrastrarlo lo mueve. Para elegir **varios**, arrastra un recuadro desde una zona vacía: queda seleccionado todo lo que toque. `Shift` + recuadro suma a lo que ya había, `Shift`+clic agrega o quita uno, y `Ctrl+A` elige todo. Arrastrar cualquiera de los elegidos mueve todos juntos; el color, el grosor y `Supr` se aplican a todos.
+
+**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta, y arrastrar desde el número lo mueve.
+
+Con algo seleccionado, las flechas del teclado lo corren 1 px (con `Shift`, 10 px). Todo se deshace con Ctrl+Z.
+
+### Texto con fondo
+
+**Texto con fondo** (en **Otras herramientas**) hace que los textos salgan como **etiqueta**: fondo redondeado del color elegido y letra blanca (oscura si el color es claro). Se aplica a los textos nuevos y, si hay un texto seleccionado, también a ese. Se recuerda entre sesiones.
+
+### Abrir una imagen arrastrándola
+
+Arrastra una imagen (desde el Explorador, el navegador u otra app) sobre un editor o sobre la ventana de historial. Si el editor todavía no tiene anotaciones, la imagen lo reemplaza en la misma ventana; si ya tiene algo, se abre en otra. Sobre el historial, siempre se abre un editor nuevo.
+
 ### Corregir un texto
 
 Doble clic sobre un texto lo vuelve a abrir para editarlo, con el cursor al final. Si lo dejas vacío, se borra. Se deshace con Ctrl+Z.
 
 ### Recortar
 
-Con **Recortar** (`C`) arrastra un rectángulo sobre la captura. Lo dibujado que quede totalmente afuera se borra; lo que cruza el borde se mantiene. La captura original no se toca: **Quitar recorte** (en la barra de estado) vuelve a la imagen completa, y Ctrl+Z / Ctrl+Y deshacen y rehacen el recorte.
+Con **Recortar** (`C`) aparece la captura completa con un marco: arrastra sus **bordes** o **esquinas** hacia adentro (o de nuevo hacia afuera), o arrástralo desde adentro para moverlo. Lo que queda afuera se oscurece. **Enter** (o cambiar de herramienta, copiar o guardar) aplica el recorte; **Esc** lo cancela. Lo dibujado que quede totalmente afuera se borra; lo que cruza el borde se mantiene. La captura original no se toca: **Quitar recorte** (en la barra de estado) vuelve a la imagen completa, y Ctrl+Z / Ctrl+Y deshacen y rehacen el recorte.
 
 ### Ajustes
 
@@ -101,7 +125,9 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |
 | `Shift+rueda` | Desplazar en horizontal |
 | `Alt` (tocar) o clic derecho en la imagen | Intercambiar color principal y secundario |
-| `Supr` | Borrar el trazo seleccionado |
+| `Supr` | Borrar lo seleccionado |
+| `Ctrl+A` | Seleccionar todo |
+| `Enter` / `Esc` con Recortar | Aplicar / cancelar el recorte |
 | `Ctrl+0` | Ajustar a la ventana |
 | `1` a `4` | Grosor: fino, medio, grueso, muy grueso |
 | `Tab` | Alternar entre lápiz y flecha |

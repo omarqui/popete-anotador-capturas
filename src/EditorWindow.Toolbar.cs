@@ -27,12 +27,10 @@ sealed partial class EditorWindow
             ToolButton(Icons.Select, Tool.Select, "Seleccionar (V) — clic en un trazo para cambiarle color o grosor; Supr lo borra"),
             ToolButton(Icons.Pen, Tool.Pen, "Lápiz (P) — Tab alterna con la flecha"),
             ToolButton(Icons.Highlighter, Tool.Highlighter, "Resaltador (H)"),
-            ToolButton(Icons.Line, Tool.Line, "Línea (L) — Shift: ángulos de 45°"),
-            ToolButton(Icons.Arrow, Tool.Arrow, "Flecha (A) — Shift: ángulos de 45°; Tab alterna con el lápiz"),
-            ToolButton(Icons.Rectangle, Tool.Rectangle, "Rectángulo (R) — Shift: cuadrado"),
-            ToolButton(Icons.Text, Tool.Text, "Texto (T) — clic para escribir"),
+            ToolButton(Icons.Arrow, Tool.Arrow, "Flecha (A) — sigue el mouse; casi recta se endereza; Shift: recta a 45°; Tab alterna con el lápiz"),
+            BuildMoreTools(),
             ToolButton(Icons.Eraser, Tool.Eraser, "Borrador (E) — borra trazos completos"),
-            ToolButton(Icons.Crop, Tool.Crop, "Recortar (C) — arrastra sobre la captura; Ctrl+Z lo deshace")));
+            ToolButton(Icons.Crop, Tool.Crop, "Recortar (C) — arrastra los bordes de la captura; Enter aplica, Esc cancela")));
 
         left.Children.Add(Ui.Divider());
 
@@ -117,8 +115,8 @@ sealed partial class EditorWindow
 
         right.Children.Add(Ui.Divider());
 
-        // Solo ícono para que la barra quepa en una fila; el texto va en el tooltip
-        right.Children.Add(Ui.IconBtn(Icons.Save, "Guardar como PNG o JPG (Ctrl+S)", Save));
+        // Solo ícono para que la barra quepa en una fila; el texto va en el tooltip.
+        // Guardar como no tiene botón: queda con Ctrl+S.
         var copy = Ui.IconBtn(Icons.Copy, "Copiar la imagen anotada sin cerrar", () => CopyToClipboard());
         copy.Margin = new Thickness(0, 0, 8, 0);
         right.Children.Add(copy);
@@ -145,6 +143,124 @@ sealed partial class EditorWindow
         var border = new Border { Child = dock, BorderThickness = new Thickness(0, 0, 0, 1) };
         border.SetResourceReference(Border.BorderBrushProperty, "Borde");
         return border;
+    }
+
+    // ------------------------------------------------------------------ otras herramientas
+    // Línea, rectángulo, texto y "texto con fondo" van en un menú para que la barra quede
+    // corta. El botón muestra la herramienta del menú que esté activa (y queda marcado);
+    // si no hay ninguna, un ícono genérico. Las teclas L, R y T siguen funcionando.
+    static readonly (Tool tool, string icon, string name, string key)[] MoreTools =
+    {
+        (Tool.Line, Icons.Line, "Línea", "L"),
+        (Tool.Rectangle, Icons.Rectangle, "Rectángulo", "R"),
+        (Tool.Text, Icons.Text, "Texto", "T"),
+    };
+
+    ToggleButton _moreButton;
+
+    ToggleButton BuildMoreTools()
+    {
+        _moreButton = new ToggleButton
+        {
+            ToolTip = "Otras herramientas: línea (L), rectángulo (R), texto (T) y texto con fondo",
+            Width = 48,
+        };
+        System.Windows.Automation.AutomationProperties.SetName(_moreButton, "Otras herramientas");
+        _moreButton.SetResourceReference(StyleProperty, "EstiloHerramienta");
+
+        var menu = new ContextMenu { Placement = PlacementMode.Bottom, PlacementTarget = _moreButton };
+        var toolItems = new List<(MenuItem item, Tool tool)>();
+        foreach (var (tool, icon, name, key) in MoreTools)
+        {
+            var item = new MenuItem { Header = MenuHeader(icon, name, key) };
+            var t = tool;
+            item.Click += (s, e) => SetTool(t);
+            toolItems.Add((item, tool));
+            menu.Items.Add(item);
+        }
+
+        var line = new FrameworkElementFactory(typeof(Border));
+        line.SetValue(HeightProperty, 1.0);
+        line.SetValue(MarginProperty, new Thickness(8, 4, 8, 4));
+        line.SetResourceReference(Border.BackgroundProperty, "Borde");
+        menu.Items.Add(new Separator { Template = new ControlTemplate(typeof(Separator)) { VisualTree = line } });
+
+        // "Texto con fondo": los textos nuevos salen como etiqueta de color
+        var label = new MenuItem
+        {
+            Header = MenuHeader(Icons.TextLabel, "Texto con fondo", ""),
+            IsCheckable = true,
+            ToolTip = "Para los textos nuevos y los textos seleccionados",
+        };
+        label.Click += (s, e) => SetLabelMode(label.IsChecked);
+        menu.Items.Add(label);
+
+        menu.Opened += (s, e) =>
+        {
+            foreach (var (item, tool) in toolItems) item.IsChecked = _tool == tool;
+            label.IsChecked = AppSettings.Current.TextoConFondo;
+        };
+        menu.Closed += (s, e) => UpdateMoreButton();
+        _moreButton.Click += (s, e) =>
+        {
+            UpdateMoreButton(); // el clic no cambia la marca: la pone la herramienta activa
+            menu.IsOpen = true;
+        };
+        UpdateMoreButton();
+        return _moreButton;
+    }
+
+    /// <summary>Ícono de la herramienta del menú activa (o el genérico) con una flechita.</summary>
+    void UpdateMoreButton()
+    {
+        if (_moreButton == null) return;
+        var active = MoreTools.FirstOrDefault(m => m.tool == _tool);
+        var content = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        content.Children.Add(Ui.Icon(active.icon ?? Icons.Shapes));
+        var chevron = Ui.Icon(Icons.ChevronDown, 12, 2);
+        chevron.Margin = new Thickness(1, 2, 0, 0);
+        content.Children.Add(chevron);
+        _moreButton.Content = content;
+        _moreButton.IsChecked = active.icon != null;
+    }
+
+    /// <summary>Fila del menú: ícono, nombre y tecla.</summary>
+    static FrameworkElement MenuHeader(string icon, string name, string key)
+    {
+        var grid = new Grid { MinWidth = 180 };
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition());
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        var iconEl = Ui.Icon(icon, 18);
+        grid.Children.Add(iconEl);
+        var text = new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center };
+        Grid.SetColumn(text, 1);
+        grid.Children.Add(text);
+        var keyText = new TextBlock { Text = key, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
+        keyText.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+        Grid.SetColumn(keyText, 2);
+        grid.Children.Add(keyText);
+        return grid;
+    }
+
+    /// <summary>
+    /// "Texto con fondo": los textos nuevos salen como etiqueta de color. Si hay textos
+    /// seleccionados, también se les aplica (con deshacer). El estado se recuerda en los ajustes.
+    /// </summary>
+    void SetLabelMode(bool on)
+    {
+        AppSettings.Current.TextoConFondo = on;
+        try { AppSettings.Current.Save(); } catch { /* se aplica igual en esta sesión */ }
+
+        var changed = _selectedTexts.OfType<NoteText>().Where(nt => nt.Fondo != on).ToList();
+        if (changed.Count > 0)
+        {
+            foreach (var nt in changed) nt.Fondo = on;
+            PushUndo(new ActionChange(
+                () => changed.ForEach(nt => nt.Fondo = !on),
+                () => changed.ForEach(nt => nt.Fondo = on)));
+            Dispatcher.InvokeAsync(UpdateSelectionVisual, DispatcherPriority.Loaded); // cambia de tamaño
+        }
     }
 
     ToggleButton ToolButton(string icon, Tool t, string tip)
@@ -226,8 +342,12 @@ sealed partial class EditorWindow
     void SetTool(Tool t)
     {
         CommitText();
+        var previous = _tool;
         _tool = t;
         foreach (var kv in _toolButtons) kv.Value.IsChecked = kv.Key == t;
+        UpdateMoreButton();
+        if (_cropMode && t != Tool.Crop) EndCropMode();      // aplica el marco si cambió
+        if (!_cropMode && t == Tool.Crop) BeginCropMode(previous);
 
         // Elegir una herramienta de dibujo es para dibujar algo nuevo: se suelta la selección
         if (t != Tool.Select) ClearSelection();
@@ -239,9 +359,9 @@ sealed partial class EditorWindow
             _ => InkCanvasEditingMode.None,
         };
         // El puntero del sistema se oculta: lo reemplaza el de EditorWindow.Pointer.cs.
-        // Seleccionar usa la flecha normal.
+        // Seleccionar y Recortar usan los del sistema (Recortar los cambia según el borde).
         _ink.UseCustomCursor = true;
-        _ink.Cursor = t == Tool.Select ? Cursors.Arrow : Cursors.None;
+        _ink.Cursor = t is Tool.Select or Tool.Crop ? Cursors.Arrow : Cursors.None;
 
         RefreshSwatches();
         UpdateDrawingAttributes();

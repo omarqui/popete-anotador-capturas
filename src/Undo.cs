@@ -82,6 +82,15 @@ sealed class ActionChange : IUndo
     public void Redo() => _redo();
 }
 
+/// <summary>Varios cambios que se deshacen juntos (por ejemplo, sobre una selección múltiple).</summary>
+sealed class CompositeChange : IUndo
+{
+    readonly List<IUndo> _items;
+    public CompositeChange(IEnumerable<IUndo> items) { _items = items.ToList(); }
+    public void Undo() { for (int i = _items.Count - 1; i >= 0; i--) _items[i].Undo(); }
+    public void Redo() { foreach (var item in _items) item.Redo(); }
+}
+
 sealed class ClearAllChange : IUndo
 {
     readonly StrokeCollection _target, _strokes; readonly Panel _panel; readonly List<UIElement> _elements;

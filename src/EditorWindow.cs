@@ -110,6 +110,9 @@ sealed partial class EditorWindow : Window
         _ink.Strokes.StrokesChanged += (s, e) =>
         {
             if (_suppress) return;
+            // Un trazo recién hecho a mano: StrokeCollected lo descarta (si es mínimo) o lo
+            // cambia por un NoteStroke y registra ahí el deshacer
+            if (e.Added.Count == 1 && e.Removed.Count == 0 && e.Added[0] is not NoteStroke) return;
             PushUndo(new StrokeChange(_ink.Strokes, e.Added, e.Removed));
         };
         _ink.PreviewMouseLeftButtonDown += Ink_MouseDown;
@@ -167,7 +170,21 @@ sealed partial class EditorWindow : Window
         // Lo recién dibujado con lápiz o resaltador queda seleccionado
         _ink.StrokeCollected += (s, e) =>
         {
-            SelectStrokes(new StrokeCollection { e.Stroke }, auto: true);
+            if (IsTiny(e.Stroke))
+            {
+                // Un clic o un trazo de pocos píxeles: casi siempre es accidental, no se aplica
+                _suppress = true;
+                _ink.Strokes.Remove(e.Stroke);
+                _suppress = false;
+                return;
+            }
+            // El InkCanvas agrega un trazo común: se cambia por uno con borde blanco
+            var stroke = NoteStroke.From(e.Stroke);
+            _suppress = true;
+            _ink.Strokes.Replace(e.Stroke, new StrokeCollection { stroke });
+            _suppress = false;
+            PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
+            SelectStrokes(new StrokeCollection { stroke }, auto: true);
             AdvanceColor();
         };
 
@@ -241,6 +258,7 @@ sealed partial class EditorWindow : Window
         // que de otro modo se queda con Ctrl+C / Ctrl+X / Ctrl+V.
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
+        EnableDrop();
         PreviewMouseDown += (s, e) =>
         {
             _altAlone = false; // Alt+clic no cuenta como toque de Alt
@@ -266,6 +284,7 @@ sealed partial class EditorWindow : Window
         Closing += (s, e) =>
         {
             CommitText();
+            if (_cropMode) ConfirmCrop(); // cerrar con el marco ajustado lo aplica
             if (_pendingSave) SaveSession();
         };
     }
@@ -284,9 +303,9 @@ sealed partial class EditorWindow : Window
     /// <summary>Ajusta tamaños y posiciones a la parte visible (al abrir y al recortar).</summary>
     void LayoutForImage()
     {
-        var v = VisibleRect;
+        var v = ShownRect; // con Recortar activo, la captura entera
         double bw = _original.PixelWidth + 2 * _pad, bh = _original.PixelHeight + 2 * _pad;
-        _imageCtl.Source = _image;
+        _imageCtl.Source = ShownImage;
         _imageCtl.Width = _frame.Width = v.Width;
         _imageCtl.Height = _frame.Height = v.Height;
         _framed.Margin = new Thickness(v.X, v.Y, 0, 0);
@@ -307,7 +326,7 @@ sealed partial class EditorWindow : Window
     void UpdateFrameClip()
     {
         double r = CornerRadiusOnScreen / _zoom.ScaleX;
-        _frame.Clip = new RectangleGeometry(new Rect(0, 0, _image.PixelWidth, _image.PixelHeight), r, r);
+        _frame.Clip = new RectangleGeometry(new Rect(0, 0, ShownImage.PixelWidth, ShownImage.PixelHeight), r, r);
     }
 
     void LoadAnnotations()
@@ -322,7 +341,7 @@ sealed partial class EditorWindow : Window
                     using var fs = File.OpenRead(_session.InkPath);
                     var strokes = new StrokeCollection(fs);
                     strokes.Transform(ToBoard, false);
-                    _ink.Strokes.Add(strokes);
+                    _ink.Strokes.Add(new StrokeCollection(strokes.Select(NoteStroke.From))); // con borde blanco
                 }
                 catch { /* archivo dañado: se ignora */ }
             }
@@ -348,8 +367,18 @@ sealed partial class EditorWindow : Window
         }
     }
 
+    /// <summary>Trazo a mano que en pantalla no llega a 5 px de largo ni de alto (un punto, un temblor del clic).</summary>
+    bool IsTiny(Stroke s)
+    {
+        if (s == _preview || s.StylusPoints.Count == 0) return false;
+        double minX = s.StylusPoints.Min(p => p.X), maxX = s.StylusPoints.Max(p => p.X);
+        double minY = s.StylusPoints.Min(p => p.Y), maxY = s.StylusPoints.Max(p => p.Y);
+        return Math.Max(maxX - minX, maxY - minY) * _zoom.ScaleX < 5;
+    }
+
     void MarkChanged()
     {
+        MarkTouched(); // ya no se cierra solo (EditorWindow.AutoClose.cs)
         RefreshNumbers();
         _pendingSave = true;
         _saveTimer.Stop();
@@ -382,6 +411,7 @@ sealed partial class EditorWindow : Window
                 X = Canvas.GetLeft(tb) - _pad,
                 Y = Canvas.GetTop(tb) - _pad,
                 Orden = tb.Tag is long orden ? orden : 0,
+                Fondo = tb is NoteText nt && nt.Fondo,
                 FontSize = tb.FontSize,
                 Color = (tb.Foreground as SolidColorBrush)?.Color.ToString() ?? Palette[0].color.ToString(),
             }).ToList();
@@ -416,12 +446,14 @@ sealed partial class EditorWindow : Window
     {
         CommitText();
         ClearSelection();
+        if (ResetPendingCrop()) return; // con Recortar: primero devuelve el marco a su lugar
         if (_undo.Count == 0) return;
         var item = _undo.Pop();
         _suppress = true;
         try { item.Undo(); }
         finally { _suppress = false; }
         _redo.Push(item);
+        SyncPendingCrop();
         MarkChanged();
     }
 
@@ -435,6 +467,7 @@ sealed partial class EditorWindow : Window
         try { item.Redo(); }
         finally { _suppress = false; }
         _undo.Push(item); // sin pasar por PushUndo: no hay que vaciar _redo
+        SyncPendingCrop();
         MarkChanged();
     }
 
@@ -445,6 +478,11 @@ sealed partial class EditorWindow : Window
         var strokes = new StrokeCollection(_ink.Strokes);
         var elements = _textLayer.Children.Cast<UIElement>().ToList();
         if (strokes.Count == 0 && elements.Count == 0) return;
+
+        int count = strokes.Count + elements.Count;
+        var title = count == 1 ? "¿Quitar la anotación?" : $"¿Quitar las {count} anotaciones?";
+        if (!ConfirmDialog.Ask(this, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar"))
+            return;
 
         _suppress = true;
         _ink.Strokes.Clear();
@@ -471,7 +509,7 @@ sealed partial class EditorWindow : Window
     {
         double availW = Math.Max(100, _scroll.ActualWidth - 2 * ViewMargin - 20);
         double availH = Math.Max(100, _scroll.ActualHeight - 2 * ViewMargin - 20);
-        double fit = Math.Min(availW / _image.PixelWidth, availH / _image.PixelHeight);
+        double fit = Math.Min(availW / ShownImage.PixelWidth, availH / ShownImage.PixelHeight);
         // Nunca agrandar por encima del tamaño real en pantalla
         SetZoom(Math.Min(1 / DpiScale(), fit));
     }
@@ -518,6 +556,7 @@ sealed partial class EditorWindow : Window
                 case Key.S: Save(); break;
                 case Key.Enter: if (CopyToClipboard()) Close(); break;
                 case Key.H: ToggleRecents(); break;
+                case Key.A: SelectAll(); break;
                 case Key.OemComma: SettingsWindow.Show(this); break;
                 case Key.D0: case Key.NumPad0: FitZoom(); break;
                 case Key.OemPlus: case Key.Add: SetZoom(_zoom.ScaleX * 1.15); break;
@@ -525,6 +564,14 @@ sealed partial class EditorWindow : Window
                 default: return;
             }
             e.Handled = true;
+            return;
+        }
+
+        // Flechas (Shift: de a 10 px) mueven lo seleccionado
+        if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down
+            && Keyboard.Modifiers is ModifierKeys.None or ModifierKeys.Shift)
+        {
+            if (NudgeSelection(e.Key)) e.Handled = true;
             return;
         }
 
@@ -547,7 +594,12 @@ sealed partial class EditorWindow : Window
             case Key.D3: case Key.NumPad3: SetSize(SizePresets[2]); break;
             case Key.D4: case Key.NumPad4: SetSize(SizePresets[3]); break;
             case Key.Delete: case Key.Back: DeleteSelection(); break;
-            case Key.Escape: if (HasSelection) ClearSelection(); else Close(); break;
+            case Key.Enter when _cropMode: ConfirmCrop(); break;
+            case Key.Escape:
+                if (_cropMode) CancelCrop();
+                else if (HasSelection) ClearSelection();
+                else Close();
+                break;
             default: return;
         }
         e.Handled = true;

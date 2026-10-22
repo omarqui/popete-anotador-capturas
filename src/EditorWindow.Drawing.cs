@@ -3,12 +3,14 @@
 // ----------------------------------------------------------------------------
 sealed partial class EditorWindow
 {
+    List<Point> _arrowPath;   // recorrido de la flecha mientras se dibuja (a mano alzada)
+
     // ------------------------------------------------------------------ formas (línea, flecha, rectángulo) y texto
     void Ink_MouseDown(object sender, MouseButtonEventArgs e)
     {
         if (_tool == Tool.Select)
         {
-            SelectAt(e.GetPosition(_ink));
+            SelectToolDown(e.GetPosition(_ink)); // un trazo (y arrastrar lo mueve) o un recuadro
             e.Handled = true;
             return;
         }
@@ -30,7 +32,8 @@ sealed partial class EditorWindow
         if (_tool is not (Tool.Line or Tool.Arrow or Tool.Rectangle)) return;
 
         _start = e.GetPosition(_ink);
-        _preview = new Stroke(BuildPoints(_start, _start), MakeAttributes());
+        _arrowPath = _tool == Tool.Arrow ? new List<Point> { _start } : null;
+        _preview = new NoteStroke(BuildPoints(_start, _start), MakeAttributes());
         _suppress = true;
         _ink.Strokes.Add(_preview);
         _suppress = false;
@@ -40,15 +43,30 @@ sealed partial class EditorWindow
 
     void Ink_MouseMove(object sender, MouseEventArgs e)
     {
+        if (DragMove(e.GetPosition(_ink))) return;
+        if (MarqueeMove(e.GetPosition(_ink))) return;
         if (CropMouseMove(e.GetPosition(_ink))) return;
         if (_preview == null) return;
         var p = e.GetPosition(_ink);
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) p = Constrain(_start, p);
+        bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        if (_arrowPath != null)
+        {
+            // La flecha sigue el mouse (puntos cada 2 px en pantalla); con Shift, recta a 45°
+            if ((p - _arrowPath[^1]).Length * _zoom.ScaleX >= 2) _arrowPath.Add(p);
+            _preview.StylusPoints = shift ? BuildPoints(_start, Constrain(_start, p)) : FreeArrow(_arrowPath);
+            return;
+        }
+        if (shift) p = Constrain(_start, p);
         _preview.StylusPoints = BuildPoints(_start, p);
     }
 
     void Ink_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (DragEnd() || MarqueeEnd(e.GetPosition(_ink)))
+        {
+            e.Handled = true;
+            return;
+        }
         if (CropMouseUp(e.GetPosition(_ink)))
         {
             e.Handled = true;
@@ -58,10 +76,21 @@ sealed partial class EditorWindow
         _ink.ReleaseMouseCapture();
         var stroke = _preview;
         _preview = null;
+        var path = _arrowPath;
+        _arrowPath = null;
 
-        if ((e.GetPosition(_ink) - _start).Length < 3)
+        var end = e.GetPosition(_ink);
+        if (path != null && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
         {
-            // Un clic sin arrastrar: se descarta
+            if ((end - path[^1]).Length > 0) path.Add(end);
+            // Casi recta: se endereza; si no, queda la curva suavizada
+            stroke.StylusPoints = IsNearlyStraight(path) ? BuildPoints(_start, end) : FreeArrow(path);
+        }
+
+        double extent = path != null ? PathLength(path) : (end - _start).Length;
+        if (extent * _zoom.ScaleX < 5)
+        {
+            // Un clic o un arrastre mínimo: se descarta (como en IsTiny)
             _suppress = true;
             _ink.Strokes.Remove(stroke);
             _suppress = false;
@@ -84,15 +113,8 @@ sealed partial class EditorWindow
                 pts.AddRange(new[] { a, new Point(b.X, a.Y), b, new Point(a.X, b.Y), a });
                 break;
             case Tool.Arrow:
-                var v = b - a;
-                double len = v.Length;
-                if (len < 1) { pts.Add(a); pts.Add(b); break; }
-                v /= len;
-                double head = Math.Max(14, _size * 4);
-                var n = new Vector(-v.Y, v.X);
-                var w1 = b - v * head + n * head * 0.5;
-                var w2 = b - v * head - n * head * 0.5;
-                pts.AddRange(new[] { a, b, w1, b, w2 });
+                pts.Add(a);
+                AddArrowHead(pts, a, b);
                 break;
             default: // línea
                 pts.Add(a);
@@ -100,6 +122,96 @@ sealed partial class EditorWindow
                 break;
         }
         return new StylusPointCollection(pts);
+    }
+
+    double ArrowHeadLength => Math.Max(18, _size * 5);
+
+    /// <summary>
+    /// Agrega la punta en <paramref name="tip"/>, apuntando desde <paramref name="from"/>: un
+    /// triángulo relleno. Como es un solo trazo, el relleno es un abanico de líneas desde la
+    /// punta a la base, más juntas que el grosor, así no quedan huecos.
+    /// </summary>
+    void AddArrowHead(List<Point> pts, Point from, Point tip)
+    {
+        var v = tip - from;
+        double len = v.Length;
+        pts.Add(tip);
+        if (len < 1) return;
+        v /= len;
+        double head = ArrowHeadLength;
+        var n = new Vector(-v.Y, v.X);
+        var w1 = tip - v * head + n * head * 0.55;
+        var w2 = tip - v * head - n * head * 0.55;
+        pts.AddRange(new[] { w1, w2, tip }); // contorno
+        int steps = (int)Math.Ceiling((w2 - w1).Length / Math.Max(1, _size * 0.8));
+        for (int i = 1; i < steps; i++)
+        {
+            pts.Add(w1 + (w2 - w1) * i / steps);
+            pts.Add(tip);
+        }
+    }
+
+    /// <summary>
+    /// Flecha a mano alzada: el recorrido suavizado y la punta orientada según el
+    /// último tramo (una cabeza de largo hacia atrás, para que el temblor final no la tuerza).
+    /// </summary>
+    StylusPointCollection FreeArrow(List<Point> path)
+    {
+        var smooth = Smooth(path);
+        var tip = smooth[^1];
+        var from = smooth[0];
+        double walked = 0;
+        for (int i = smooth.Count - 2; i >= 0; i--)
+        {
+            walked += (smooth[i + 1] - smooth[i]).Length;
+            from = smooth[i];
+            if (walked >= ArrowHeadLength) break;
+        }
+        var pts = smooth.Take(smooth.Count - 1).ToList();
+        AddArrowHead(pts, from, tip);
+        return new StylusPointCollection(pts);
+    }
+
+    /// <summary>Media móvil de 5 puntos; los extremos no se mueven.</summary>
+    static List<Point> Smooth(List<Point> path)
+    {
+        if (path.Count < 5) return path.ToList();
+        var result = new List<Point> { path[0] };
+        for (int i = 1; i < path.Count - 1; i++)
+        {
+            int from = Math.Max(0, i - 2), to = Math.Min(path.Count - 1, i + 2);
+            double x = 0, y = 0;
+            for (int j = from; j <= to; j++) { x += path[j].X; y += path[j].Y; }
+            result.Add(new Point(x / (to - from + 1), y / (to - from + 1)));
+        }
+        result.Add(path[^1]);
+        return result;
+    }
+
+    static double PathLength(List<Point> path)
+    {
+        double total = 0;
+        for (int i = 1; i < path.Count; i++) total += (path[i] - path[i - 1]).Length;
+        return total;
+    }
+
+    /// <summary>
+    /// El recorrido se aparta poco de la recta entre sus extremos (hasta 6 px en pantalla
+    /// o el 6 % de su largo, lo que sea mayor): se toma como flecha recta.
+    /// </summary>
+    bool IsNearlyStraight(List<Point> path)
+    {
+        var a = path[0];
+        var chord = path[^1] - a;
+        double len = chord.Length;
+        if (len < 1) return false; // vuelve al inicio: es una curva
+        double tolerance = Math.Max(6 / _zoom.ScaleX, len * 0.06);
+        foreach (var p in path)
+        {
+            double deviation = Math.Abs(Vector.CrossProduct(chord, p - a)) / len;
+            if (deviation > tolerance) return false;
+        }
+        return true;
     }
 
     Point Constrain(Point a, Point b)
@@ -118,6 +230,7 @@ sealed partial class EditorWindow
     /// <param name="existing">Texto ya escrito que se corrige (doble clic); null para uno nuevo.</param>
     void BeginText(Point p, TextBlock existing = null)
     {
+        MarkTouched(); // escribiendo: aunque cambie de ventana, no se cierra solo
         _editing = new TextBox
         {
             MinWidth = 80,
@@ -195,29 +308,30 @@ sealed partial class EditorWindow
             Y = Canvas.GetTop(tb),
             FontSize = tb.FontSize,
             Color = ((SolidColorBrush)tb.Foreground).Color.ToString(),
+            Fondo = AppSettings.Current.TextoConFondo, // botón "texto con fondo" de la barra
         });
         PushUndo(new ElementAdd(_textLayer, block));
     }
 
     TextBlock AddTextBlock(TextNote n)
     {
-        var block = new TextBlock
+        var block = new NoteText(n.Fondo)
         {
             Text = n.Text,
             FontSize = n.FontSize > 0 ? n.FontSize : FontSizeFor(_size),
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(ParseColor(n.Color)),
-            Padding = new Thickness(3, 1, 3, 1),
-            Effect = new System.Windows.Media.Effects.DropShadowEffect { Color = Colors.White, BlurRadius = 4, ShadowDepth = 0, Opacity = 0.9 },
         };
         Canvas.SetLeft(block, n.X);
         Canvas.SetTop(block, n.Y);
         if (n.Orden > 0) block.Tag = n.Orden; // orden para la numeración (si no, se asigna al refrescar)
-        // Doble clic para corregirlo. Un clic simple no hace nada (no empieza un trazo encima).
+        // Doble clic para corregirlo. Con Seleccionar, un clic lo elige y arrastrar lo mueve;
+        // con las demás herramientas un clic simple no hace nada (no empieza un trazo encima).
         block.Cursor = Cursors.IBeam;
         block.MouseLeftButtonDown += (s, e) =>
         {
             if (e.ClickCount == 2) EditText(block);
+            else if (_tool == Tool.Select) PickAndDrag(block, e.GetPosition(_ink));
             e.Handled = true;
         };
         _textLayer.Children.Add(block);

@@ -50,6 +50,21 @@ sealed class HistoryWindow : Window
 
         // Se recarga cada vez que la ventana vuelve al frente
         Activated += (s, e) => Refresh();
+
+        // Soltar imágenes sobre el historial: cada una se abre en un editor nuevo
+        AllowDrop = true;
+        PreviewDragOver += (s, e) =>
+        {
+            e.Effects = CaptureHost.HasImages(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Handled = true;
+        };
+        PreviewDrop += (s, e) =>
+        {
+            if (!CaptureHost.HasImages(e.Data)) return;
+            e.Handled = true;
+            CaptureHost.OpenDropped(e.Data, null);
+            Refresh();
+        };
     }
 
     void Refresh()
@@ -117,16 +132,15 @@ sealed class HistoryWindow : Window
     {
         if (EditorWindow.Open.TryGetValue(s.Meta.Id, out var w))
         {
-            MessageBox.Show(this, "Esta captura está abierta. Ciérrala antes de eliminarla.", AppInfo.Name,
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ConfirmDialog.Inform(this, "Esta captura está abierta", "Ciérrala antes de eliminarla.");
             w.Activate();
             return;
         }
-        if (MessageBox.Show(this, "¿Eliminar esta captura y sus anotaciones del historial?", AppInfo.Name,
-                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        if (!ConfirmDialog.Ask(this, "¿Eliminar esta captura?",
+                "Se borra del historial con sus anotaciones, y no se puede deshacer.", "Eliminar"))
             return;
         try { History.Delete(s); }
-        catch (Exception ex) { MessageBox.Show(this, ex.Message, "No se pudo eliminar", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { ConfirmDialog.Inform(this, "No se pudo eliminar", ex.Message); }
         Refresh();
     }
 }

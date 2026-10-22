@@ -67,6 +67,7 @@ sealed partial class EditorWindow
     bool CopyToClipboard()
     {
         CommitText();
+        if (_cropMode) ConfirmCrop(); // copiar con el marco ajustado: se aplica primero
         var bmp = Render();
 
         var png = new MemoryStream();
@@ -134,7 +135,9 @@ sealed partial class EditorWindow
 
     void Save()
     {
+        MarkTouched(); // el diálogo de Windows le quita el foco: que no se cierre detrás
         CommitText();
+        if (_cropMode) ConfirmCrop();
         var dlg = new SaveFileDialog
         {
             Filter = "Imagen PNG (*.png)|*.png|Imagen JPEG (*.jpg)|*.jpg",

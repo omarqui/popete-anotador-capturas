@@ -54,7 +54,8 @@ sealed partial class EditorWindow
         switch (_tool)
         {
             case Tool.Select:
-                hot = new Point(0, 0); // usa la flecha del sistema
+            case Tool.Crop:
+                hot = new Point(0, 0); // usan los cursores del sistema
                 break;
             case Tool.Pen:
             {
