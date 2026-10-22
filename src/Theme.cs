@@ -100,6 +100,7 @@ static class Theme
         w.SetResourceReference(Control.ForegroundProperty, "Texto");
         w.FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI");
         w.FontSize = 13;
+        w.Icon = AppInfo.WindowIcon;
 
         Action titleBar = () => ApplyTitleBar(w);
         w.SourceInitialized += (s, e) => titleBar();

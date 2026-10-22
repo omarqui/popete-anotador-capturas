@@ -141,7 +141,7 @@ sealed class CaptureHost : IDisposable
 
         _tray = new System.Windows.Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = AppInfo.TrayIcon(),
             Text = AppInfo.FullName,
             ContextMenuStrip = menu,
             Visible = true,

@@ -11,6 +11,18 @@ static class AppInfo
     public const string Subtitle = "anotador de capturas";
     public const string FullName = Name + " · " + Subtitle;
 
+    static Stream IconStream() => typeof(AppInfo).Assembly.GetManifestResourceStream("popete.ico");
+
+    /// <summary>Ícono para la bandeja, en el tamaño que pide Windows (elige el mejor del .ico).</summary>
+    public static System.Drawing.Icon TrayIcon()
+    {
+        using var s = IconStream();
+        return new System.Drawing.Icon(s, System.Windows.Forms.SystemInformation.SmallIconSize);
+    }
+
+    /// <summary>Ícono para las ventanas WPF.</summary>
+    public static readonly ImageSource WindowIcon = BitmapFrame.Create(IconStream(), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+
     static readonly string LocalAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     static readonly string NewRoot = Path.Combine(LocalAppData, "Popete");
     static readonly string LegacyRoot = Path.Combine(LocalAppData, "AnotadorCapturas");

@@ -16,6 +16,13 @@
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
+    <!-- Ícono del .exe. Se genera desde assets\popete.svg con tools\generar-icono.ps1 -->
+    <ApplicationIcon>..\assets\popete.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- El mismo ícono, embebido para la bandeja y las ventanas -->
+    <EmbeddedResource Include="..\assets\popete.ico" LogicalName="popete.ico" />
+  </ItemGroup>
 
 </Project>
