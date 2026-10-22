@@ -178,3 +178,7 @@ Esto tiene dos consecuencias:
 | Error de trimming o AOT con WPF | WPF no soporta AOT. El `.csproj` lo desactiva con `PublishAot=false`; no lo quites. |
 | La app no arranca y no da error | Ya hay una instancia corriendo (solo se permite una). Ciérrala desde la bandeja: **Salir**. |
 | Ctrl+C no copia mientras escribes un texto | Es intencional: dentro del cuadro de texto, Ctrl+C copia texto. Pulsa `Esc` primero. |
+
+## Privacidad
+
+Popete no envía datos a internet: las capturas, anotaciones y ajustes quedan en tu equipo. Detalles en la [política de privacidad](PRIVACIDAD.md).
