@@ -35,6 +35,9 @@ static class Theme
         };
     }
 
+    /// <summary>Pasa de claro a oscuro y viceversa (el botón de la barra). Deja de seguir a Windows.</summary>
+    public static void Toggle() => SetMode(IsDark ? ModoTema.Claro : ModoTema.Oscuro);
+
     public static void SetMode(ModoTema mode)
     {
         AppSettings.Current.Tema = mode;
@@ -60,19 +63,20 @@ static class Theme
         var r = Application.Current.Resources;
         if (IsDark)
         {
-            r["Fondo"] = Solid(0x20, 0x20, 0x20);
-            r["Superficie"] = Solid(0x2D, 0x2D, 0x30);
-            r["Borde"] = Solid(0x3A, 0x3A, 0x3F);
-            r["BordeFuerte"] = Solid(0x4D, 0x4D, 0x53);
+            // Gris medio, no negro: el lienzo es más claro que las barras para que la captura destaque
+            r["Fondo"] = Solid(0x26, 0x27, 0x2B);
+            r["Superficie"] = Solid(0x32, 0x33, 0x38);
+            r["Borde"] = Solid(0x3D, 0x3E, 0x44);
+            r["BordeFuerte"] = Solid(0x50, 0x52, 0x59);
             r["Texto"] = Solid(0xF3, 0xF3, 0xF3);
-            r["TextoSecundario"] = Solid(0xB4, 0xB4, 0xB8);
-            r["Icono"] = Solid(0xD6, 0xD6, 0xDA);
-            r["Hover"] = Solid(0x38, 0x38, 0x3C);
-            r["Seleccion"] = Solid(0x1F, 0x3A, 0x52);
+            r["TextoSecundario"] = Solid(0xB8, 0xB9, 0xBE);
+            r["Icono"] = Solid(0xD8, 0xD9, 0xDD);
+            r["Hover"] = Solid(0x3C, 0x3D, 0x43);
+            r["Seleccion"] = Solid(0x24, 0x40, 0x5A);
             r["Acento"] = Solid(0x60, 0xCD, 0xFF);
             r["TextoSobreAcento"] = Solid(0x0B, 0x1A, 0x26);
             r["Exito"] = Solid(0x6C, 0xCB, 0x5F);
-            r["Lienzo"] = DotGrid(Color.FromRgb(0x16, 0x16, 0x18), Color.FromRgb(0x2E, 0x2E, 0x33));
+            r["Lienzo"] = DotGrid(Color.FromRgb(0x38, 0x3A, 0x40), Color.FromRgb(0x4A, 0x4C, 0x53));
         }
         else
         {

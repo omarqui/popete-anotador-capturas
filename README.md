@@ -38,6 +38,7 @@ Todo se guarda automáticamente en el historial mientras editas.
 
 | Herramienta | Tecla | Notas |
 |---|---|---|
+| Seleccionar | `V` | Clic en un trazo para cambiarle color o grosor; `Supr` lo borra |
 | Lápiz | `P` | Trazo libre |
 | Resaltador | `H` | Semitransparente; tiene su propio color (amarillo por defecto) |
 | Línea | `L` | `Shift` para ángulos de 45° |
@@ -46,12 +47,24 @@ Todo se guarda automáticamente en el historial mientras editas.
 | Texto | `T` | Clic para escribir; `Esc` o clic fuera para terminar |
 | Borrador | `E` | Borra trazos completos |
 
-Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4 grosores, con las teclas `1` a `4`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo y se ve tanto en fondos claros como oscuros.
+Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4 grosores, con las teclas `1` a `4`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo, cuatro marcas de retícula y el grosor ("4 px"), y se ve tanto en fondos claros como oscuros.
+
+### Color principal y secundario
+
+Clic en un color elige el **principal**; clic derecho, el **secundario** (los dos se ven superpuestos al inicio de la paleta). Para dibujar rápido con el otro, **toca Alt** o haz **clic derecho sobre la imagen**: se intercambian. El lápiz y el resaltador tienen cada uno su par (rojo/azul y amarillo/verde por defecto).
+
+### Lo recién dibujado queda seleccionado
+
+Después de un trazo o una forma, queda marcado con un recuadro punteado: elegir un color o un grosor se le aplica, y `Supr` lo borra. Tocar Alt o el clic derecho **no** lo cambian (son para el próximo trazo). `Esc` quita la selección. Con **Seleccionar** (`V`) se puede elegir cualquier trazo anterior.
+
+### Dibujar fuera de la captura
+
+Alrededor de la captura hay un margen (marcado con una línea punteada) donde también se puede dibujar o escribir. Al copiar o guardar, la imagen crece lo justo para incluir lo que quede afuera, con fondo blanco. En el editor la captura se ve con esquinas redondeadas; la imagen que se copia queda rectangular.
 
 ### Tema y capturas recientes
 
-- El botón de la luna elige el tema: **Claro**, **Oscuro** o **Usar el tema de Windows** (por defecto). La elección se guarda en `%LOCALAPPDATA%\Popete\ajustes.json`.
-- El botón del reloj (o `Ctrl+H`) muestra una tira con las capturas recientes para abrir otra sin ir al historial. Siempre arranca oculta.
+- El botón de la luna/sol cambia entre tema **claro** y **oscuro**. Hasta que lo toques por primera vez, sigue al tema de Windows. La elección se guarda en `%LOCALAPPDATA%\Popete\ajustes.json`.
+- El botón del reloj (o `Ctrl+H`) muestra una tira con las capturas recientes para abrir otra sin ir al historial. Siempre arranca oculta. Cada miniatura tiene una **×** para eliminarla, y arriba están **Eliminar todas** y **Conservar las últimas N** (20, 50, 100, 200 o todas; 50 por defecto): las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.
 
 ### Atajos
 
@@ -62,10 +75,14 @@ Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |
+| `Shift+rueda` | Desplazar en horizontal |
+| `Alt` (tocar) o clic derecho en la imagen | Intercambiar color principal y secundario |
+| `Supr` | Borrar el trazo seleccionado |
 | `Ctrl+0` | Ajustar a la ventana |
 | `1` a `4` | Grosor: fino, medio, grueso, muy grueso |
+| `Tab` | Alternar entre lápiz y flecha |
 | `Ctrl+H` | Mostrar u ocultar las capturas recientes |
-| `Esc` | Cerrar el editor |
+| `Esc` | Quitar la selección; si no hay, cerrar el editor |
 
 ### Menú de la bandeja
 

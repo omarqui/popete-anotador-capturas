@@ -14,7 +14,9 @@ sealed partial class EditorWindow
     readonly TextBlock _saveText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
     readonly TextBlock _zoomText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, MinWidth = 44, TextAlignment = TextAlignment.Center };
     FrameworkElement _saveIcon;
+    System.Windows.Shapes.Ellipse _pairPrimary, _pairSecondary;
     ToggleButton _recentsButton;
+    Button _themeButton;
 
     // ------------------------------------------------------------------ barra de herramientas
     FrameworkElement BuildToolbar()
@@ -22,10 +24,11 @@ sealed partial class EditorWindow
         // Izquierda: se reparte en varias filas si la ventana es angosta.
         var left = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
         left.Children.Add(Ui.Group(
-            ToolButton(Icons.Pen, Tool.Pen, "Lápiz (P)"),
+            ToolButton(Icons.Select, Tool.Select, "Seleccionar (V) — clic en un trazo para cambiarle color o grosor; Supr lo borra"),
+            ToolButton(Icons.Pen, Tool.Pen, "Lápiz (P) — Tab alterna con la flecha"),
             ToolButton(Icons.Highlighter, Tool.Highlighter, "Resaltador (H)"),
             ToolButton(Icons.Line, Tool.Line, "Línea (L) — Shift: ángulos de 45°"),
-            ToolButton(Icons.Arrow, Tool.Arrow, "Flecha (A) — Shift: ángulos de 45°"),
+            ToolButton(Icons.Arrow, Tool.Arrow, "Flecha (A) — Shift: ángulos de 45°; Tab alterna con el lápiz"),
             ToolButton(Icons.Rectangle, Tool.Rectangle, "Rectángulo (R) — Shift: cuadrado"),
             ToolButton(Icons.Text, Tool.Text, "Texto (T) — clic para escribir"),
             ToolButton(Icons.Eraser, Tool.Eraser, "Borrador (E) — borra trazos completos")));
@@ -33,13 +36,16 @@ sealed partial class EditorWindow
         left.Children.Add(Ui.Divider());
 
         var colors = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        colors.Children.Add(BuildColorPair());
         foreach (var (c, name) in Palette)
         {
-            var sw = new ToggleButton { Background = new SolidColorBrush(c), ToolTip = name };
+            var tip = $"{name} — clic: principal · clic derecho: secundario";
+            var sw = new ToggleButton { Background = new SolidColorBrush(c), ToolTip = tip };
             System.Windows.Automation.AutomationProperties.SetName(sw, name);
             sw.SetResourceReference(StyleProperty, "EstiloMuestra");
             var color = c;
             sw.Click += (s, e) => SetColor(color);
+            sw.MouseRightButtonUp += (s, e) => { SetSecondaryColor(color); e.Handled = true; };
             _swatches.Add((sw, c));
             colors.Children.Add(sw);
         }
@@ -89,17 +95,19 @@ sealed partial class EditorWindow
         _recentsButton.Click += (s, e) => ToggleRecents(_recentsButton.IsChecked == true);
         right.Children.Add(_recentsButton);
 
-        Button themeButton = null;
-        themeButton = Ui.IconBtn(Icons.Theme, "Tema: claro, oscuro o el de Windows", () => ShowThemeMenu(themeButton));
-        right.Children.Add(themeButton);
+        _themeButton = Ui.IconBtn(Icons.Theme, "", Theme.Toggle);
+        UpdateThemeButton();
+        // El ícono muestra el tema al que se pasa: luna en claro, sol en oscuro
+        Action onThemeChanged = UpdateThemeButton;
+        Theme.Changed += onThemeChanged;
+        Closed += (s, e) => Theme.Changed -= onThemeChanged;
+        right.Children.Add(_themeButton);
 
         right.Children.Add(Ui.Divider());
 
-        var save = Ui.Btn("Guardar", "Guardar como PNG o JPG (Ctrl+S)", Save, Icons.Save);
-        save.Margin = new Thickness(0, 0, 8, 0);
-        right.Children.Add(save);
-
-        var copy = Ui.Btn("Copiar", "Copiar la imagen anotada sin cerrar", () => CopyToClipboard(), Icons.Copy);
+        // Solo ícono para que la barra quepa en una fila; el texto va en el tooltip
+        right.Children.Add(Ui.IconBtn(Icons.Save, "Guardar como PNG o JPG (Ctrl+S)", Save));
+        var copy = Ui.IconBtn(Icons.Copy, "Copiar la imagen anotada sin cerrar", () => CopyToClipboard());
         copy.Margin = new Thickness(0, 0, 8, 0);
         right.Children.Add(copy);
 
@@ -137,22 +145,12 @@ sealed partial class EditorWindow
         return b;
     }
 
-    void ShowThemeMenu(Button target)
+    void UpdateThemeButton()
     {
-        var menu = new ContextMenu { PlacementTarget = target, Placement = PlacementMode.Bottom };
-        foreach (var (mode, text) in new[]
-        {
-            (ModoTema.Sistema, "Usar el tema de Windows"),
-            (ModoTema.Claro, "Claro"),
-            (ModoTema.Oscuro, "Oscuro"),
-        })
-        {
-            var item = new MenuItem { Header = text, IsCheckable = true, IsChecked = AppSettings.Current.Tema == mode };
-            var m = mode;
-            item.Click += (s, e) => Theme.SetMode(m);
-            menu.Items.Add(item);
-        }
-        menu.IsOpen = true;
+        _themeButton.Content = Ui.Icon(Theme.IsDark ? Icons.Sun : Icons.Theme);
+        var tip = Theme.IsDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
+        _themeButton.ToolTip = tip;
+        System.Windows.Automation.AutomationProperties.SetName(_themeButton, tip);
     }
 
     // ------------------------------------------------------------------ barra de estado
@@ -170,7 +168,7 @@ sealed partial class EditorWindow
         left.Children.Add(_status);
 
         var hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–4", "Grosor"), ("Ctrl+rueda", "Zoom") })
+        foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–4", "Grosor"), ("Alt / clic der.", "Otro color"), ("Supr", "Borrar selección") })
         {
             hints.Children.Add(Ui.Keycap(key));
             var t = new TextBlock { Text = text, Margin = new Thickness(6, 0, 14, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -210,6 +208,9 @@ sealed partial class EditorWindow
         _tool = t;
         foreach (var kv in _toolButtons) kv.Value.IsChecked = kv.Key == t;
 
+        // Elegir una herramienta de dibujo es para dibujar algo nuevo: se suelta la selección
+        if (t != Tool.Select) ClearSelection();
+
         _ink.EditingMode = t switch
         {
             Tool.Pen or Tool.Highlighter => InkCanvasEditingMode.Ink,
@@ -217,21 +218,61 @@ sealed partial class EditorWindow
             _ => InkCanvasEditingMode.None,
         };
         // El puntero del sistema se oculta: lo reemplaza el de EditorWindow.Pointer.cs.
+        // Seleccionar usa la flecha normal.
         _ink.UseCustomCursor = true;
-        _ink.Cursor = Cursors.None;
+        _ink.Cursor = t == Tool.Select ? Cursors.Arrow : Cursors.None;
 
         RefreshSwatches();
         UpdateDrawingAttributes();
         UpdatePointer();
     }
 
-    void SetColor(Color color)
+    /// <param name="applyToSelection">Si hay trazos seleccionados, también se pintan (no al intercambiar con Alt).</param>
+    void SetColor(Color color, bool applyToSelection = true)
     {
         CurrentColor = color;
         RefreshSwatches();
         UpdateDrawingAttributes();
         if (_editing != null) _editing.Foreground = new SolidColorBrush(color);
+        if (applyToSelection) ApplyColorToSelection(color);
         UpdatePointer();
+    }
+
+    void SetSecondaryColor(Color color)
+    {
+        SecondaryColor = color;
+        RefreshSwatches();
+    }
+
+    /// <summary>Intercambia principal y secundario (tocar Alt o clic en el par de colores).</summary>
+    void SwapColors()
+    {
+        (CurrentColor, SecondaryColor) = (SecondaryColor, CurrentColor);
+        SetColor(CurrentColor, applyToSelection: false); // es para el próximo trazo, no para el anterior
+    }
+
+    /// <summary>Dos círculos superpuestos: principal adelante, secundario atrás. Clic: intercambiar.</summary>
+    FrameworkElement BuildColorPair()
+    {
+        System.Windows.Shapes.Ellipse Circle(double size, Thickness margin, HorizontalAlignment h, VerticalAlignment v)
+        {
+            var e = new System.Windows.Shapes.Ellipse { Width = size, Height = size, StrokeThickness = 2, Margin = margin, HorizontalAlignment = h, VerticalAlignment = v };
+            e.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Fondo"); // separa los dos círculos
+            return e;
+        }
+        _pairSecondary = Circle(18, new Thickness(0, 0, 2, 2), HorizontalAlignment.Right, VerticalAlignment.Bottom);
+        _pairPrimary = Circle(20, new Thickness(2, 2, 0, 0), HorizontalAlignment.Left, VerticalAlignment.Top);
+
+        var grid = new Grid { Width = 32, Height = 32 };
+        grid.Children.Add(_pairSecondary);
+        grid.Children.Add(_pairPrimary);
+
+        var tip = "Color principal y secundario — Alt, clic derecho en la imagen o clic aquí para intercambiar";
+        var b = new Button { Content = grid, ToolTip = tip, Margin = new Thickness(0, 0, 6, 0) };
+        System.Windows.Automation.AutomationProperties.SetName(b, tip);
+        b.SetResourceReference(StyleProperty, "EstiloIcono");
+        b.Click += (s, e) => SwapColors();
+        return b;
     }
 
     void SetSize(double size)
@@ -240,6 +281,7 @@ sealed partial class EditorWindow
         RefreshSizes();
         UpdateDrawingAttributes();
         if (_editing != null) _editing.FontSize = FontSizeFor(_size);
+        ApplySizeToSelection(_size);
         UpdatePointer();
     }
 
@@ -247,6 +289,8 @@ sealed partial class EditorWindow
     {
         var current = CurrentColor;
         foreach (var (b, c) in _swatches) b.IsChecked = c == current;
+        _pairPrimary.Fill = new SolidColorBrush(current);
+        _pairSecondary.Fill = new SolidColorBrush(SecondaryColor);
     }
 
     void RefreshSizes()

@@ -6,6 +6,14 @@ sealed partial class EditorWindow
     // ------------------------------------------------------------------ formas (línea, flecha, rectángulo) y texto
     void Ink_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (_tool == Tool.Select)
+        {
+            SelectAt(e.GetPosition(_ink));
+            e.Handled = true;
+            return;
+        }
+        ClearSelection(); // empieza algo nuevo: lo anterior deja de estar seleccionado
+
         if (_tool == Tool.Text)
         {
             CommitText();
@@ -49,6 +57,7 @@ sealed partial class EditorWindow
         else
         {
             PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
+            SelectStrokes(new StrokeCollection { stroke }); // queda seleccionada para cambiarle color o grosor
         }
         e.Handled = true;
     }

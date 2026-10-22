@@ -102,6 +102,7 @@ static class Ui
 /// <summary>Íconos de trazo (sintaxis de Path de WPF, grilla de 24×24).</summary>
 static class Icons
 {
+    public const string Select = "M6 3 L6 18 L10 14 L13 20.5 L15.5 19.5 L12.5 13 L18 13 Z";
     public const string Pen = "M4 20 L8 19 L19 8 L16 5 L5 16 Z M14 7 L17 10";
     public const string Highlighter = "M9 14 L15 4 L19 7 L12 16 Z M9 14 L8 17 L11 18 L12 16 M4 21 H12";
     public const string Line = "M5 19 L19 5";
@@ -115,6 +116,7 @@ static class Icons
     public const string Copy = "M10 8 H18 A2 2 0 0 1 20 10 V18 A2 2 0 0 1 18 20 H10 A2 2 0 0 1 8 18 V10 A2 2 0 0 1 10 8 Z M16 8 V5 A1 1 0 0 0 15 4 H5 A1 1 0 0 0 4 5 V15 A1 1 0 0 0 5 16 H8";
     public const string Check = "M5 12 L10 17 L19 7";
     public const string Theme = "M20 14.5 A8 8 0 1 1 9.5 4 A6.5 6.5 0 0 0 20 14.5 Z";
+    public const string Sun = "M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z M12 2 V4 M12 20 V22 M2 12 H4 M20 12 H22 M4.9 4.9 L6.3 6.3 M17.7 17.7 L19.1 19.1 M4.9 19.1 L6.3 17.7 M17.7 6.3 L19.1 4.9";
     public const string Recents = "M3 12 A9 9 0 1 0 6 5.3 M3 4 V8 H7 M12 7 V12 L15 14";
     public const string Close = "M6 6 L18 18 M18 6 L6 18";
     public const string Refresh = "M20 11 A8 8 0 1 0 18 17 M20 5 V11 H14";

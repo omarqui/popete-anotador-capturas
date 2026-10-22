@@ -19,6 +19,17 @@ sealed class StrokeChange : IUndo
     }
 }
 
+/// <summary>Cambio de color o grosor de trazos ya dibujados.</summary>
+sealed class AttributeChange : IUndo
+{
+    readonly List<(Stroke stroke, DrawingAttributes before)> _items;
+    public AttributeChange(List<(Stroke, DrawingAttributes)> items) { _items = items; }
+    public void Undo()
+    {
+        foreach (var (stroke, before) in _items) stroke.DrawingAttributes = before;
+    }
+}
+
 sealed class ElementAdd : IUndo
 {
     readonly Panel _panel; readonly UIElement _element;

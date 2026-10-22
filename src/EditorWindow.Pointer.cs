@@ -3,8 +3,10 @@
 //
 //  El cursor del sistema se oculta sobre la imagen y se dibuja uno en una capa
 //  encima del lienzo (fuera de _surface: no sale en la imagen exportada).
-//  Todas las formas llevan doble contorno, blanco debajo y casi negro encima,
-//  para que se vean sobre cualquier fondo. El tamaño sigue al grosor y al zoom.
+//  Estilo "halo y retícula" (propuesta B del canvas): anillo del tamaño real
+//  del trazo en el color actual con halo, cuatro marcas de retícula y etiqueta
+//  de grosor. Todo lleva contraste claro y oscuro para verse sobre cualquier
+//  fondo. El tamaño sigue al grosor y al zoom.
 // ----------------------------------------------------------------------------
 sealed partial class EditorWindow
 {
@@ -47,30 +49,36 @@ sealed partial class EditorWindow
     {
         double z = _zoom.ScaleX;
         var color = CurrentColor;
-        var tint = Freeze(new SolidColorBrush(Color.FromArgb(90, color.R, color.G, color.B)));
         var c = new Canvas();
 
         switch (_tool)
         {
+            case Tool.Select:
+                hot = new Point(0, 0); // usa la flecha del sistema
+                break;
             case Tool.Pen:
             {
-                // Anillo del tamaño real del trazo, relleno con el color actual
-                double d = Math.Max(6, _size * z), box = d + 6;
+                // Anillo del tamaño real del trazo en el color actual, con halo, retícula y grosor
+                double d = Math.Max(10, _size * z), box = d + 28;
                 c.Width = c.Height = box;
                 hot = new Point(box / 2, box / 2);
-                Outlined(c, new EllipseGeometry(hot, d / 2, d / 2), tint);
+                Haloed(c, new EllipseGeometry(hot, d / 2, d / 2), color);
+                Ticks(c, hot, d / 2 + 3, d / 2 + 10);
                 Outlined(c, new EllipseGeometry(hot, 1, 1), PointerDark, 1);
+                SizeLabel(c, hot.X + d / 2 + 4, hot.Y + d / 2 + 2);
                 break;
             }
             case Tool.Highlighter:
             {
-                // Rectángulo de la punta del resaltador
+                // Rectángulo de la punta del resaltador en el color actual, con halo, retícula y grosor
                 var a = MakeAttributes();
-                double w = Math.Max(4, a.Width * z), h = Math.Max(8, a.Height * z);
-                c.Width = w + 6;
-                c.Height = h + 6;
+                double w = Math.Max(6, a.Width * z), h = Math.Max(10, a.Height * z);
+                c.Width = w + 28;
+                c.Height = h + 28;
                 hot = new Point(c.Width / 2, c.Height / 2);
-                Outlined(c, new RectangleGeometry(new Rect(3, 3, w, h), 1.5, 1.5), tint);
+                Haloed(c, new RectangleGeometry(new Rect(hot.X - w / 2, hot.Y - h / 2, w, h), 1.5, 1.5), color);
+                Ticks(c, hot, w / 2 + 3, w / 2 + 10, h / 2 + 3, h / 2 + 10);
+                SizeLabel(c, hot.X + w / 2 + 4, hot.Y + h / 2 + 2);
                 break;
             }
             case Tool.Text:
@@ -101,25 +109,80 @@ sealed partial class EditorWindow
             default:
             {
                 // Línea, flecha y rectángulo: retícula con hueco central y punto del color actual
-                c.Width = c.Height = 26;
-                hot = new Point(13, 13);
-                var g = new GeometryGroup();
-                g.Children.Add(new LineGeometry(new Point(13, 1), new Point(13, 8)));
-                g.Children.Add(new LineGeometry(new Point(13, 18), new Point(13, 25)));
-                g.Children.Add(new LineGeometry(new Point(1, 13), new Point(8, 13)));
-                g.Children.Add(new LineGeometry(new Point(18, 13), new Point(25, 13)));
-                Outlined(c, g, null);
+                c.Width = c.Height = 34;
+                hot = new Point(17, 17);
+                Ticks(c, hot, 5, 15);
                 c.Children.Add(new System.Windows.Shapes.Path
                 {
-                    Data = new EllipseGeometry(hot, 2.5, 2.5),
+                    Data = new EllipseGeometry(hot, 3, 3),
                     Fill = Freeze(new SolidColorBrush(color)),
-                    Stroke = PointerLight,
-                    StrokeThickness = 1,
+                    Stroke = PointerDark,
+                    StrokeThickness = 1.25,
                 });
                 break;
             }
         }
         return c;
+    }
+
+    static readonly Brush HaloBrush = Freeze(new SolidColorBrush(Color.FromArgb(200, 17, 17, 17)));
+
+    /// <summary>
+    /// Contorno en el color actual con halo: blanco por fuera, oscuro en medio y el color encima.
+    /// Se ve sobre fondos claros (por el halo oscuro) y oscuros (por el blanco).
+    /// </summary>
+    static void Haloed(Canvas c, Geometry g, Color color)
+    {
+        g.Freeze();
+        foreach (var (brush, thickness) in new (Brush, double)[]
+        {
+            (Freeze(new SolidColorBrush(Color.FromArgb(150, 255, 255, 255))), 6.5),
+            (HaloBrush, 4.5),
+            (Freeze(new SolidColorBrush(color)), 2.5),
+        })
+            c.Children.Add(new System.Windows.Shapes.Path { Data = g, Stroke = brush, StrokeThickness = thickness });
+    }
+
+    /// <summary>Cuatro marcas de retícula alrededor de <paramref name="hot"/>: blancas con borde oscuro.</summary>
+    static void Ticks(Canvas c, Point hot, double fromX, double toX, double fromY = -1, double toY = -1)
+    {
+        if (fromY < 0) { fromY = fromX; toY = toX; }
+        var g = new GeometryGroup();
+        g.Children.Add(new LineGeometry(new Point(hot.X, hot.Y - toY), new Point(hot.X, hot.Y - fromY)));
+        g.Children.Add(new LineGeometry(new Point(hot.X, hot.Y + fromY), new Point(hot.X, hot.Y + toY)));
+        g.Children.Add(new LineGeometry(new Point(hot.X - toX, hot.Y), new Point(hot.X - fromX, hot.Y)));
+        g.Children.Add(new LineGeometry(new Point(hot.X + fromX, hot.Y), new Point(hot.X + toX, hot.Y)));
+        g.Freeze();
+        foreach (var (brush, thickness) in new[] { (HaloBrush, 3.5), (PointerLight, 1.5) })
+            c.Children.Add(new System.Windows.Shapes.Path
+            {
+                Data = g,
+                Stroke = brush,
+                StrokeThickness = thickness,
+                StrokeStartLineCap = PenLineCap.Round,
+                StrokeEndLineCap = PenLineCap.Round,
+            });
+    }
+
+    /// <summary>Etiqueta con el grosor actual ("4 px"), abajo a la derecha del puntero.</summary>
+    void SizeLabel(Canvas c, double x, double y)
+    {
+        var label = new Border
+        {
+            Background = HaloBrush,
+            CornerRadius = new CornerRadius(4),
+            Padding = new Thickness(5, 1, 5, 2),
+            Child = new TextBlock
+            {
+                Text = $"{_size} px",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = PointerLight,
+            },
+        };
+        Canvas.SetLeft(label, x);
+        Canvas.SetTop(label, y);
+        c.Children.Add(label);
     }
 
     /// <summary>Agrega una figura con doble contorno: blanco grueso debajo, oscuro fino encima.</summary>

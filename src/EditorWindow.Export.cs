@@ -4,19 +4,56 @@
 sealed partial class EditorWindow
 {
     // ------------------------------------------------------------------ exportar
+    /// <summary>Espacio extra alrededor de lo que sale de la captura, para que no quede pegado al borde.</summary>
+    const double ExportBreathing = 12;
+
+    /// <summary>
+    /// Zona a exportar, en coordenadas de la tabla: la captura, agrandada lo justo
+    /// para incluir trazos y textos que salen de ella.
+    /// </summary>
+    Rect ExportBounds()
+    {
+        var capture = new Rect(_pad, _pad, _image.PixelWidth, _image.PixelHeight);
+        var all = capture;
+        if (_ink.Strokes.Count > 0) all.Union(_ink.Strokes.GetBounds());
+        foreach (var tb in _textLayer.Children.OfType<TextBlock>())
+            all.Union(new Rect(Canvas.GetLeft(tb), Canvas.GetTop(tb), tb.ActualWidth, tb.ActualHeight));
+
+        double left = all.Left < capture.Left ? all.Left - ExportBreathing : capture.Left;
+        double top = all.Top < capture.Top ? all.Top - ExportBreathing : capture.Top;
+        double right = all.Right > capture.Right ? all.Right + ExportBreathing : capture.Right;
+        double bottom = all.Bottom > capture.Bottom ? all.Bottom + ExportBreathing : capture.Bottom;
+
+        // Enteros (para no partir píxeles de la captura) y dentro de la tabla
+        left = Math.Max(0, Math.Floor(left));
+        top = Math.Max(0, Math.Floor(top));
+        right = Math.Min(_surface.Width, Math.Ceiling(right));
+        bottom = Math.Min(_surface.Height, Math.Ceiling(bottom));
+        return new Rect(left, top, right - left, bottom - top);
+    }
+
+    /// <summary>
+    /// Imagen final: la captura original (sin las esquinas redondeadas del editor) y
+    /// las anotaciones encima. Si algo sale de la captura, el espacio nuevo es blanco.
+    /// </summary>
     BitmapSource Render()
     {
-        int w = _image.PixelWidth, h = _image.PixelHeight;
+        var b = ExportBounds();
+        int w = (int)b.Width, h = (int)b.Height;
+        bool expanded = w != _image.PixelWidth || h != _image.PixelHeight;
+
         var dv = new DrawingVisual();
         using (var dc = dv.RenderOpen())
         {
-            var brush = new VisualBrush(_surface)
+            if (expanded) dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, w, h));
+            dc.DrawImage(_image, new Rect(_pad - b.X, _pad - b.Y, _image.PixelWidth, _image.PixelHeight));
+            var annotations = new VisualBrush(_surface)
             {
                 Stretch = Stretch.Fill,
                 ViewboxUnits = BrushMappingMode.Absolute,
-                Viewbox = new Rect(0, 0, w, h),
+                Viewbox = b,
             };
-            dc.DrawRectangle(brush, null, new Rect(0, 0, w, h));
+            dc.DrawRectangle(annotations, null, new Rect(0, 0, w, h));
         }
         var rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
         rtb.Render(dv);
