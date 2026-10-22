@@ -31,7 +31,8 @@ sealed partial class EditorWindow
             ToolButton(Icons.Arrow, Tool.Arrow, "Flecha (A) — Shift: ángulos de 45°; Tab alterna con el lápiz"),
             ToolButton(Icons.Rectangle, Tool.Rectangle, "Rectángulo (R) — Shift: cuadrado"),
             ToolButton(Icons.Text, Tool.Text, "Texto (T) — clic para escribir"),
-            ToolButton(Icons.Eraser, Tool.Eraser, "Borrador (E) — borra trazos completos")));
+            ToolButton(Icons.Eraser, Tool.Eraser, "Borrador (E) — borra trazos completos"),
+            ToolButton(Icons.Crop, Tool.Crop, "Recortar (C) — arrastra sobre la captura; Ctrl+Z lo deshace")));
 
         left.Children.Add(Ui.Divider());
 
@@ -83,7 +84,18 @@ sealed partial class EditorWindow
 
         var edit = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         edit.Children.Add(Ui.IconBtn(Icons.Undo, "Deshacer (Ctrl+Z)", Undo));
+        edit.Children.Add(Ui.IconBtn(Icons.Redo, "Rehacer (Ctrl+Y)", Redo));
         edit.Children.Add(Ui.IconBtn(Icons.Trash, "Quitar todas las anotaciones", ClearAll));
+
+        _numbersButton = new ToggleButton
+        {
+            Content = new TextBlock { Text = "123", FontSize = 12, FontWeight = FontWeights.Bold },
+            ToolTip = "Numerar trazos y textos (N)",
+        };
+        System.Windows.Automation.AutomationProperties.SetName(_numbersButton, "Numerar trazos y textos");
+        _numbersButton.SetResourceReference(StyleProperty, "EstiloHerramienta");
+        _numbersButton.Click += (s, e) => ToggleNumbers();
+        edit.Children.Add(_numbersButton);
         left.Children.Add(edit);
 
         // Derecha: vista y acciones finales.
@@ -182,6 +194,15 @@ sealed partial class EditorWindow
         zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => SetZoom(_zoom.ScaleX * 1.15), style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "EstiloPlano"));
+        var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(this));
+        settings.Width = settings.Height = 28;
+        settings.Margin = new Thickness(6, 0, 0, 0);
+        zoom.Children.Add(settings);
+
+        _uncropButton = Ui.Btn("Quitar recorte", "Volver a la captura completa (se puede deshacer)", RemoveCrop, Icons.Crop, "EstiloPlano");
+        _uncropButton.Margin = new Thickness(0, 0, 8, 0);
+        _uncropButton.Visibility = IsCropped ? Visibility.Visible : Visibility.Collapsed;
+        zoom.Children.Insert(0, _uncropButton);
 
         var bar = new DockPanel { Margin = new Thickness(12, 0, 8, 0), Height = 32, LastChildFill = true };
         DockPanel.SetDock(left, Dock.Left);

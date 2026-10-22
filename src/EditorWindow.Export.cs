@@ -13,11 +13,13 @@ sealed partial class EditorWindow
     /// </summary>
     Rect ExportBounds()
     {
-        var capture = new Rect(_pad, _pad, _image.PixelWidth, _image.PixelHeight);
+        var capture = VisibleRect;
         var all = capture;
         if (_ink.Strokes.Count > 0) all.Union(_ink.Strokes.GetBounds());
         foreach (var tb in _textLayer.Children.OfType<TextBlock>())
             all.Union(new Rect(Canvas.GetLeft(tb), Canvas.GetTop(tb), tb.ActualWidth, tb.ActualHeight));
+        foreach (FrameworkElement badge in _numbersLayer.Children)
+            all.Union(new Rect(Canvas.GetLeft(badge), Canvas.GetTop(badge), badge.Width, badge.Height));
 
         double left = all.Left < capture.Left ? all.Left - ExportBreathing : capture.Left;
         double top = all.Top < capture.Top ? all.Top - ExportBreathing : capture.Top;
@@ -46,7 +48,8 @@ sealed partial class EditorWindow
         using (var dc = dv.RenderOpen())
         {
             if (expanded) dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, w, h));
-            dc.DrawImage(_image, new Rect(_pad - b.X, _pad - b.Y, _image.PixelWidth, _image.PixelHeight));
+            var v = VisibleRect;
+            dc.DrawImage(_image, new Rect(v.X - b.X, v.Y - b.Y, v.Width, v.Height));
             var annotations = new VisualBrush(_surface)
             {
                 Stretch = Stretch.Fill,
@@ -136,7 +139,7 @@ sealed partial class EditorWindow
         {
             Filter = "Imagen PNG (*.png)|*.png|Imagen JPEG (*.jpg)|*.jpg",
             FileName = $"Captura {DateTime.Now:yyyy-MM-dd HHmmss}.png",
-            InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            InitialDirectory = AppSettings.Current.CarpetaGuardarEfectiva,
         };
         if (dlg.ShowDialog(this) != true) return;
 

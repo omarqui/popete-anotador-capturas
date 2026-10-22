@@ -154,7 +154,7 @@ static class Theme
 
           <!-- Herramienta: ícono con fondo resaltado e indicador inferior cuando está activa -->
           <Style x:Key="EstiloHerramienta" TargetType="ToggleButton">
-            <Setter Property="Width" Value="40"/>
+            <Setter Property="Width" Value="36"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -212,14 +212,14 @@ static class Theme
 
           <!-- Muestra de color: círculo con anillo de acento cuando está elegida -->
           <Style x:Key="EstiloMuestra" TargetType="ToggleButton">
-            <Setter Property="Width" Value="30"/>
+            <Setter Property="Width" Value="28"/>
             <Setter Property="Height" Value="30"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Template">
               <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
                   <Grid Background="Transparent">
-                    <Ellipse x:Name="ring" Width="28" Height="28" StrokeThickness="2"
+                    <Ellipse x:Name="ring" Width="26" Height="26" StrokeThickness="2"
                              Stroke="{DynamicResource Acento}" Visibility="Hidden"/>
                     <Ellipse Width="20" Height="20" Fill="{TemplateBinding Background}"
                              Stroke="{DynamicResource BordeFuerte}" StrokeThickness="1"/>

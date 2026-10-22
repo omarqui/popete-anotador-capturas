@@ -13,6 +13,24 @@ sealed class AppSettings
 
     public static readonly int[] MaxCapturasOpciones = { 20, 50, 100, 200, 0 };
 
+    /// <summary>Segundos que el trazo recién dibujado queda seleccionado. 0 = no se selecciona.</summary>
+    public int SegundosSeleccion { get; set; } = 3;
+
+    /// <summary>Si las capturas nuevas numeran sus trazos y textos (cada captura puede cambiarlo con su botón).</summary>
+    public bool NumerarPorDefecto { get; set; } = true;
+
+    /// <summary>Grosor con el que abre el editor.</summary>
+    public double GrosorInicial { get; set; } = 4;
+
+    /// <summary>Carpeta que propone "Guardar como"; null = Imágenes.</summary>
+    public string CarpetaGuardar { get; set; }
+
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string CarpetaGuardarEfectiva =>
+        !string.IsNullOrEmpty(CarpetaGuardar) && Directory.Exists(CarpetaGuardar)
+            ? CarpetaGuardar
+            : Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+
     static readonly string FilePath = Path.Combine(AppInfo.DataRoot, "ajustes.json");
 
     static readonly JsonSerializerOptions Options = new JsonSerializerOptions

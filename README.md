@@ -46,6 +46,7 @@ Todo se guarda automáticamente en el historial mientras editas.
 | Rectángulo | `R` | `Shift` para cuadrado |
 | Texto | `T` | Clic para escribir; `Esc` o clic fuera para terminar |
 | Borrador | `E` | Borra trazos completos |
+| Recortar | `C` | Arrastra sobre la captura; ver «Recortar» más abajo |
 
 Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4 grosores, con las teclas `1` a `4`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo, cuatro marcas de retícula y el grosor ("4 px"), y se ve tanto en fondos claros como oscuros.
 
@@ -55,7 +56,23 @@ Clic en un color elige el **principal**; clic derecho, el **secundario** (los do
 
 ### Lo recién dibujado queda seleccionado
 
-Después de un trazo o una forma, queda marcado con un recuadro punteado: elegir un color o un grosor se le aplica, y `Supr` lo borra. Tocar Alt o el clic derecho **no** lo cambian (son para el próximo trazo). `Esc` quita la selección. Con **Seleccionar** (`V`) se puede elegir cualquier trazo anterior.
+Después de un trazo o una forma, queda marcado unos segundos con un recuadro punteado (3 por defecto; se cambia en Ajustes): elegir un color o un grosor se le aplica, y `Supr` lo borra. Cada retoque reinicia la cuenta. Tocar Alt o el clic derecho **no** lo cambian (son para el próximo trazo). `Esc` quita la selección. Con **Seleccionar** (`V`) se puede elegir cualquier trazo anterior, y queda seleccionado hasta que lo sueltes.
+
+### Numeración automática
+
+Cada trazo y cada texto lleva un círculo con su número, en el color del trazo, pegado a donde empieza (en una flecha, en la cola). Si borras uno, los demás se renumeran. Sale en la imagen copiada. El botón **123** (o `N`) la prende o apaga en cada captura; el valor inicial se elige en Ajustes.
+
+### Corregir un texto
+
+Doble clic sobre un texto lo vuelve a abrir para editarlo, con el cursor al final. Si lo dejas vacío, se borra. Se deshace con Ctrl+Z.
+
+### Recortar
+
+Con **Recortar** (`C`) arrastra un rectángulo sobre la captura. Lo dibujado que quede totalmente afuera se borra; lo que cruza el borde se mantiene. La captura original no se toca: **Quitar recorte** (en la barra de estado) vuelve a la imagen completa, y Ctrl+Z / Ctrl+Y deshacen y rehacen el recorte.
+
+### Ajustes
+
+Botón de ajustes en la barra de estado, `Ctrl+,` o **Ajustes…** en la bandeja. Tema, numeración por defecto, segundos de selección, grosor inicial, carpeta de «Guardar», cuántas capturas conservar e iniciar con Windows. Los cambios se guardan al tocarlos.
 
 ### Dibujar fuera de la captura
 
@@ -74,6 +91,9 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 | `Ctrl+Enter` | Copiar y cerrar (sin esperar el parpadeo) |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
+| `Ctrl+Y` o `Ctrl+Shift+Z` | Rehacer |
+| `N` | Prender o apagar la numeración |
+| `Ctrl+,` | Ajustes |
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |
 | `Shift+rueda` | Desplazar en horizontal |
 | `Alt` (tocar) o clic derecho en la imagen | Intercambiar color principal y secundario |

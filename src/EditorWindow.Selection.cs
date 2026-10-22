@@ -1,8 +1,9 @@
 // ----------------------------------------------------------------------------
 //  Editor — selección de trazos
 //
-//  El trazo o la forma recién dibujados quedan seleccionados: elegir un color
-//  o un grosor (clic o teclas 1–4) se aplica a la selección, y Supr la borra.
+//  El trazo o la forma recién dibujados quedan seleccionados unos segundos
+//  (ajustable; cada retoque reinicia la cuenta): elegir un color o un grosor
+//  (clic o teclas 1–4) se aplica a la selección, y Supr la borra.
 //  Con la herramienta Seleccionar (V) se elige cualquier trazo con un clic.
 //  Tocar Alt o clic derecho NO cambia la selección: sirven para dibujar el
 //  siguiente en el otro color. Esc quita la selección (y con nada seleccionado cierra).
@@ -14,10 +15,12 @@ sealed partial class EditorWindow
 {
     StrokeCollection _selection = new StrokeCollection();
     Canvas _selectionLayer;
+    DispatcherTimer _selectionTimer;
+    bool _selectionAuto;   // la puso el dibujo (se suelta sola), no la herramienta Seleccionar
 
-    Canvas BuildSelectionLayer(double width, double height)
+    Canvas BuildSelectionLayer()
     {
-        _selectionLayer = new Canvas { Width = width, Height = height, IsHitTestVisible = false };
+        _selectionLayer = new Canvas { IsHitTestVisible = false };
         // Si un trazo seleccionado desaparece (deshacer, borrador, limpiar), sale de la selección
         _ink.Strokes.StrokesChanged += (s, e) =>
         {
@@ -29,10 +32,30 @@ sealed partial class EditorWindow
 
     bool HasSelection => _selection.Count > 0;
 
-    void SelectStrokes(StrokeCollection strokes)
+    /// <param name="auto">
+    /// true cuando la selección la pone el dibujo recién hecho: se suelta sola a los
+    /// <see cref="AppSettings.SegundosSeleccion"/> segundos (0 = no se selecciona).
+    /// </param>
+    void SelectStrokes(StrokeCollection strokes, bool auto = false)
     {
+        if (auto && AppSettings.Current.SegundosSeleccion <= 0) strokes = null;
         _selection = strokes ?? new StrokeCollection();
+        _selectionAuto = auto && HasSelection;
         UpdateSelectionVisual();
+        RestartSelectionTimer();
+    }
+
+    void RestartSelectionTimer()
+    {
+        if (_selectionTimer == null)
+        {
+            _selectionTimer = new DispatcherTimer();
+            _selectionTimer.Tick += (s, e) => { _selectionTimer.Stop(); ClearSelection(); };
+        }
+        _selectionTimer.Stop();
+        if (!_selectionAuto) return;
+        _selectionTimer.Interval = TimeSpan.FromSeconds(AppSettings.Current.SegundosSeleccion);
+        _selectionTimer.Start();
     }
 
     void ClearSelection()
@@ -69,15 +92,17 @@ sealed partial class EditorWindow
     void ApplyToSelection(Action<DrawingAttributes> change)
     {
         if (!HasSelection) return;
-        var before = new List<(Stroke, DrawingAttributes)>();
+        var items = new List<(Stroke, DrawingAttributes, DrawingAttributes)>();
         foreach (var s in _selection)
         {
-            before.Add((s, s.DrawingAttributes.Clone()));
-            var da = s.DrawingAttributes.Clone();
-            change(da);
-            s.DrawingAttributes = da;
+            var before = s.DrawingAttributes.Clone();
+            var after = s.DrawingAttributes.Clone();
+            change(after);
+            s.DrawingAttributes = after;
+            items.Add((s, before, after));
         }
-        PushUndo(new AttributeChange(before));
+        PushUndo(new AttributeChange(items));
+        RestartSelectionTimer(); // mientras se la retoca, la selección no se suelta
         UpdateSelectionVisual(); // el grosor cambia el recuadro
     }
 

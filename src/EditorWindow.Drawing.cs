@@ -14,6 +14,12 @@ sealed partial class EditorWindow
         }
         ClearSelection(); // empieza algo nuevo: lo anterior deja de estar seleccionado
 
+        if (CropMouseDown(e.GetPosition(_ink)))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (_tool == Tool.Text)
         {
             CommitText();
@@ -34,6 +40,7 @@ sealed partial class EditorWindow
 
     void Ink_MouseMove(object sender, MouseEventArgs e)
     {
+        if (CropMouseMove(e.GetPosition(_ink))) return;
         if (_preview == null) return;
         var p = e.GetPosition(_ink);
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) p = Constrain(_start, p);
@@ -42,6 +49,11 @@ sealed partial class EditorWindow
 
     void Ink_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (CropMouseUp(e.GetPosition(_ink)))
+        {
+            e.Handled = true;
+            return;
+        }
         if (_preview == null) return;
         _ink.ReleaseMouseCapture();
         var stroke = _preview;
@@ -57,7 +69,7 @@ sealed partial class EditorWindow
         else
         {
             PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
-            SelectStrokes(new StrokeCollection { stroke }); // queda seleccionada para cambiarle color o grosor
+            SelectStrokes(new StrokeCollection { stroke }, auto: true); // unos segundos, para cambiarle color o grosor
         }
         e.Handled = true;
     }
@@ -102,23 +114,31 @@ sealed partial class EditorWindow
         return a + new Vector(Math.Cos(ang), Math.Sin(ang)) * v.Length;
     }
 
-    void BeginText(Point p)
+    /// <param name="existing">Texto ya escrito que se corrige (doble clic); null para uno nuevo.</param>
+    void BeginText(Point p, TextBlock existing = null)
     {
         _editing = new TextBox
         {
             MinWidth = 80,
-            FontSize = FontSizeFor(_size),
+            FontSize = existing?.FontSize ?? FontSizeFor(_size),
             FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(_penColor),
+            Foreground = existing?.Foreground ?? new SolidColorBrush(_penColor),
             Background = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
             BorderThickness = new Thickness(1),
             AcceptsReturn = true,
+            Text = existing?.Text ?? "",
         };
         _editing.SetResourceReference(BorderBrushProperty, "Acento");
         Canvas.SetLeft(_editing, p.X);
         Canvas.SetTop(_editing, p.Y);
-        _textLayer.IsHitTestVisible = true;
         _textLayer.Children.Add(_editing);
+
+        _editingBlock = existing;
+        if (existing != null)
+        {
+            existing.Visibility = Visibility.Hidden; // el cuadro de edición ocupa su lugar
+            _editing.CaretIndex = _editing.Text.Length; // cursor al final, sin seleccionar: es para corregir
+        }
 
         _editing.KeyDown += (s, e) =>
         {
@@ -128,13 +148,43 @@ sealed partial class EditorWindow
         Dispatcher.InvokeAsync(() => { _editing?.Focus(); }, DispatcherPriority.Input);
     }
 
+    /// <summary>Doble clic sobre un texto: se vuelve a abrir para corregirlo (con su color y tamaño).</summary>
+    void EditText(TextBlock block)
+    {
+        CommitText();
+        ClearSelection();
+        BeginText(new Point(Canvas.GetLeft(block), Canvas.GetTop(block)), block);
+    }
+
     void CommitText()
     {
         if (_editing == null) return;
         var tb = _editing;
         _editing = null;                 // primero, para que LostKeyboardFocus no reentre
         _textLayer.Children.Remove(tb);
-        _textLayer.IsHitTestVisible = false;
+
+        if (_editingBlock != null)
+        {
+            // Corrección de un texto existente
+            var edited = _editingBlock;
+            _editingBlock = null;
+            edited.Visibility = Visibility.Visible;
+            if (string.IsNullOrWhiteSpace(tb.Text))
+            {
+                _textLayer.Children.Remove(edited); // quedó vacío: se borra
+                PushUndo(new ElementRemove(_textLayer, edited));
+                return;
+            }
+            var before = (edited.Text, edited.Foreground, edited.FontSize);
+            var after = (tb.Text, tb.Foreground, tb.FontSize);
+            if (before == after) return;
+            edited.Text = after.Text;
+            edited.Foreground = after.Foreground;
+            edited.FontSize = after.FontSize;
+            PushUndo(new TextEdit(edited, before, after));
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(tb.Text)) return;
 
         var block = AddTextBlock(new TextNote
@@ -161,6 +211,14 @@ sealed partial class EditorWindow
         };
         Canvas.SetLeft(block, n.X);
         Canvas.SetTop(block, n.Y);
+        if (n.Orden > 0) block.Tag = n.Orden; // orden para la numeración (si no, se asigna al refrescar)
+        // Doble clic para corregirlo. Un clic simple no hace nada (no empieza un trazo encima).
+        block.Cursor = Cursors.IBeam;
+        block.MouseLeftButtonDown += (s, e) =>
+        {
+            if (e.ClickCount == 2) EditText(block);
+            e.Handled = true;
+        };
         _textLayer.Children.Add(block);
         return block;
     }

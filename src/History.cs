@@ -12,6 +12,10 @@ sealed class SessionMeta
     public string Signature { get; set; }
     /// <summary>Huellas de las versiones anotadas que se copiaron al portapapeles.</summary>
     public List<string> ExportSignatures { get; set; } = new List<string>();
+    /// <summary>Recorte [x, y, ancho, alto] sobre original.png; null = sin recorte.</summary>
+    public int[] Crop { get; set; }
+    /// <summary>Numerar trazos y textos; null = lo que diga AppSettings.NumerarPorDefecto.</summary>
+    public bool? Numerar { get; set; }
 }
 
 sealed class TextNote
@@ -21,6 +25,8 @@ sealed class TextNote
     public double Y { get; set; }
     public double FontSize { get; set; }
     public string Color { get; set; }
+    /// <summary>Orden de creación entre trazos y textos (para numerarlos). 0 = desconocido.</summary>
+    public long Orden { get; set; }
 }
 
 sealed class Session

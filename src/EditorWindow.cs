@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  Editor
 // ----------------------------------------------------------------------------
-enum Tool { Select, Pen, Highlighter, Line, Arrow, Rectangle, Text, Eraser }
+enum Tool { Select, Pen, Highlighter, Line, Arrow, Rectangle, Text, Eraser, Crop }
 
 sealed partial class EditorWindow : Window
 {
@@ -21,14 +21,20 @@ sealed partial class EditorWindow : Window
     };
 
     readonly Session _session;
-    readonly BitmapSource _image;
-    readonly Grid _surface;          // anotaciones (tinta + textos) sobre la captura y su margen
+    readonly BitmapSource _original; // la captura tal como llegó; nunca se modifica
+    BitmapSource _image;             // lo que se ve y se exporta: la captura, recortada si hay recorte
+    Int32Rect _crop;                 // recorte actual en píxeles de la captura original (o la captura entera)
+    readonly Grid _surface;          // anotaciones (tinta + textos + números) sobre la captura y su margen
     readonly InkCanvas _ink;
     readonly Canvas _textLayer;
     readonly ScrollViewer _scroll;
     readonly ScaleTransform _zoom = new ScaleTransform(1, 1);
     readonly Border _flash;
     readonly Grid _frame;            // captura + _flash, con esquinas redondeadas en pantalla
+    readonly Image _imageCtl;
+    readonly Border _framed;         // _frame con su sombra, ubicado en VisibleRect
+    readonly Grid _board;            // captura + margen
+    readonly Canvas _host;           // mide lo que la captura visible; la tabla cuelga de él
     readonly double _pad;            // margen dibujable alrededor de la captura, en píxeles de la captura
 
     /// <summary>Espacio de lienzo visible alrededor de la captura al ajustar, en DIP de pantalla.</summary>
@@ -38,6 +44,7 @@ sealed partial class EditorWindow : Window
     const double CornerRadiusOnScreen = 10;
     readonly DispatcherTimer _saveTimer;
     readonly Stack<IUndo> _undo = new Stack<IUndo>();
+    readonly Stack<IUndo> _redo = new Stack<IUndo>();
 
     Tool _tool = Tool.Pen;
     // Cada familia (lápiz/formas/texto y resaltador) tiene color principal y secundario
@@ -53,6 +60,7 @@ sealed partial class EditorWindow : Window
     Stroke _preview;
     Point _start;
     TextBox _editing;
+    TextBlock _editingBlock; // texto existente que se está corrigiendo (doble clic)
 
     Color CurrentColor
     {
@@ -69,14 +77,16 @@ sealed partial class EditorWindow : Window
     public EditorWindow(Session session)
     {
         _session = session;
-        _image = History.LoadImage(session.OriginalPath);
-        int pw = _image.PixelWidth, ph = _image.PixelHeight;
+        _original = History.LoadImage(session.OriginalPath);
+        int pw = _original.PixelWidth, ph = _original.PixelHeight;
+        _crop = ValidCrop(session.Meta.Crop) ?? new Int32Rect(0, 0, pw, ph);
+        _image = CropOf(_crop);
 
         Title = $"{AppInfo.Name} — captura del {session.Meta.Created:dd/MM/yyyy HH:mm} — {pw}×{ph}";
         var work = SystemParameters.WorkArea;
         Width = Math.Min(work.Width * 0.85, Math.Max(760, pw + 80));
         Height = Math.Min(work.Height * 0.9, Math.Max(480, ph + 170));
-        Width = Math.Max(Width, Math.Min(work.Width * 0.92, 1380)); // que la barra quepa en una fila
+        Width = Math.Max(Width, Math.Min(work.Width * 0.92, 1440)); // que la barra quepa en una fila
         MinWidth = 640;
         MinHeight = 420;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -90,13 +100,13 @@ sealed partial class EditorWindow : Window
         // ---- superficie de dibujo (1 DIP = 1 píxel de la captura) ----
         // Alrededor de la captura hay un margen donde también se puede dibujar;
         // al exportar, la imagen crece lo justo para incluir lo que quede afuera.
+        // Los tamaños de todo esto los fija LayoutForImage (cambian al recortar).
         _pad = Math.Round(Math.Clamp(Math.Max(pw, ph) * 0.3, 200, 600));
-        double bw = pw + 2 * _pad, bh = ph + 2 * _pad;
 
-        var imgCtl = new Image { Source = _image, Width = pw, Height = ph, Stretch = Stretch.Fill };
-        RenderOptions.SetBitmapScalingMode(imgCtl, BitmapScalingMode.HighQuality);
+        _imageCtl = new Image { Stretch = Stretch.Fill };
+        RenderOptions.SetBitmapScalingMode(_imageCtl, BitmapScalingMode.HighQuality);
 
-        _ink = new InkCanvas { Background = Brushes.Transparent, Width = bw, Height = bh };
+        _ink = new InkCanvas { Background = Brushes.Transparent };
         _ink.Strokes.StrokesChanged += (s, e) =>
         {
             if (_suppress) return;
@@ -106,12 +116,14 @@ sealed partial class EditorWindow : Window
         _ink.PreviewMouseMove += Ink_MouseMove;
         _ink.PreviewMouseLeftButtonUp += Ink_MouseUp;
 
-        _textLayer = new Canvas { Width = bw, Height = bh, IsHitTestVisible = false };
+        // Sin fondo: solo los textos reciben clics (doble clic para corregir); el resto pasa a la tinta
+        _textLayer = new Canvas();
 
-        // Anotaciones (tinta + textos) sobre toda la tabla, margen incluido
-        _surface = new Grid { Width = bw, Height = bh };
+        // Anotaciones (tinta + textos + números) sobre toda la tabla, margen incluido
+        _surface = new Grid();
         _surface.Children.Add(_ink);
         _surface.Children.Add(_textLayer);
+        _surface.Children.Add(BuildNumbersLayer());
 
         // La captura en el centro, con esquinas redondeadas y sombra (solo en pantalla).
         // Capa de parpadeo encima: no forma parte de la imagen exportada.
@@ -123,13 +135,12 @@ sealed partial class EditorWindow : Window
             BorderThickness = new Thickness(6),
         };
         _flash.SetResourceReference(Border.BorderBrushProperty, "Acento");
-        _frame = new Grid { Width = pw, Height = ph };
-        _frame.Children.Add(imgCtl);
+        _frame = new Grid();
+        _frame.Children.Add(_imageCtl);
         _frame.Children.Add(_flash);
-        var framed = new Border
+        _framed = new Border
         {
             Child = _frame,
-            Margin = new Thickness(_pad),
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
             Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 4, Opacity = 0.25 },
@@ -147,14 +158,14 @@ sealed partial class EditorWindow : Window
         };
         limit.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "BordeFuerte");
 
-        var board = new Grid { Width = bw, Height = bh };
-        board.Children.Add(limit);
-        board.Children.Add(framed);
-        board.Children.Add(_surface);
-        board.Children.Add(BuildSelectionLayer(bw, bh));
+        _board = new Grid();
+        _board.Children.Add(limit);
+        _board.Children.Add(_framed);
+        _board.Children.Add(_surface);
+        _board.Children.Add(BuildSelectionLayer());
 
         // Lo recién dibujado con lápiz o resaltador queda seleccionado
-        _ink.StrokeCollected += (s, e) => SelectStrokes(new StrokeCollection { e.Stroke });
+        _ink.StrokeCollected += (s, e) => SelectStrokes(new StrokeCollection { e.Stroke }, auto: true);
 
         // Clic derecho sobre el lienzo: intercambia color principal y secundario (como tocar Alt)
         _ink.PreviewMouseRightButtonUp += (s, e) =>
@@ -166,22 +177,19 @@ sealed partial class EditorWindow : Window
 
         // El host mide lo que la captura: el margen queda por fuera del layout
         // (Canvas no recorta), así "Ajustar" encuadra la captura y no la tabla entera.
-        var host = new Canvas
+        _host = new Canvas
         {
-            Width = pw,
-            Height = ph,
             LayoutTransform = _zoom,
             Margin = new Thickness(ViewMargin),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
         };
-        Canvas.SetLeft(board, -_pad);
-        Canvas.SetTop(board, -_pad);
-        host.Children.Add(board);
+        _host.Children.Add(_board);
+        LayoutForImage();
 
         _scroll = new ScrollViewer
         {
-            Content = host,
+            Content = _host,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
         };
@@ -218,7 +226,10 @@ sealed partial class EditorWindow : Window
         root.Children.Add(canvasArea);
         Content = root;
 
+        _size = AppSettings.Current.GrosorInicial;
         LoadAnnotations();
+        InitOrders();
+        RefreshNumbers();
         RefreshSizes();
         SetTool(Tool.Pen);
 
@@ -249,10 +260,44 @@ sealed partial class EditorWindow : Window
     }
 
     // ------------------------------------------------------------------ persistencia
-    // En disco, trazos y textos se guardan relativos a la esquina de la captura
-    // (pueden ser negativos si están en el margen); en pantalla están corridos _pad.
+    // La tabla abarca la captura ORIGINAL más _pad alrededor, y no se mueve nunca:
+    // recortar solo cambia qué parte se ve (VisibleRect). En disco, trazos y textos
+    // se guardan relativos a la esquina de la captura original (pueden ser negativos
+    // si están en el margen); en la tabla están corridos _pad.
     Matrix ToBoard => new Matrix(1, 0, 0, 1, _pad, _pad);
     Matrix ToCapture => new Matrix(1, 0, 0, 1, -_pad, -_pad);
+
+    /// <summary>Lo visible de la captura (el recorte), en coordenadas de la tabla.</summary>
+    Rect VisibleRect => new Rect(_pad + _crop.X, _pad + _crop.Y, _crop.Width, _crop.Height);
+
+    /// <summary>Ajusta tamaños y posiciones a la parte visible (al abrir y al recortar).</summary>
+    void LayoutForImage()
+    {
+        var v = VisibleRect;
+        double bw = _original.PixelWidth + 2 * _pad, bh = _original.PixelHeight + 2 * _pad;
+        _imageCtl.Source = _image;
+        _imageCtl.Width = _frame.Width = v.Width;
+        _imageCtl.Height = _frame.Height = v.Height;
+        _framed.Margin = new Thickness(v.X, v.Y, 0, 0);
+        foreach (var e in new FrameworkElement[] { _board, _surface, _ink, _textLayer, _numbersLayer, _selectionLayer })
+        {
+            e.Width = bw;
+            e.Height = bh;
+        }
+        // El host mide lo visible y la tabla cuelga de él de modo que lo visible quede en (0, 0)
+        _host.Width = v.Width;
+        _host.Height = v.Height;
+        Canvas.SetLeft(_board, -v.X);
+        Canvas.SetTop(_board, -v.Y);
+        UpdateFrameClip();
+    }
+
+    /// <summary>Esquinas redondeadas de la captura; el radio se divide por el zoom para medir siempre lo mismo en pantalla.</summary>
+    void UpdateFrameClip()
+    {
+        double r = CornerRadiusOnScreen / _zoom.ScaleX;
+        _frame.Clip = new RectangleGeometry(new Rect(0, 0, _image.PixelWidth, _image.PixelHeight), r, r);
+    }
 
     void LoadAnnotations()
     {
@@ -294,6 +339,7 @@ sealed partial class EditorWindow : Window
 
     void MarkChanged()
     {
+        RefreshNumbers();
         _pendingSave = true;
         _saveTimer.Stop();
         _saveTimer.Start();
@@ -324,6 +370,7 @@ sealed partial class EditorWindow : Window
                 Text = tb.Text,
                 X = Canvas.GetLeft(tb) - _pad,
                 Y = Canvas.GetTop(tb) - _pad,
+                Orden = tb.Tag is long orden ? orden : 0,
                 FontSize = tb.FontSize,
                 Color = (tb.Foreground as SolidColorBrush)?.Color.ToString() ?? Palette[0].color.ToString(),
             }).ToList();
@@ -346,10 +393,11 @@ sealed partial class EditorWindow : Window
         }
     }
 
-    // ------------------------------------------------------------------ deshacer
+    // ------------------------------------------------------------------ deshacer / rehacer
     void PushUndo(IUndo item)
     {
         _undo.Push(item);
+        _redo.Clear(); // un cambio nuevo invalida lo que se podía rehacer
         MarkChanged();
     }
 
@@ -358,9 +406,24 @@ sealed partial class EditorWindow : Window
         CommitText();
         ClearSelection();
         if (_undo.Count == 0) return;
+        var item = _undo.Pop();
         _suppress = true;
-        try { _undo.Pop().Undo(); }
+        try { item.Undo(); }
         finally { _suppress = false; }
+        _redo.Push(item);
+        MarkChanged();
+    }
+
+    void Redo()
+    {
+        CommitText();
+        ClearSelection();
+        if (_redo.Count == 0) return;
+        var item = _redo.Pop();
+        _suppress = true;
+        try { item.Redo(); }
+        finally { _suppress = false; }
+        _undo.Push(item); // sin pasar por PushUndo: no hay que vaciar _redo
         MarkChanged();
     }
 
@@ -388,9 +451,7 @@ sealed partial class EditorWindow : Window
         _zoom.ScaleX = _zoom.ScaleY = z;
         _zoomText.Text = $"{Math.Round(z * DpiScale() * 100)}%";
 
-        // El recorte está dentro del zoom: el radio se divide para que en pantalla mida siempre lo mismo
-        double r = CornerRadiusOnScreen / z;
-        _frame.Clip = new RectangleGeometry(new Rect(0, 0, _image.PixelWidth, _image.PixelHeight), r, r);
+        UpdateFrameClip();
         UpdateSelectionVisual();
         UpdatePointer();
     }
@@ -428,16 +489,25 @@ sealed partial class EditorWindow : Window
         }
         _altAlone = false; // Alt+otra tecla (Alt+Tab, Alt+F4...) no intercambia
 
+        if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Z)
+        {
+            Redo(); // Ctrl+Shift+Z, como en otros editores
+            e.Handled = true;
+            return;
+        }
+
         bool ctrl = Keyboard.Modifiers == ModifierKeys.Control;
         if (ctrl)
         {
             switch (e.Key)
             {
                 case Key.Z: Undo(); break;
+                case Key.Y: Redo(); break;
                 case Key.C: if (CopyToClipboard()) CloseAfterFlash(); break;
                 case Key.S: Save(); break;
                 case Key.Enter: if (CopyToClipboard()) Close(); break;
                 case Key.H: ToggleRecents(); break;
+                case Key.OemComma: SettingsWindow.Show(this); break;
                 case Key.D0: case Key.NumPad0: FitZoom(); break;
                 case Key.OemPlus: case Key.Add: SetZoom(_zoom.ScaleX * 1.15); break;
                 case Key.OemMinus: case Key.Subtract: SetZoom(_zoom.ScaleX / 1.15); break;
@@ -459,6 +529,8 @@ sealed partial class EditorWindow : Window
             case Key.R: SetTool(Tool.Rectangle); break;
             case Key.T: SetTool(Tool.Text); break;
             case Key.E: SetTool(Tool.Eraser); break;
+            case Key.C: SetTool(Tool.Crop); break;
+            case Key.N: ToggleNumbers(); break;
             case Key.D1: case Key.NumPad1: SetSize(SizePresets[0]); break;
             case Key.D2: case Key.NumPad2: SetSize(SizePresets[1]); break;
             case Key.D3: case Key.NumPad3: SetSize(SizePresets[2]); break;

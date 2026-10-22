@@ -111,6 +111,9 @@ static class Icons
     public const string Text = "M5 7 V5 H19 V7 M12 5 V19 M9 19 H15";
     public const string Eraser = "M8 20 H20 M4.5 15.5 L13.5 6.5 L18.5 11.5 L10 20 H8 Z M9 11 L14 16";
     public const string Undo = "M9 14 L4 9 L9 4 M4 9 H14 A6 6 0 0 1 14 21 H11";
+    public const string Redo = "M15 14 L20 9 L15 4 M20 9 H10 A6 6 0 0 0 10 21 H13";
+    public const string Crop = "M6 2 V18 H22 M2 6 H18 V22";
+    public const string Settings = "M4 6 H13 M17 6 H20 M15 4 V8 M4 12 H7 M11 12 H20 M9 10 V14 M4 18 H11 M15 18 H20 M13 16 V20";
     public const string Trash = "M4 7 H20 M10 11 V17 M14 11 V17 M6 7 L7 20 H17 L18 7 M9 7 V4 H15 V7";
     public const string Save = "M12 4 V15 M7 10 L12 15 L17 10 M5 20 H19";
     public const string Copy = "M10 8 H18 A2 2 0 0 1 20 10 V18 A2 2 0 0 1 18 20 H10 A2 2 0 0 1 8 18 V10 A2 2 0 0 1 10 8 Z M16 8 V5 A1 1 0 0 0 15 4 H5 A1 1 0 0 0 4 5 V15 A1 1 0 0 0 5 16 H8";
