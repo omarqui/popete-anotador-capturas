@@ -60,7 +60,7 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 8. **1 DIP = 1 píxel** dentro de `_surface`. El zoom inicial es `min(1/DpiScale, ajuste a la ventana)`.
 9. **El guardado automático se pospone mientras hay un `TextBox` en edición** (`_editing != null`), para que el cuadro de texto no salga en `anotada.png`.
 10. Las anotaciones cargadas al retomar una sesión **no** entran en la pila de deshacer. "Limpiar" sí se puede deshacer.
-11. **Colores de la UI siempre por recurso** (`SetResourceReference` o `{DynamicResource}`), nunca un pincel fijo: es lo que permite cambiar de tema en caliente. Los colores de las anotaciones y del puntero sí son fijos.
+11. **Colores de la UI siempre por recurso** (`SetResourceReference` o `{DynamicResource}`), nunca un pincel fijo: es lo que permite cambiar de tema en caliente. Los colores de las anotaciones y del puntero sí son fijos. **Claves:** los colores van sin prefijo (`Icono`, `Acento`...) y los estilos con `Estilo` (`EstiloIcono`, `EstiloPrimario`...). Los colores viven directo en `Application.Resources` y ganan sobre los estilos del diccionario fusionado: un estilo llamado igual que un color hizo fallar el editor con «'#FFD6D6DA' is not a valid value for property 'Style'».
 12. **El enum del tema se llama `ModoTema`, no `ThemeMode`:** desde .NET 9, `Window` tiene una propiedad experimental `ThemeMode` (WPF0001) que tapa el nombre dentro de las ventanas.
 13. **Los botones de la barra son `Focusable=False`** (en los estilos): un clic en un color o grosor no debe quitarle el foco al `TextBox` en edición, porque eso dispara `CommitText`.
 14. **El puntero no va dentro de `_surface` ni del zoom:** así no sale en la imagen exportada y su contorno mide lo mismo a cualquier zoom.

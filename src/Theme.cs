@@ -148,7 +148,7 @@ static class Theme
                             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
           <!-- Herramienta: ícono con fondo resaltado e indicador inferior cuando está activa -->
-          <Style x:Key="Herramienta" TargetType="ToggleButton">
+          <Style x:Key="EstiloHerramienta" TargetType="ToggleButton">
             <Setter Property="Width" Value="40"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Focusable" Value="False"/>
@@ -179,7 +179,7 @@ static class Theme
           </Style>
 
           <!-- Segmento: opción de un grupo (grosor), sin indicador -->
-          <Style x:Key="Segmento" TargetType="ToggleButton">
+          <Style x:Key="EstiloSegmento" TargetType="ToggleButton">
             <Setter Property="Width" Value="34"/>
             <Setter Property="Height" Value="28"/>
             <Setter Property="Focusable" Value="False"/>
@@ -206,7 +206,7 @@ static class Theme
           </Style>
 
           <!-- Muestra de color: círculo con anillo de acento cuando está elegida -->
-          <Style x:Key="Muestra" TargetType="ToggleButton">
+          <Style x:Key="EstiloMuestra" TargetType="ToggleButton">
             <Setter Property="Width" Value="30"/>
             <Setter Property="Height" Value="30"/>
             <Setter Property="Focusable" Value="False"/>
@@ -235,7 +235,7 @@ static class Theme
           </Style>
 
           <!-- Botón de ícono (deshacer, limpiar, tema...) -->
-          <Style x:Key="Icono" TargetType="Button">
+          <Style x:Key="EstiloIcono" TargetType="Button">
             <Setter Property="Width" Value="36"/>
             <Setter Property="Height" Value="36"/>
             <Setter Property="Focusable" Value="False"/>
@@ -261,7 +261,7 @@ static class Theme
           </Style>
 
           <!-- Botón secundario: superficie con borde -->
-          <Style x:Key="Secundario" TargetType="Button">
+          <Style x:Key="EstiloSecundario" TargetType="Button">
             <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="12,0"/>
             <Setter Property="Focusable" Value="False"/>
@@ -286,7 +286,7 @@ static class Theme
           </Style>
 
           <!-- Botón principal: color de acento -->
-          <Style x:Key="Primario" TargetType="Button">
+          <Style x:Key="EstiloPrimario" TargetType="Button">
             <Setter Property="Height" Value="32"/>
             <Setter Property="Padding" Value="12,0,10,0"/>
             <Setter Property="Focusable" Value="False"/>
@@ -310,7 +310,7 @@ static class Theme
           </Style>
 
           <!-- Botón plano pequeño (barra de estado) -->
-          <Style x:Key="Plano" TargetType="Button">
+          <Style x:Key="EstiloPlano" TargetType="Button">
             <Setter Property="Height" Value="24"/>
             <Setter Property="MinWidth" Value="26"/>
             <Setter Property="Padding" Value="8,0"/>
@@ -334,7 +334,7 @@ static class Theme
           </Style>
 
           <!-- Miniatura del panel de capturas recientes -->
-          <Style x:Key="Miniatura" TargetType="Button">
+          <Style x:Key="EstiloMiniatura" TargetType="Button">
             <Setter Property="Padding" Value="6"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Background" Value="{DynamicResource Superficie}"/>

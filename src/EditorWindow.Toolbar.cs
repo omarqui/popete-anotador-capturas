@@ -37,7 +37,7 @@ sealed partial class EditorWindow
         {
             var sw = new ToggleButton { Background = new SolidColorBrush(c), ToolTip = name };
             System.Windows.Automation.AutomationProperties.SetName(sw, name);
-            sw.SetResourceReference(StyleProperty, "Muestra");
+            sw.SetResourceReference(StyleProperty, "EstiloMuestra");
             var color = c;
             sw.Click += (s, e) => SetColor(color);
             _swatches.Add((sw, c));
@@ -62,7 +62,7 @@ sealed partial class EditorWindow
             var tip = $"{names[i]}: {size} px ({i + 1})";
             var b = new ToggleButton { Content = dotEl, ToolTip = tip };
             System.Windows.Automation.AutomationProperties.SetName(b, tip);
-            b.SetResourceReference(StyleProperty, "Segmento");
+            b.SetResourceReference(StyleProperty, "EstiloSegmento");
             b.Click += (s, e) => SetSize(size);
             _sizeButtons.Add((b, size));
             sizes.Add(b);
@@ -85,7 +85,7 @@ sealed partial class EditorWindow
 
         _recentsButton = new ToggleButton { Content = Ui.Icon(Icons.Recents), ToolTip = "Capturas recientes (Ctrl+H)" };
         System.Windows.Automation.AutomationProperties.SetName(_recentsButton, "Capturas recientes");
-        _recentsButton.SetResourceReference(StyleProperty, "Herramienta");
+        _recentsButton.SetResourceReference(StyleProperty, "EstiloHerramienta");
         _recentsButton.Click += (s, e) => ToggleRecents(_recentsButton.IsChecked == true);
         right.Children.Add(_recentsButton);
 
@@ -104,7 +104,7 @@ sealed partial class EditorWindow
         right.Children.Add(copy);
 
         var copyClose = Ui.Btn("Copiar y cerrar", "Copiar y cerrar (Ctrl+C o Ctrl+Enter)",
-            () => { if (CopyToClipboard()) Close(); }, Icons.Check, "Primario");
+            () => { if (CopyToClipboard()) Close(); }, Icons.Check, "EstiloPrimario");
         var chip = new Border
         {
             Child = new TextBlock { Text = "Ctrl+C", FontSize = 11, FontWeight = FontWeights.Normal },
@@ -131,7 +131,7 @@ sealed partial class EditorWindow
     {
         var b = new ToggleButton { Content = Ui.Icon(icon), ToolTip = tip };
         System.Windows.Automation.AutomationProperties.SetName(b, tip);
-        b.SetResourceReference(StyleProperty, "Herramienta");
+        b.SetResourceReference(StyleProperty, "EstiloHerramienta");
         b.Click += (s, e) => SetTool(t);
         _toolButtons[t] = b;
         return b;
@@ -179,11 +179,11 @@ sealed partial class EditorWindow
         }
 
         var zoom = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        zoom.Children.Add(Ui.Btn("−", "Alejar (Ctrl+−)", () => SetZoom(_zoom.ScaleX / 1.15), style: "Plano"));
+        zoom.Children.Add(Ui.Btn("−", "Alejar (Ctrl+−)", () => SetZoom(_zoom.ScaleX / 1.15), style: "EstiloPlano"));
         zoom.Children.Add(_zoomText);
-        zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => SetZoom(_zoom.ScaleX * 1.15), style: "Plano"));
-        zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "Plano"));
-        zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "Plano"));
+        zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => SetZoom(_zoom.ScaleX * 1.15), style: "EstiloPlano"));
+        zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "EstiloPlano"));
+        zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "EstiloPlano"));
 
         var bar = new DockPanel { Margin = new Thickness(12, 0, 8, 0), Height = 32, LastChildFill = true };
         DockPanel.SetDock(left, Dock.Left);

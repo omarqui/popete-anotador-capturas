@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------------------
 static class Ui
 {
-    /// <summary>Botón con texto y, opcionalmente, ícono. Estilo por defecto: "Secundario".</summary>
-    public static Button Btn(string text, string tip, Action action, string icon = null, string style = "Secundario")
+    /// <summary>Botón con texto y, opcionalmente, ícono. Estilo por defecto: "EstiloSecundario".</summary>
+    public static Button Btn(string text, string tip, Action action, string icon = null, string style = "EstiloSecundario")
     {
         var b = new Button { Content = Label(text, icon), ToolTip = tip };
         b.SetResourceReference(FrameworkElement.StyleProperty, style);
@@ -17,7 +17,7 @@ static class Ui
     {
         var b = new Button { Content = Icon(icon), ToolTip = tip };
         System.Windows.Automation.AutomationProperties.SetName(b, tip);
-        b.SetResourceReference(FrameworkElement.StyleProperty, "Icono");
+        b.SetResourceReference(FrameworkElement.StyleProperty, "EstiloIcono");
         b.Click += (s, e) => action();
         return b;
     }

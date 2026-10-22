@@ -86,7 +86,7 @@ sealed class HistoryWindow : Window
         info.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
 
         var bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        var resume = Ui.Btn("Retomar", "Abrir para seguir editando", () => _open(s), Icons.Pen, "Primario");
+        var resume = Ui.Btn("Retomar", "Abrir para seguir editando", () => _open(s), Icons.Pen, "EstiloPrimario");
         resume.Margin = new Thickness(0, 0, 8, 0);
         bar.Children.Add(resume);
         bar.Children.Add(Ui.Btn("Eliminar", "Eliminar del historial", () => Delete(s), Icons.Trash));

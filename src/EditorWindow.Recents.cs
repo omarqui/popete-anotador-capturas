@@ -104,7 +104,7 @@ sealed partial class EditorWindow
             ToolTip = actual ? "Es la captura que estás editando" : "Abrir esta captura",
             Margin = new Thickness(0, 0, 8, 0),
         };
-        b.SetResourceReference(StyleProperty, "Miniatura");
+        b.SetResourceReference(StyleProperty, "EstiloMiniatura");
         if (actual)
         {
             b.BorderThickness = new Thickness(2);
