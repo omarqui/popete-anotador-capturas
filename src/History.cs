@@ -165,4 +165,20 @@ static class History
     }
 
     public static void Delete(Session s) => Directory.Delete(s.Folder, true);
+
+    /// <summary>
+    /// Elimina las capturas más viejas por encima de <paramref name="max"/> (0 = sin límite).
+    /// Nunca elimina las que <paramref name="keep"/> marca (por ejemplo, las abiertas en un editor).
+    /// </summary>
+    public static int Prune(int max, Func<Session, bool> keep)
+    {
+        if (max <= 0) return 0;
+        int deleted = 0;
+        foreach (var s in List().Skip(max).Where(s => !keep(s)))
+        {
+            try { Delete(s); deleted++; }
+            catch { /* en uso: se reintenta en la próxima limpieza */ }
+        }
+        return deleted;
+    }
 }

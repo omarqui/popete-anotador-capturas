@@ -33,6 +33,7 @@ sealed class CaptureHost : IDisposable
 
     public void Start()
     {
+        PruneHistory();
         History.LoadKnownSignatures();
 
         // Ventana "message-only" invisible que recibe WM_CLIPBOARDUPDATE
@@ -71,7 +72,12 @@ sealed class CaptureHost : IDisposable
         if (History.IsKnown(sig)) return;
 
         OpenEditor(History.Create(img, sig));
+        PruneHistory();
     }
+
+    /// <summary>Aplica el límite de capturas del historial, sin tocar las que están abiertas.</summary>
+    public static void PruneHistory() =>
+        History.Prune(AppSettings.Current.MaxCapturas, s => EditorWindow.Open.ContainsKey(s.Meta.Id));
 
     public static void OpenEditor(Session s)
     {
@@ -103,6 +109,7 @@ sealed class CaptureHost : IDisposable
         }
         var sig = ClipboardHelper.Signature(img);
         OpenEditor(History.FindBySignature(sig) ?? History.Create(img, sig));
+        PruneHistory();
     }
 
     void ShowHistory()

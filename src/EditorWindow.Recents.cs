@@ -3,11 +3,14 @@
 //
 //  Tira de miniaturas sobre la barra de estado. Siempre arranca oculto para no
 //  quitarle espacio a la captura; se abre con el botón de la barra o Ctrl+H.
+//  Cada miniatura tiene una × para eliminarla; arriba, "Eliminar todas" y el
+//  límite de capturas que se conservan (las más viejas se eliminan solas).
 // ----------------------------------------------------------------------------
 sealed partial class EditorWindow
 {
     Border _recents;
     StackPanel _recentsList;
+    Button _keepButton;
 
     FrameworkElement BuildRecents()
     {
@@ -15,9 +18,20 @@ sealed partial class EditorWindow
         var close = Ui.IconBtn(Icons.Close, "Ocultar (Ctrl+H)", () => ToggleRecents(false));
         close.Width = close.Height = 28;
 
+        _keepButton = Ui.Btn("", "Cuántas capturas se conservan; las más viejas se eliminan solas", () => ShowKeepMenu(), style: "EstiloPlano");
+        UpdateKeepButton();
+        var deleteAll = Ui.Btn("Eliminar todas", "Eliminar del historial todas las capturas que no estén abiertas",
+            DeleteAllRecents, Icons.Trash, "EstiloPlano");
+        deleteAll.Margin = new Thickness(4, 0, 8, 0);
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        actions.Children.Add(_keepButton);
+        actions.Children.Add(deleteAll);
+        actions.Children.Add(close);
+
         var header = new DockPanel { Margin = new Thickness(12, 6, 8, 6) };
-        DockPanel.SetDock(close, Dock.Right);
-        header.Children.Add(close);
+        DockPanel.SetDock(actions, Dock.Right);
+        header.Children.Add(actions);
         header.Children.Add(title);
 
         _recentsList = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(12, 0, 12, 10) };
@@ -60,7 +74,7 @@ sealed partial class EditorWindow
     void LoadRecents()
     {
         _recentsList.Children.Clear();
-        var sessions = History.List().Take(20).ToList();
+        var sessions = History.List();
         foreach (var s in sessions) _recentsList.Children.Add(RecentCard(s));
 
         if (sessions.All(s => s.Meta.Id == _session.Meta.Id))
@@ -102,7 +116,6 @@ sealed partial class EditorWindow
         {
             Content = stack,
             ToolTip = actual ? "Es la captura que estás editando" : "Abrir esta captura",
-            Margin = new Thickness(0, 0, 8, 0),
         };
         b.SetResourceReference(StyleProperty, "EstiloMiniatura");
         if (actual)
@@ -111,6 +124,80 @@ sealed partial class EditorWindow
             b.SetResourceReference(BorderBrushProperty, "Acento");
         }
         b.Click += (o, e) => { if (!actual) CaptureHost.OpenEditor(s); };
-        return b;
+
+        var card = new Grid { Margin = new Thickness(0, 0, 8, 0) };
+        card.Children.Add(b);
+
+        // × para eliminarla; no en las que están abiertas (esta u otro editor)
+        if (!actual && !abierta)
+        {
+            var x = Ui.IconBtn(Icons.Close, "Eliminar del historial", () => DeleteRecent(s));
+            x.Width = x.Height = 24;
+            x.Margin = new Thickness(0, 4, 4, 0);
+            x.HorizontalAlignment = HorizontalAlignment.Right;
+            x.VerticalAlignment = VerticalAlignment.Top;
+            x.SetResourceReference(BackgroundProperty, "Superficie");
+            card.Children.Add(x);
+        }
+        return card;
+    }
+
+    void DeleteRecent(Session s)
+    {
+        try { History.Delete(s); }
+        catch (Exception ex) { _status.Text = "No se pudo eliminar: " + ex.Message; }
+        LoadRecents();
+    }
+
+    void DeleteAllRecents()
+    {
+        var deletable = History.List().Where(s => !Open.ContainsKey(s.Meta.Id)).ToList();
+        if (deletable.Count == 0) return;
+        var text = deletable.Count == 1
+            ? "¿Eliminar 1 captura del historial con sus anotaciones?"
+            : $"¿Eliminar {deletable.Count} capturas del historial con sus anotaciones?";
+        if (MessageBox.Show(this, text + "\n\nLas que están abiertas se conservan.", AppInfo.Name,
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        int failed = 0;
+        foreach (var s in deletable)
+        {
+            try { History.Delete(s); }
+            catch { failed++; }
+        }
+        if (failed > 0) _status.Text = $"No se pudieron eliminar {failed} capturas.";
+        LoadRecents();
+    }
+
+    void UpdateKeepButton()
+    {
+        int max = AppSettings.Current.MaxCapturas;
+        _keepButton.Content = max > 0 ? $"Conservar las últimas {max} ▾" : "Conservar todas ▾";
+    }
+
+    void ShowKeepMenu()
+    {
+        var menu = new ContextMenu { PlacementTarget = _keepButton, Placement = PlacementMode.Bottom };
+        foreach (int option in AppSettings.MaxCapturasOpciones)
+        {
+            var item = new MenuItem
+            {
+                Header = option > 0 ? $"Las últimas {option}" : "Todas (sin límite)",
+                IsCheckable = true,
+                IsChecked = AppSettings.Current.MaxCapturas == option,
+            };
+            int value = option;
+            item.Click += (s, e) =>
+            {
+                AppSettings.Current.MaxCapturas = value;
+                try { AppSettings.Current.Save(); } catch { /* se aplica igual en esta sesión */ }
+                UpdateKeepButton();
+                CaptureHost.PruneHistory();
+                LoadRecents();
+            };
+            menu.Items.Add(item);
+        }
+        menu.IsOpen = true;
     }
 }

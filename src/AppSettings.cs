@@ -8,6 +8,11 @@ sealed class AppSettings
     /// <summary>Tema de la interfaz. "Sistema" sigue al de Windows.</summary>
     public ModoTema Tema { get; set; } = ModoTema.Sistema;
 
+    /// <summary>Cuántas capturas conservar en el historial; las más viejas se eliminan solas. 0 = sin límite.</summary>
+    public int MaxCapturas { get; set; } = 50;
+
+    public static readonly int[] MaxCapturasOpciones = { 20, 50, 100, 200, 0 };
+
     static readonly string FilePath = Path.Combine(AppInfo.DataRoot, "ajustes.json");
 
     static readonly JsonSerializerOptions Options = new JsonSerializerOptions
