@@ -37,8 +37,8 @@ sealed class Session
 
 static class History
 {
-    public static readonly string Root = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AnotadorCapturas", "Historial");
+    // Se calcula al primer uso, después de AppInfo.MigrateLegacy()
+    public static readonly string Root = Path.Combine(AppInfo.DataRoot, "Historial");
 
     public static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions { WriteIndented = true };
 

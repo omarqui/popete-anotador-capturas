@@ -54,7 +54,7 @@ sealed partial class EditorWindow : Window
         _image = History.LoadImage(session.OriginalPath);
         int pw = _image.PixelWidth, ph = _image.PixelHeight;
 
-        Title = $"Anotar captura — {session.Meta.Created:dd/MM/yyyy HH:mm} — {pw}×{ph}";
+        Title = $"{AppInfo.Name} — captura del {session.Meta.Created:dd/MM/yyyy HH:mm} — {pw}×{ph}";
         var work = SystemParameters.WorkArea;
         Width = Math.Min(work.Width * 0.85, Math.Max(760, pw + 80));
         Height = Math.Min(work.Height * 0.9, Math.Max(480, ph + 170));

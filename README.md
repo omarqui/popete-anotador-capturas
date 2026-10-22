@@ -1,4 +1,4 @@
-# Anotador de capturas
+# Popete · anotador de capturas
 
 App de Windows que vive en la bandeja del sistema. Cuando tomas una captura de pantalla, se abre sola con herramientas para dibujar, subrayar y escribir sobre la imagen. Cada captura queda guardada en un historial y la puedes retomar después.
 
@@ -50,7 +50,7 @@ Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4
 
 ### Tema y capturas recientes
 
-- El botón de la luna elige el tema: **Claro**, **Oscuro** o **Usar el tema de Windows** (por defecto). La elección se guarda en `%LOCALAPPDATA%\AnotadorCapturas\ajustes.json`.
+- El botón de la luna elige el tema: **Claro**, **Oscuro** o **Usar el tema de Windows** (por defecto). La elección se guarda en `%LOCALAPPDATA%\Popete\ajustes.json`.
 - El botón del reloj (o `Ctrl+H`) muestra una tira con las capturas recientes para abrir otra sin ir al historial. Siempre arranca oculta.
 
 ### Atajos
@@ -80,7 +80,7 @@ Doble clic en el ícono abre la captura más reciente.
 
 ## Historial
 
-Se guarda en `%LOCALAPPDATA%\AnotadorCapturas\Historial\`, con una carpeta por captura:
+Se guarda en `%LOCALAPPDATA%\Popete\Historial\`, con una carpeta por captura:
 
 | Archivo | Contenido |
 |---|---|

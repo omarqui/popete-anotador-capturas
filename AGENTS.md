@@ -1,10 +1,10 @@
-# AGENTS.md — Anotador de capturas
+# AGENTS.md — Popete (anotador de capturas)
 
 Contexto para continuar este proyecto con un agente de código (Claude Code u otro).
 
 ## Qué es
 
-App de bandeja para Windows. Detecta capturas de pantalla mediante el portapapeles, abre un editor WPF para anotarlas y guarda cada captura en un historial que se puede retomar. Es un proyecto WPF de .NET 10 en `src/` (`AnotadorCapturas.csproj`). Empezó como file-based app de un solo archivo y se convirtió con `dotnet project convert` el 2026-10-22.
+App de bandeja para Windows. Detecta capturas de pantalla mediante el portapapeles, abre un editor WPF para anotarlas y guarda cada captura en un historial que se puede retomar. Es un proyecto WPF de .NET 10 en `src/` (`Popete.csproj`, genera `Popete.exe`). Empezó como file-based app de un solo archivo y se convirtió con `dotnet project convert` el 2026-10-22.
 
 ```powershell
 dotnet run --project src       # compilar y ejecutar
@@ -27,10 +27,11 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 | Archivo | Tipo | Responsabilidad |
 |---|---|---|
 | `GlobalUsings.cs` | — | Todos los `using` del proyecto, como `global using`. |
+| `AppInfo.cs` | `AppInfo` | Nombre (`Popete`, subtítulo «anotador de capturas») y carpeta de datos. `MigrateLegacy()` mueve `%LOCALAPPDATA%\AnotadorCapturas` a `%LOCALAPPDATA%\Popete` y la entrada de inicio con Windows. |
 | `Program.cs` | `Program` | `Main` con `[STAThread]`, mutex de instancia única, `Application` con `ShutdownMode.OnExplicitShutdown`. |
 | `CaptureHost.cs` | `CaptureHost` | Ventana *message-only* (`HwndSource`, `HWND_MESSAGE`) con `AddClipboardFormatListener`. Agrupa eventos con un `DispatcherTimer` de 350 ms. Maneja el `NotifyIcon` de WinForms y su menú. `OpenEditor(Session)` es estático y evita abrir dos editores para la misma sesión. |
 | `ClipboardHelper.cs` | `ClipboardHelper` | Lee la imagen del portapapeles con reintentos: primero el formato `"PNG"`, si no, el Bitmap vía WinForms reconvertido a PNG. `Signature()` calcula tamaño + SHA-256 de los píxeles en Bgra32. |
-| `History.cs` | `History`, `Session`, `SessionMeta`, `TextNote` | Persistencia en `%LOCALAPPDATA%\AnotadorCapturas\Historial\<yyyyMMdd-HHmmss-fff>\`. `Known` es un `HashSet` de huellas (originales y exportadas) que se carga al iniciar. Las escrituras son atómicas (`.tmp` + `File.Move`). |
+| `History.cs` | `History`, `Session`, `SessionMeta`, `TextNote` | Persistencia en `%LOCALAPPDATA%\Popete\Historial\<yyyyMMdd-HHmmss-fff>\`. `Known` es un `HashSet` de huellas (originales y exportadas) que se carga al iniciar. Las escrituras son atómicas (`.tmp` + `File.Move`). |
 | `HistoryWindow.cs` | `HistoryWindow` | Tarjetas con miniatura y botones Retomar/Eliminar. Se recarga en `Activated`. |
 | `EditorWindow.cs` | `EditorWindow` (`partial`), `Tool` | Editor: campos, constructor, persistencia, deshacer, zoom y teclado. `_surface` (Grid con `Image` + `InkCanvas` + `Canvas` de textos) es lo que se exporta. `_flash` es una capa encima, fuera de `_surface`, para el parpadeo. Guardado automático 800 ms después de cada cambio. `EditorWindow.Open` es un diccionario estático de editores abiertos por Id de sesión. |
 | `EditorWindow.Toolbar.cs` | `EditorWindow` | Barra de herramientas (estilo Fluent: grupo de herramientas, muestras de color, grosores 1–4, deshacer/limpiar, recientes, tema, Guardar/Copiar/Copiar y cerrar), barra de estado, `SetTool`, `SetColor`, `SetSize`. |
@@ -39,7 +40,7 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 | `EditorWindow.Drawing.cs` | `EditorWindow` | Formas (línea, flecha, rectángulo) y textos. |
 | `EditorWindow.Export.cs` | `EditorWindow` | `Render`, copiar al portapapeles con parpadeo, cierre tras Ctrl+C, guardar como. |
 | `Theme.cs` | `Theme` | Tema claro/oscuro: pinceles en `Application.Resources` con claves fijas (`Fondo`, `Superficie`, `Borde`, `Texto`, `Acento`, `Lienzo`...) y estilos de botón en XAML (`XamlReader.Parse`). Sigue al tema de Windows (`AppsUseLightTheme` + `SystemEvents.UserPreferenceChanged`) salvo que se fije a mano. Barra de título oscura con `DwmSetWindowAttribute`. |
-| `AppSettings.cs` | `AppSettings`, `ModoTema` | `%LOCALAPPDATA%\AnotadorCapturas\ajustes.json`. Por ahora solo el tema. |
+| `AppSettings.cs` | `AppSettings`, `ModoTema` | `%LOCALAPPDATA%\Popete\ajustes.json`. Por ahora solo el tema. |
 | `Undo.cs` | `IUndo` y sus implementaciones | Pila de deshacer: `StrokeChange`, `ElementAdd`, `ClearAllChange`. |
 | `StartupHelper.cs` | `StartupHelper` | Clave `HKCU\...\Run`. |
 | `Ui.cs` | `Ui`, `Icons` | Botones con estilo, íconos de trazo (`Path` en grilla 24×24 que toma el color del texto), separadores, grupos y teclas. |
@@ -64,6 +65,7 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 12. **El enum del tema se llama `ModoTema`, no `ThemeMode`:** desde .NET 9, `Window` tiene una propiedad experimental `ThemeMode` (WPF0001) que tapa el nombre dentro de las ventanas.
 13. **Los botones de la barra son `Focusable=False`** (en los estilos): un clic en un color o grosor no debe quitarle el foco al `TextBox` en edición, porque eso dispara `CommitText`.
 14. **El puntero no va dentro de `_surface` ni del zoom:** así no sale en la imagen exportada y su contorno mide lo mismo a cualquier zoom.
+15. **Renombre a Popete (2026-10-22):** `AppInfo.MigrateLegacy()` corre en `Main` **antes** de tocar `History` o `AppSettings` (sus rutas son `static readonly` y se fijan al primer uso). Si la carpeta vieja no se puede mover, `DataRoot` sigue usando la vieja. `Main` sale si encuentra el mutex viejo (`Local\AnotadorCapturas_InstanciaUnica`) para no correr junto a una versión anterior sobre la misma carpeta.
 
 ## Convenciones
 

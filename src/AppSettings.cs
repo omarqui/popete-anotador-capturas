@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-//  Ajustes persistentes (%LOCALAPPDATA%\AnotadorCapturas\ajustes.json)
+//  Ajustes persistentes (%LOCALAPPDATA%\Popete\ajustes.json)
 // ----------------------------------------------------------------------------
 enum ModoTema { Sistema, Claro, Oscuro }
 
@@ -8,7 +8,7 @@ sealed class AppSettings
     /// <summary>Tema de la interfaz. "Sistema" sigue al de Windows.</summary>
     public ModoTema Tema { get; set; } = ModoTema.Sistema;
 
-    static readonly string FilePath = Path.Combine(Path.GetDirectoryName(History.Root), "ajustes.json");
+    static readonly string FilePath = Path.Combine(AppInfo.DataRoot, "ajustes.json");
 
     static readonly JsonSerializerOptions Options = new JsonSerializerOptions
     {

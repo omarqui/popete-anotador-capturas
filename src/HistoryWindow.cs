@@ -15,7 +15,7 @@ sealed class HistoryWindow : Window
     public HistoryWindow(Action<Session> open)
     {
         _open = open;
-        Title = "Historial de capturas";
+        Title = $"Historial — {AppInfo.Name}";
         Width = 980;
         Height = 640;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -117,12 +117,12 @@ sealed class HistoryWindow : Window
     {
         if (EditorWindow.Open.TryGetValue(s.Meta.Id, out var w))
         {
-            MessageBox.Show(this, "Esta captura está abierta. Ciérrala antes de eliminarla.", "Historial de capturas",
+            MessageBox.Show(this, "Esta captura está abierta. Ciérrala antes de eliminarla.", AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Information);
             w.Activate();
             return;
         }
-        if (MessageBox.Show(this, "¿Eliminar esta captura y sus anotaciones del historial?", "Historial de capturas",
+        if (MessageBox.Show(this, "¿Eliminar esta captura y sus anotaciones del historial?", AppInfo.Name,
                 MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
         try { History.Delete(s); }

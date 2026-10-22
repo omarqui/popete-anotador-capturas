@@ -36,7 +36,7 @@ sealed class CaptureHost : IDisposable
         History.LoadKnownSignatures();
 
         // Ventana "message-only" invisible que recibe WM_CLIPBOARDUPDATE
-        var p = new HwndSourceParameters("AnotadorCapturasListener")
+        var p = new HwndSourceParameters("PopeteListener")
         {
             ParentWindow = HWND_MESSAGE,
             WindowStyle = 0,
@@ -87,7 +87,7 @@ sealed class CaptureHost : IDisposable
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"No se pudo abrir la captura:\n{ex.Message}", "Anotador de capturas",
+            MessageBox.Show($"No se pudo abrir la captura:\n{ex.Message}", AppInfo.Name,
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -97,7 +97,7 @@ sealed class CaptureHost : IDisposable
         var img = ClipboardHelper.TryGetImage();
         if (img == null)
         {
-            _tray.ShowBalloonTip(2000, "Anotador de capturas", "No hay ninguna imagen en el portapapeles.",
+            _tray.ShowBalloonTip(2000, AppInfo.Name, "No hay ninguna imagen en el portapapeles.",
                 System.Windows.Forms.ToolTipIcon.Info);
             return;
         }
@@ -142,7 +142,7 @@ sealed class CaptureHost : IDisposable
         _tray = new System.Windows.Forms.NotifyIcon
         {
             Icon = System.Drawing.SystemIcons.Application,
-            Text = "Anotador de capturas",
+            Text = AppInfo.FullName,
             ContextMenuStrip = menu,
             Visible = true,
         };
@@ -152,7 +152,7 @@ sealed class CaptureHost : IDisposable
             if (last != null) OpenEditor(last);
             else ShowHistory();
         };
-        _tray.ShowBalloonTip(2500, "Anotador de capturas",
+        _tray.ShowBalloonTip(2500, AppInfo.FullName,
             "Activo. Toma una captura con Impr Pant o Win+Shift+S.", System.Windows.Forms.ToolTipIcon.Info);
     }
 
@@ -210,7 +210,7 @@ sealed class CaptureHost : IDisposable
     {
         _paused = !_paused;
         _pauseItem.Text = _paused ? "Reanudar detección" : "Pausar detección";
-        _tray.Text = _paused ? "Anotador de capturas (en pausa)" : "Anotador de capturas";
+        _tray.Text = _paused ? AppInfo.Name + " (en pausa)" : AppInfo.FullName;
     }
 
     void ToggleStartup()
