@@ -40,7 +40,7 @@ dotnet project convert AnotadorCapturas.cs
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
 2. Toma una captura con **Impr Pant**, **Win+Shift+S**, la Herramienta Recortes o **Win+Impr Pant**.
 3. Se abre el editor con la captura. Anota lo que necesites.
-4. Pulsa **Ctrl+C** para copiar la imagen anotada (la imagen parpadea para confirmarlo) o **Ctrl+S** para guardarla como PNG o JPG.
+4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. Para copiar sin cerrar, usa el botón **Copiar**.
 
 Todo se guarda automáticamente en el historial mientras editas.
 
@@ -60,8 +60,8 @@ Todo se guarda automáticamente en el historial mientras editas.
 
 | Atajo | Acción |
 |---|---|
-| `Ctrl+C` | Copiar la imagen anotada |
-| `Ctrl+Enter` | Copiar y cerrar |
+| `Ctrl+C` | Copiar la imagen anotada y cerrar el editor |
+| `Ctrl+Enter` | Copiar y cerrar (sin esperar el parpadeo) |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |

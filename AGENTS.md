@@ -61,7 +61,7 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 1. `dotnet run AnotadorCapturas.cs` → aparece el ícono y el aviso en la bandeja.
 2. Win+Shift+S → se abre el editor. Impr Pant → se abre el editor.
 3. Dibujar con cada herramienta, usar Shift en línea, flecha y rectángulo, escribir texto, Ctrl+Z.
-4. Ctrl+C → parpadeo y **no** se abre un editor nuevo. Pegar en Paint u otro programa y verificar las anotaciones.
+4. Ctrl+C → parpadeo, el editor se cierra solo (~450 ms) y **no** se abre un editor nuevo. Pegar en Paint u otro programa y verificar las anotaciones. El botón "Copiar" copia sin cerrar.
 5. Esperar unos minutos, o desconectar y reconectar RDP si aplica → la última captura **no** se reabre.
 6. Cerrar el editor → bandeja → Retomar captura → las anotaciones siguen ahí y se pueden editar.
 7. Ver historial → eliminar una captura (con su editor cerrado).

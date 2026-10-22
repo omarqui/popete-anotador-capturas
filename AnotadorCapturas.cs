@@ -784,6 +784,7 @@ sealed class EditorWindow : Window
     double _size = 4;
     bool _suppress;      // no registrar cambios internos en el historial de deshacer
     bool _pendingSave;
+    bool _closeScheduled;
     Stroke _preview;
     Point _start;
     TextBox _editing;
@@ -1059,9 +1060,9 @@ sealed class EditorWindow : Window
 
         panel.Children.Add(Divider());
 
-        panel.Children.Add(Ui.Btn("📋 Copiar", "Copiar imagen anotada (Ctrl+C)", () => CopyToClipboard()));
+        panel.Children.Add(Ui.Btn("📋 Copiar", "Copiar imagen anotada sin cerrar", () => CopyToClipboard()));
         panel.Children.Add(Ui.Btn("💾 Guardar", "Guardar como PNG/JPG (Ctrl+S)", Save));
-        panel.Children.Add(Ui.Btn("✔ Copiar y cerrar", "Copiar y cerrar (Ctrl+Enter)", () => { if (CopyToClipboard()) Close(); }));
+        panel.Children.Add(Ui.Btn("✔ Copiar y cerrar", "Copiar y cerrar (Ctrl+C o Ctrl+Enter)", () => { if (CopyToClipboard()) Close(); }));
 
         return new Border
         {
@@ -1429,6 +1430,20 @@ sealed class EditorWindow : Window
         _flash.BeginAnimation(OpacityProperty, anim);
     }
 
+    /// <summary>Cierra el editor cuando termina el parpadeo, para que se vea que se copió.</summary>
+    void CloseAfterFlash()
+    {
+        if (_closeScheduled) return;
+        _closeScheduled = true;
+        var t = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
+        t.Tick += (s, e) =>
+        {
+            t.Stop();
+            if (Open.ContainsKey(_session.Meta.Id)) Close(); // pudo cerrarse a mano mientras tanto
+        };
+        t.Start();
+    }
+
     void Save()
     {
         CommitText();
@@ -1461,7 +1476,7 @@ sealed class EditorWindow : Window
             switch (e.Key)
             {
                 case Key.Z: Undo(); break;
-                case Key.C: CopyToClipboard(); break;
+                case Key.C: if (CopyToClipboard()) CloseAfterFlash(); break;
                 case Key.S: Save(); break;
                 case Key.Enter: if (CopyToClipboard()) Close(); break;
                 case Key.D0: case Key.NumPad0: FitZoom(); break;
@@ -1490,5 +1505,5 @@ sealed class EditorWindow : Window
     }
 
     void SetHint() =>
-        _status.Text = "Ctrl+rueda: zoom · Shift: líneas a 45° y cuadrados · Ctrl+Z: deshacer · Ctrl+C: copiar · Ctrl+S: guardar";
+        _status.Text = "Ctrl+rueda: zoom · Shift: líneas a 45° y cuadrados · Ctrl+Z: deshacer · Ctrl+C: copiar y cerrar · Ctrl+S: guardar";
 }
