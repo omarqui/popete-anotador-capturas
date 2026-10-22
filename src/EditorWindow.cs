@@ -165,7 +165,11 @@ sealed partial class EditorWindow : Window
         _board.Children.Add(BuildSelectionLayer());
 
         // Lo recién dibujado con lápiz o resaltador queda seleccionado
-        _ink.StrokeCollected += (s, e) => SelectStrokes(new StrokeCollection { e.Stroke }, auto: true);
+        _ink.StrokeCollected += (s, e) =>
+        {
+            SelectStrokes(new StrokeCollection { e.Stroke }, auto: true);
+            AdvanceColor();
+        };
 
         // Clic derecho sobre el lienzo: intercambia color principal y secundario (como tocar Alt)
         _ink.PreviewMouseRightButtonUp += (s, e) =>
@@ -237,7 +241,14 @@ sealed partial class EditorWindow : Window
         // que de otro modo se queda con Ctrl+C / Ctrl+X / Ctrl+V.
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
-        PreviewMouseDown += (s, e) => _altAlone = false; // Alt+clic no cuenta como toque de Alt
+        PreviewMouseDown += (s, e) =>
+        {
+            _altAlone = false; // Alt+clic no cuenta como toque de Alt
+            if (e.ChangedButton != MouseButton.Middle) return;
+            // Clic central: copiar y cerrar, como Ctrl+C
+            if (CopyToClipboard()) CloseAfterFlash();
+            e.Handled = true;
+        };
         Deactivated += (s, e) => _altAlone = false;      // Alt+Tab: el Alt se suelta en otra ventana
 
         Open[session.Meta.Id] = this;

@@ -60,7 +60,11 @@ Después de un trazo o una forma, queda marcado unos segundos con un recuadro pu
 
 ### Numeración automática
 
-Cada trazo y cada texto lleva un círculo con su número, en el color del trazo, pegado a donde empieza (en una flecha, en la cola). Si borras uno, los demás se renumeran. Sale en la imagen copiada. El botón **123** (o `N`) la prende o apaga en cada captura; el valor inicial se elige en Ajustes.
+Cada trazo y cada texto lleva un círculo con su número, en el color del trazo, pegado al punto del trazo que está más arriba a la izquierda (en un círculo, sobre su arco superior izquierdo), sin taparlo. Si borras uno, los demás se renumeran. Sale en la imagen copiada. El botón **123** (o `N`) la prende o apaga en cada captura; el valor inicial y el tamaño de los números (normal, grande, muy grande, enorme) se eligen en Ajustes.
+
+### Un color distinto por trazo
+
+Después de cada trazo, el color pasa solo al siguiente: rojo → azul → verde → morado → naranja (el resaltador: amarillo → verde → azul). Así cada paso numerado queda de un color distinto. Si eliges un color a mano, el próximo trazo lo usa y la rotación sigue desde ahí. Se apaga en Ajustes.
 
 ### Corregir un texto
 
@@ -87,7 +91,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 
 | Atajo | Acción |
 |---|---|
-| `Ctrl+C` | Copiar la imagen anotada y cerrar el editor |
+| `Ctrl+C` o clic central | Copiar la imagen anotada y cerrar el editor |
 | `Ctrl+Enter` | Copiar y cerrar (sin esperar el parpadeo) |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |

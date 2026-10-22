@@ -70,6 +70,7 @@ sealed partial class EditorWindow
         {
             PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
             SelectStrokes(new StrokeCollection { stroke }, auto: true); // unos segundos, para cambiarle color o grosor
+            AdvanceColor();
         }
         e.Handled = true;
     }

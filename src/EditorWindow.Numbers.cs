@@ -2,7 +2,7 @@
 //  Editor — numeración automática
 //
 //  Cada trazo (lápiz, resaltador, formas) y cada texto lleva un círculo con su
-//  número de orden, pegado a donde empieza. Los números se recalculan en cada
+//  número de orden pegado a su punto más arriba a la izquierda. Los números se recalculan en cada
 //  cambio (MarkChanged): si se borra el 2, el 3 pasa a ser el 2.
 //
 //  El orden de creación se guarda en el propio trazo (propiedad del ISF) y en
@@ -24,6 +24,10 @@ sealed partial class EditorWindow
     Canvas BuildNumbersLayer()
     {
         _numbersLayer = new Canvas { IsHitTestVisible = false };
+        // Si cambia el tamaño de los números en Ajustes, se redibujan al momento
+        Action onSettings = RefreshNumbers;
+        AppSettings.Changed += onSettings;
+        Closed += (s, e) => AppSettings.Changed -= onSettings;
         return _numbersLayer;
     }
 
@@ -65,34 +69,32 @@ sealed partial class EditorWindow
         if (!NumbersOn) return;
         AssignMissingOrders();
 
-        // (orden, punto de inicio, dirección hacia donde avanza, color)
-        var items = new List<(long order, Point at, Vector away, Color color)>();
+        // (orden, punto del trazo más arriba a la izquierda, medio grosor, color).
+        // El número va pegado a ese punto, hacia arriba a la izquierda: así queda
+        // en esa zona del trazo pero siempre junto a él (en un círculo, sobre el
+        // arco superior izquierdo, no en la esquina vacía de su recuadro).
+        var items = new List<(long order, Point at, double halfWidth, Color color)>();
         foreach (var s in _ink.Strokes)
         {
             if (s == _preview || s.StylusPoints.Count == 0) continue;
-            var p0 = s.StylusPoints[0].ToPoint();
-            // Dirección inicial del trazo: el número va del lado contrario para no taparlo
-            var dir = new Vector(-1, -1);
-            foreach (var sp in s.StylusPoints)
-            {
-                var v = sp.ToPoint() - p0;
-                if (v.Length > 12) { dir = v; break; }
-            }
-            dir.Normalize();
-            items.Add((OrderOf(s), p0, -dir, s.DrawingAttributes.Color));
+            var corner = s.StylusPoints.Select(p => p.ToPoint()).MinBy(p => p.X + p.Y);
+            var da = s.DrawingAttributes;
+            items.Add((OrderOf(s), corner, Math.Max(da.Width, da.Height) / 2, da.Color));
         }
         foreach (var tb in TextBlocks)
         {
             var color = (tb.Foreground as SolidColorBrush)?.Color ?? Palette[0].color;
-            var at = new Point(Canvas.GetLeft(tb), Canvas.GetTop(tb) + tb.FontSize * 0.7);
-            items.Add((tb.Tag is long o ? o : long.MaxValue, at, new Vector(-1, 0), color));
+            items.Add((tb.Tag is long o ? o : long.MaxValue, new Point(Canvas.GetLeft(tb), Canvas.GetTop(tb)), 0, color));
         }
 
         double r = NumberRadius;
+        var upLeft = new Vector(-1, -1);
+        upLeft.Normalize();
         int n = 1;
         foreach (var item in items.OrderBy(i => i.order))
         {
-            var center = item.at + item.away * (r + 4);
+            // Borde del círculo a 2 px del borde del trazo
+            var center = item.at + upLeft * (r + item.halfWidth + 2);
             var badge = NumberBadge(n++, item.color, r);
             Canvas.SetLeft(badge, center.X - r);
             Canvas.SetTop(badge, center.Y - r);
@@ -100,8 +102,12 @@ sealed partial class EditorWindow
         }
     }
 
-    /// <summary>Radio del círculo en píxeles de la captura: crece un poco en capturas grandes.</summary>
-    double NumberRadius => Math.Clamp(Math.Max(_image.PixelWidth, _image.PixelHeight) / 110.0, 11, 22);
+    /// <summary>
+    /// Radio del círculo en píxeles de la captura: crece un poco en capturas grandes
+    /// y se multiplica por el tamaño elegido en Ajustes.
+    /// </summary>
+    double NumberRadius =>
+        Math.Clamp(Math.Max(_image.PixelWidth, _image.PixelHeight) / 110.0, 11, 22) * AppSettings.Current.TamanoNumeros;
 
     static FrameworkElement NumberBadge(int number, Color color, double r)
     {

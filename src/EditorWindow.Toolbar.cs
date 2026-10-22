@@ -259,6 +259,23 @@ sealed partial class EditorWindow
         UpdatePointer();
     }
 
+    // Rotación después de cada trazo: solo colores que se leen bien sobre capturas
+    // (sin amarillo, negro ni blanco en el lápiz). El resaltador rota aparte.
+    static readonly Color[] PenRotation = { Palette[0].color, Palette[3].color, Palette[2].color, Palette[4].color, Palette[5].color };
+    static readonly Color[] HighlightRotation = { Palette[1].color, Palette[2].color, Palette[3].color };
+
+    /// <summary>
+    /// Después de agregar un trazo, el color pasa al siguiente de la rotación (si está activado
+    /// en Ajustes). No toca el trazo recién hecho aunque siga seleccionado.
+    /// </summary>
+    void AdvanceColor()
+    {
+        if (!AppSettings.Current.RotarColores) return;
+        var rotation = _tool == Tool.Highlighter ? HighlightRotation : PenRotation;
+        int i = Array.IndexOf(rotation, CurrentColor); // -1 si se eligió a mano uno fuera de la rotación → el primero
+        SetColor(rotation[(i + 1) % rotation.Length], applyToSelection: false);
+    }
+
     void SetSecondaryColor(Color color)
     {
         SecondaryColor = color;

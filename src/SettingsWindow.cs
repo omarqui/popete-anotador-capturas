@@ -42,6 +42,11 @@ sealed class SettingsWindow : Window
         Choice("Numerar trazos y textos en capturas nuevas", new[] { ("Sí", true), ("No", false) },
             s.NumerarPorDefecto, v => Save(() => s.NumerarPorDefecto = v),
             "Cada captura puede cambiarlo con el botón «123» de la barra.");
+        Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
+            s.RotarColores, v => Save(() => s.RotarColores = v),
+            "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");
+        Choice("Tamaño de los números", new[] { ("Normal", 1.0), ("Grande", 1.5), ("Muy grande", 2.0), ("Enorme", 2.6) },
+            s.TamanoNumeros, v => Save(() => s.TamanoNumeros = v));
         Choice("Lo recién dibujado queda seleccionado", new[] { ("No", 0), ("2 s", 2), ("3 s", 3), ("5 s", 5), ("10 s", 10) },
             s.SegundosSeleccion, v => Save(() => s.SegundosSeleccion = v),
             "Mientras está seleccionado, elegir color o grosor se le aplica.");

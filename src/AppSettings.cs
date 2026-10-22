@@ -19,6 +19,12 @@ sealed class AppSettings
     /// <summary>Si las capturas nuevas numeran sus trazos y textos (cada captura puede cambiarlo con su botón).</summary>
     public bool NumerarPorDefecto { get; set; } = true;
 
+    /// <summary>Después de cada trazo, pasar al siguiente color (rojo → azul → verde → morado → naranja).</summary>
+    public bool RotarColores { get; set; } = true;
+
+    /// <summary>Multiplicador del tamaño de los números (1 = el tamaño original).</summary>
+    public double TamanoNumeros { get; set; } = 1.5;
+
     /// <summary>Grosor con el que abre el editor.</summary>
     public double GrosorInicial { get; set; } = 4;
 
@@ -53,10 +59,14 @@ sealed class AppSettings
         return new AppSettings();
     }
 
+    /// <summary>Después de guardar: los editores abiertos se actualizan (por ejemplo, el tamaño de los números).</summary>
+    public static event Action Changed;
+
     public void Save()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
         var bytes = JsonSerializer.SerializeToUtf8Bytes(this, Options);
         History.WriteAtomic(FilePath, fs => fs.Write(bytes, 0, bytes.Length));
+        Changed?.Invoke();
     }
 }
