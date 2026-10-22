@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifiesto del paquete MSIX de Popete. Es una plantilla: tools\empaquetar-msix.ps1
+  reemplaza los $VALORES$ (identidad y editor de Partner Center, versión, arquitectura).
+  Los logos de Assets se generan con tools\generar-icono.ps1.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+
+  <Identity
+    Name="$IDENTITY_NAME$"
+    Publisher="$PUBLISHER$"
+    Version="$VERSION$"
+    ProcessorArchitecture="$ARCH$" />
+
+  <Properties>
+    <DisplayName>Popete</DisplayName>
+    <PublisherDisplayName>$PUBLISHER_DISPLAY_NAME$</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <Description>Anotador de capturas de pantalla: detecta cada captura y abre un editor para marcarla.</Description>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="es-ES" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Popete" Executable="Popete.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Popete"
+        Description="Anotador de capturas"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+
+      <Extensions>
+        <!-- "Iniciar con Windows" dentro del paquete (StartupHelper usa este TaskId). Apagado hasta que el usuario lo pida. -->
+        <desktop:Extension Category="windows.startupTask" Executable="Popete.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="PopeteInicio" Enabled="false" DisplayName="Popete" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- App de escritorio (WPF) con acceso completo: lo exige el escucha del portapapeles y la bandeja -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

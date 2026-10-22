@@ -339,8 +339,9 @@ sealed class CaptureHost : IDisposable
     void ToggleStartup()
     {
         bool on = !StartupHelper.IsEnabled();
-        StartupHelper.Set(on);
-        _startupItem.Checked = on;
+        bool now = StartupHelper.Set(on);
+        _startupItem.Checked = now;
+        if (on && !now) ConfirmDialog.Inform(null, "Iniciar con Windows", StartupHelper.BlockedMessage);
     }
 
     public void Dispose()

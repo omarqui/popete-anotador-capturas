@@ -58,8 +58,15 @@ sealed class SettingsWindow : Window
         Choice("Conservar las últimas", AppSettings.MaxCapturasOpciones.Select(n => (n > 0 ? n.ToString() : "Todas", n)).ToArray(),
             s.MaxCapturas, v => { Save(() => s.MaxCapturas = v); CaptureHost.PruneHistory(); },
             "Las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.");
-        Choice("Iniciar con Windows", new[] { ("Sí", true), ("No", false) },
-            StartupHelper.IsEnabled(), v => StartupHelper.Set(v));
+        Action<bool> selectStartup = null;
+        selectStartup = Choice("Iniciar con Windows", new[] { ("Sí", true), ("No", false) },
+            StartupHelper.IsEnabled(), v =>
+            {
+                // En el MSIX, Windows puede no dejar encenderlo: se muestra cómo quedó
+                if (StartupHelper.Set(v) == v) return;
+                selectStartup(!v);
+                ConfirmDialog.Inform(this, "Iniciar con Windows", StartupHelper.BlockedMessage);
+            });
 
         var folder = Ui.Btn("Abrir carpeta del historial", "Abrir en el Explorador", () =>
         {
@@ -98,7 +105,8 @@ sealed class SettingsWindow : Window
     }
 
     /// <summary>Una fila: etiqueta (y nota opcional) a la izquierda, opciones segmentadas a la derecha.</summary>
-    void Choice<T>(string label, (string text, T value)[] options, T current, Action<T> apply, string note = null)
+    /// <returns>Marca otra opción sin aplicarla (para mostrar el valor real si el cambio no se pudo hacer).</returns>
+    Action<T> Choice<T>(string label, (string text, T value)[] options, T current, Action<T> apply, string note = null)
     {
         var buttons = new List<ToggleButton>();
         foreach (var (text, value) in options)
@@ -136,6 +144,12 @@ sealed class SettingsWindow : Window
         row.Children.Add(group);
         row.Children.Add(labels);
         _body.Children.Add(row);
+
+        return value =>
+        {
+            for (int i = 0; i < buttons.Count; i++)
+                buttons[i].IsChecked = EqualityComparer<T>.Default.Equals(options[i].value, value);
+        };
     }
 
     /// <summary>Carpeta que propone "Guardar como".</summary>

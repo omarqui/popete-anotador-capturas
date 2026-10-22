@@ -1,5 +1,6 @@
 # Genera assets\popete.ico a partir de assets\popete.svg (y, para 16-24 px,
-# de assets\popete-pequeno.svg, una version simplificada que se lee mejor en la bandeja).
+# de assets\popete-pequeno.svg, una version simplificada que se lee mejor en la bandeja),
+# y los logos del paquete MSIX en packaging\Assets (ver tools\empaquetar-msix.ps1).
 #
 # Uso (desde la raiz del repo):  powershell -STA -File tools\generar-icono.ps1
 #
@@ -13,7 +14,8 @@ param(
     [int]$SmallMax = 24,   # hasta este tamano se usa la version simplificada
     [string]$Ico = "$PSScriptRoot\..\assets\popete.ico",
     [int[]]$Sizes = @(16, 20, 24, 32, 40, 48, 64, 256),
-    [string]$PreviewDir   # opcional: guarda tambien un PNG por tamano
+    [string]$PreviewDir,  # opcional: guarda tambien un PNG por tamano
+    [string]$MsixAssets = "$PSScriptRoot\..\packaging\Assets"  # logos del paquete MSIX
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationCore, PresentationFramework, WindowsBase
@@ -65,15 +67,20 @@ function LoadSvg($path) {
     return @{ Drawing = $group; ViewBox = $vb }
 }
 
-function RenderPng([int]$size, $svg) {
+function RenderPng([int]$size, $svg) { return , (RenderCentered $size $size $size $svg) }
+
+# Lienzo de $width x $height transparente con el logo de $icon px centrado
+function RenderCentered([int]$width, [int]$height, [int]$icon, $svg) {
+    $size = $icon
     $vb = $svg.ViewBox
     $dv = New-Object System.Windows.Media.DrawingVisual
     $dc = $dv.RenderOpen()
+    $dc.PushTransform((New-Object System.Windows.Media.TranslateTransform ([math]::Floor(($width - $icon) / 2)), ([math]::Floor(($height - $icon) / 2))))
     $dc.PushTransform((New-Object System.Windows.Media.ScaleTransform ($size / $vb[2]), ($size / $vb[3])))
     $dc.PushTransform((New-Object System.Windows.Media.TranslateTransform (-$vb[0]), (-$vb[1])))
     $dc.DrawDrawing($svg.Drawing)
     $dc.Close()
-    $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap $size, $size, 96, 96, ([System.Windows.Media.PixelFormats]::Pbgra32)
+    $rtb = New-Object System.Windows.Media.Imaging.RenderTargetBitmap $width, $height, 96, 96, ([System.Windows.Media.PixelFormats]::Pbgra32)
     $rtb.Render($dv)
     $enc = New-Object System.Windows.Media.Imaging.PngBitmapEncoder
     $enc.Frames.Add([System.Windows.Media.Imaging.BitmapFrame]::Create($rtb))
@@ -108,3 +115,27 @@ foreach ($img in $images) { $w.Write($img) }
 $w.Flush()
 [IO.File]::WriteAllBytes([IO.Path]::GetFullPath($Ico), $out.ToArray())
 "Generado $([IO.Path]::GetFullPath($Ico)) ($($Sizes -join ', ') px, $($out.Length) bytes)"
+
+# Logos del MSIX, con los calificadores que resuelve resources.pri (makepri):
+# scale-* para mosaicos y Store, targetsize-* (y sus variantes sin placa) para barra de tareas e Inicio.
+if ($MsixAssets) {
+    $dir = [IO.Path]::GetFullPath($MsixAssets)
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    function Save([string]$name, [int]$w, [int]$h, [int]$icon) {
+        $svg = if ($icon -le $SmallMax) { $small } else { $big }
+        [IO.File]::WriteAllBytes((Join-Path $dir $name), (RenderCentered $w $h $icon $svg))
+    }
+    foreach ($scale in 100, 200, 400) {
+        $f = $scale / 100
+        Save "Square44x44Logo.scale-$scale.png" (44 * $f) (44 * $f) (44 * $f)
+        Save "Square150x150Logo.scale-$scale.png" (150 * $f) (150 * $f) (100 * $f)   # con margen, como los mosaicos de Windows
+        Save "Wide310x150Logo.scale-$scale.png" (310 * $f) (150 * $f) (100 * $f)
+        Save "StoreLogo.scale-$scale.png" (50 * $f) (50 * $f) (50 * $f)
+    }
+    foreach ($t in 16, 20, 24, 32, 40, 48, 64, 256) {
+        Save "Square44x44Logo.targetsize-$t.png" $t $t $t
+        Save "Square44x44Logo.targetsize-${t}_altform-unplated.png" $t $t $t
+        Save "Square44x44Logo.targetsize-${t}_altform-lightunplated.png" $t $t $t
+    }
+    "Generados los logos del MSIX en $dir"
+}

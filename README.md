@@ -25,12 +25,29 @@ dotnet publish src
 
 Usa el `.exe` publicado si vas a activar **Iniciar con Windows**. Con `dotnet run`, el ejecutable vive en `src\bin\` y cambia con cada compilación.
 
+## Paquete MSIX (Microsoft Store)
+
+```powershell
+powershell -File tools\empaquetar-msix.ps1
+```
+
+Genera `artifacts\msix\Popete_1.0.0.0_x64-prueba.msix`, firmado con un certificado de prueba que el script crea en tu usuario. Para instalarlo, confía una vez en ese certificado (como administrador) y luego instala el paquete; el script imprime los dos comandos. Si no tienes el Windows SDK, el script descarga una vez `makeappx`, `makepri` y `signtool` del paquete NuGet oficial `Microsoft.Windows.SDK.BuildTools`.
+
+Para la Store, usa los datos de **Partner Center › tu app › Identidad del producto**. Sale sin firmar, porque la Store lo firma:
+
+```powershell
+powershell -File tools\empaquetar-msix.ps1 -Store -IdentityName "12345Nombre.Popete" `
+  -Publisher "CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" -PublisherDisplayName "Tu nombre" -Version 1.0.0.0
+```
+
+La versión tiene que terminar en `.0` y subir en cada envío. Instalada como MSIX, la app guarda sus datos en la carpeta del paquete (se borran al desinstalarla), y **Iniciar con Windows** usa la tarea de inicio del paquete, que también se puede apagar en **Configuración › Aplicaciones › Inicio**.
+
 ## Uso
 
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
 2. Toma una captura con **Impr Pant**, **Win+Shift+S**, la Herramienta Recortes o **Win+Impr Pant**.
 3. Se abre el editor con la captura. Anota lo que necesites.
-4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. Para copiar sin cerrar, usa el botón **Copiar**.
+4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **doble clic** sobre la imagen.
 
 Todo se guarda automáticamente en el historial mientras editas.
 
@@ -52,11 +69,11 @@ El botón de la papelera quita todas las anotaciones, después de pedir confirma
 | Borrador | `E` | Borra trazos completos |
 | Recortar | `C` | Arrastra los bordes de la captura; ver «Recortar» más abajo |
 
-Línea, Rectángulo, Texto y «Texto con fondo» están en el botón **Otras herramientas** (el de las figuras, con una flechita), al lado de la flecha. El botón muestra la que esté activa. Sus teclas (`L`, `R`, `T`) siguen funcionando.
+Resaltador, Línea, Rectángulo, Texto y «Texto con fondo» están en el botón **Otras herramientas** (el de las figuras, con una flechita), al lado de la flecha. El botón muestra la que esté activa. Sus teclas (`H`, `L`, `R`, `T`) siguen funcionando.
 
 Los trazos llevan un borde blanco fino para que se destaquen sobre cualquier fondo (también en la imagen copiada); el resaltador no.
 
-Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4 grosores, con las teclas `1` a `4`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo, cuatro marcas de retícula y el grosor ("4 px"), y se ve tanto en fondos claros como oscuros.
+Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 3 grosores (2, 4 y 8 px), con las teclas `1` a `3`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo, cuatro marcas de retícula y el grosor ("4 px"), y se ve tanto en fondos claros como oscuros.
 
 ### Color principal y secundario
 
@@ -68,7 +85,7 @@ Después de un trazo o una forma, queda marcado unos segundos con un recuadro pu
 
 ### Numeración automática
 
-Cada trazo y cada texto lleva un círculo con su número, en el color del trazo, pegado al punto del trazo que está más arriba a la izquierda (en un círculo, sobre su arco superior izquierdo), sin taparlo. Si borras uno, los demás se renumeran. Sale en la imagen copiada. El botón **123** (o `N`) la prende o apaga en cada captura; el valor inicial y el tamaño de los números (normal, grande, muy grande, enorme) se eligen en Ajustes.
+Cada trazo y cada texto (las flechas no) lleva un círculo con su número, en el color del trazo, pegado al punto del trazo que está más arriba a la izquierda (en un círculo, sobre su arco superior izquierdo), sin taparlo. Si borras uno, los demás se renumeran. Sale en la imagen copiada. El botón **123** (o `N`) la prende o apaga en cada captura; el valor inicial y el tamaño de los números (normal, grande, muy grande, enorme) se eligen en Ajustes.
 
 ### Un color distinto por trazo
 
@@ -115,7 +132,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 
 | Atajo | Acción |
 |---|---|
-| `Ctrl+C` o clic central | Copiar la imagen anotada y cerrar el editor |
+| `Ctrl+C` o doble clic en la imagen | Copiar la imagen anotada y cerrar el editor |
 | `Ctrl+Enter` | Copiar y cerrar (sin esperar el parpadeo) |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
@@ -124,12 +141,13 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 | `Ctrl+,` | Ajustes |
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |
 | `Shift+rueda` | Desplazar en horizontal |
+| Clic central y arrastrar | Mover la vista (con la mano), aunque la imagen entre entera; `Ctrl+0` la vuelve a centrar |
 | `Alt` (tocar) o clic derecho en la imagen | Intercambiar color principal y secundario |
 | `Supr` | Borrar lo seleccionado |
 | `Ctrl+A` | Seleccionar todo |
 | `Enter` / `Esc` con Recortar | Aplicar / cancelar el recorte |
 | `Ctrl+0` | Ajustar a la ventana |
-| `1` a `4` | Grosor: fino, medio, grueso, muy grueso |
+| `1` a `3` | Grosor: fino, medio, grueso |
 | `Tab` | Alternar entre lápiz y flecha |
 | `Ctrl+H` | Mostrar u ocultar las capturas recientes |
 | `Esc` | Quitar la selección; si no hay, cerrar el editor |
@@ -143,7 +161,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 - **Iniciar con Windows**
 - **Salir**
 
-Doble clic en el ícono abre la captura más reciente.
+Un clic en el ícono abre la captura más reciente.
 
 ## Historial
 

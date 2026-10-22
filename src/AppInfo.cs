@@ -27,16 +27,35 @@ static class AppInfo
     static readonly string NewRoot = Path.Combine(LocalAppData, "Popete");
     static readonly string LegacyRoot = Path.Combine(LocalAppData, "AnotadorCapturas");
 
+    /// <summary>Si corre instalada como paquete MSIX (Microsoft Store o .msix de prueba).</summary>
+    public static readonly bool IsPackaged = DetectPackage();
+
+    const int ErrorInsufficientBuffer = 122; // con paquete; sin paquete devuelve APPMODEL_ERROR_NO_PACKAGE
+
+    [DllImport("kernel32.dll")]
+    static extern int GetCurrentPackageFullName(ref int length, IntPtr name);
+
+    static bool DetectPackage()
+    {
+        int length = 0;
+        return GetCurrentPackageFullName(ref length, IntPtr.Zero) == ErrorInsufficientBuffer;
+    }
+
     /// <summary>
     /// Carpeta de datos. Si la carpeta vieja no se pudo mover (por ejemplo, un
     /// archivo en uso), se sigue usando la vieja para no perder el historial.
+    /// En el MSIX es la carpeta propia del paquete: Windows redirige igual las
+    /// escrituras en %LOCALAPPDATA%, pero el Explorador ("Abrir carpeta del
+    /// historial") no vería esa redirección.
     /// </summary>
     public static string DataRoot =>
-        !Directory.Exists(NewRoot) && Directory.Exists(LegacyRoot) ? LegacyRoot : NewRoot;
+        IsPackaged ? Windows.Storage.ApplicationData.Current.LocalFolder.Path
+        : !Directory.Exists(NewRoot) && Directory.Exists(LegacyRoot) ? LegacyRoot : NewRoot;
 
     /// <summary>Se llama una vez al arrancar, antes de leer historial o ajustes.</summary>
     public static void MigrateLegacy()
     {
+        if (IsPackaged) return; // el paquete arranca con su propia carpeta y su propio inicio con Windows
         if (Directory.Exists(LegacyRoot) && !Directory.Exists(NewRoot))
         {
             try { Directory.Move(LegacyRoot, NewRoot); }

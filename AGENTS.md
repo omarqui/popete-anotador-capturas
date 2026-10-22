@@ -10,11 +10,12 @@ App de bandeja para Windows. Detecta capturas de pantalla mediante el portapapel
 dotnet run --project src       # compilar y ejecutar
 dotnet build src               # solo compilar (úsalo para verificar cambios)
 dotnet publish src             # generar .exe
+powershell -File tools\empaquetar-msix.ps1   # paquete MSIX (ver README)
 ```
 
 Si la app ya está abierta, `dotnet run` sale enseguida por el mutex de instancia única: hay que cerrarla antes desde la bandeja (**Salir**).
 
-Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linux o macOS no se puede verificar el build.
+Solo compila y corre en **Windows** (`net10.0-windows10.0.19041.0`, WPF y WinForms). En Linux o macOS no se puede verificar el build.
 
 ## Estado actual
 
@@ -27,7 +28,7 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 | Archivo | Tipo | Responsabilidad |
 |---|---|---|
 | `GlobalUsings.cs` | — | Todos los `using` del proyecto, como `global using`. |
-| `AppInfo.cs` | `AppInfo` | Nombre (`Popete`, subtítulo «anotador de capturas») y carpeta de datos. `MigrateLegacy()` mueve `%LOCALAPPDATA%\AnotadorCapturas` a `%LOCALAPPDATA%\Popete` y la entrada de inicio con Windows. |
+| `AppInfo.cs` | `AppInfo` | Nombre (`Popete`, subtítulo «anotador de capturas») y carpeta de datos. `MigrateLegacy()` mueve `%LOCALAPPDATA%\AnotadorCapturas` a `%LOCALAPPDATA%\Popete` y la entrada de inicio con Windows. `IsPackaged` (con `GetCurrentPackageFullName`): en el MSIX, `DataRoot` es `ApplicationData.Current.LocalFolder` y no se migra nada. |
 | `Program.cs` | `Program` | `Main` con `[STAThread]`, mutex de instancia única, `Application` con `ShutdownMode.OnExplicitShutdown`. |
 | `CaptureHost.cs` | `CaptureHost` | Ventana *message-only* (`HwndSource`, `HWND_MESSAGE`) con `AddClipboardFormatListener`. Agrupa eventos con un `DispatcherTimer` de 350 ms. Maneja el `NotifyIcon` de WinForms y su menú. `OpenEditor(Session)` es estático y evita abrir dos editores para la misma sesión. |
 | `ClipboardHelper.cs` | `ClipboardHelper` | Lee la imagen del portapapeles con reintentos: primero el formato `"PNG"`, si no, el Bitmap vía WinForms reconvertido a PNG. `Signature()` calcula tamaño + SHA-256 de los píxeles en Bgra32. |
@@ -52,7 +53,7 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 | `Theme.cs` | `Theme` | Tema claro/oscuro: pinceles en `Application.Resources` con claves fijas (`Fondo`, `Superficie`, `Borde`, `Texto`, `Acento`, `Lienzo`...) y estilos de botón en XAML (`XamlReader.Parse`). `Toggle()` alterna claro/oscuro; mientras el ajuste sea `Sistema` (nunca tocado) sigue al tema de Windows (`AppsUseLightTheme` + `SystemEvents.UserPreferenceChanged`). Barra de título oscura con `DwmSetWindowAttribute`. |
 | `AppSettings.cs` | `AppSettings`, `ModoTema` | `%LOCALAPPDATA%\Popete\ajustes.json`: tema y `MaxCapturas` (50 por defecto, 0 = sin límite). |
 | `Undo.cs` | `IUndo` y sus implementaciones | Pila de deshacer: `StrokeChange`, `AttributeChange`, `ElementAdd`, `ElementRemove`, `TextEdit`, `ActionChange`, `CompositeChange` (varios en un paso), `ClearAllChange`. |
-| `StartupHelper.cs` | `StartupHelper` | Clave `HKCU\...\Run`. |
+| `StartupHelper.cs` | `StartupHelper` | Inicio con Windows: clave `HKCU\...\Run` como .exe; en el MSIX, la API `StartupTask` (TaskId `PopeteInicio`, declarado en el manifiesto). `Set` devuelve el estado real (el usuario puede bloquearlo en Configuración). |
 | `Ui.cs` | `Ui`, `Icons` | Botones con estilo, íconos de trazo (`Path` en grilla 24×24 que toma el color del texto), separadores, grupos y teclas. |
 
 ## Decisiones y trampas conocidas (no las deshagas)
@@ -92,7 +93,8 @@ Solo compila y corre en **Windows** (`net10.0-windows`, WPF y WinForms). En Linu
 29. **Mientras se recorta, la vista no es la exportación:** `LayoutForImage`, `UpdateFrameClip` y `FitZoom` usan `ShownRect`/`ShownImage` (la captura entera); `Render` y `ExportBounds` siguen con `VisibleRect`/`_image` (el recorte aplicado). Por eso copiar o guardar aplican antes el marco. El marco se dibuja en `_selectionLayer` desde `UpdateSelectionVisual`.
 30. **Todos los trazos son `NoteStroke`:** el ISF guarda trazos comunes, así que `LoadAnnotations` los convierte; el `InkCanvas` agrega uno común al terminar un trazo a mano y `StrokeCollected` lo reemplaza con `_suppress` y registra ahí el deshacer (por eso `StrokesChanged` ignora un agregado suelto que no sea `NoteStroke`). Las formas nacen como `NoteStroke`. Mientras se dibuja a mano, el trazo en vivo todavía no tiene borde.
 31. **Nada de `MessageBox`:** se ve clásico y con «Yes/No». Usar `ConfirmDialog`.
-32. **Ratón en el lienzo:** clic central arrastra la vista (`EditorWindow.Pan.cs`: captura el mouse en `_scroll` y esconde `_pointerLayer` mientras dura; funciona aunque la captura entre entera, con `_panShift` como `RenderTransform` de `_host`; "Ajustar" lo vuelve a cero). Doble clic izquierdo copia y cierra, salvo sobre un texto (lo edita) o con un cuadro de texto abierto. El primer clic del doble clic deja un trazo mínimo que `IsTiny` descarta.
+32. **MSIX (`packaging\`, `tools\empaquetar-msix.ps1`):** dentro del paquete, `HKCU\...\Run` queda virtualizado y no arranca nada al iniciar sesión; por eso `StartupHelper` usa `StartupTask` y el `TargetFramework` lleva la versión de Windows (proyecciones WinRT). Las escrituras en `%LOCALAPPDATA%` también se redirigen, y el Explorador no ve esa redirección: `AppInfo.DataRoot` usa la carpeta real del paquete. `AppxManifest.xml` es una plantilla (`$IDENTITY_NAME$`, `$PUBLISHER$`...). Los logos de `packaging\Assets` los genera `generar-icono.ps1` con calificadores `scale-*`/`targetsize-*`, que resuelve `resources.pri`; el script le quita `<packaging>` al priconfig para que no parta el `.pri` por escala (eso solo sirve en un bundle). La versión es `N.N.N.0`. `-Store` deja el paquete sin firmar (lo firma la Store); sin `-Store`, firma con un certificado propio `CN=Popete Prueba` en `CurrentUser\My`. Los `.ps1` van sin tildes: PowerShell 5.1 lee mal UTF-8 sin BOM.
+33. **Ratón en el lienzo:** clic central arrastra la vista (`EditorWindow.Pan.cs`: captura el mouse en `_scroll` y esconde `_pointerLayer` mientras dura; funciona aunque la captura entre entera, con `_panShift` como `RenderTransform` de `_host`; "Ajustar" lo vuelve a cero). Doble clic izquierdo copia y cierra, salvo sobre un texto (lo edita) o con un cuadro de texto abierto. El primer clic del doble clic deja un trazo mínimo que `IsTiny` descarta.
 
 ## Convenciones
 
