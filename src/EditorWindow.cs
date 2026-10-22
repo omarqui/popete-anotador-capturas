@@ -201,6 +201,7 @@ sealed partial class EditorWindow : Window
         _host = new Canvas
         {
             LayoutTransform = _zoom,
+            RenderTransform = _panShift, // pan cuando la captura entra entera (ver EditorWindow.Pan.cs)
             Margin = new Thickness(ViewMargin),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
@@ -262,11 +263,28 @@ sealed partial class EditorWindow : Window
         PreviewMouseDown += (s, e) =>
         {
             _altAlone = false; // Alt+clic no cuenta como toque de Alt
-            if (e.ChangedButton != MouseButton.Middle) return;
-            // Clic central: copiar y cerrar, como Ctrl+C
-            if (CopyToClipboard()) CloseAfterFlash();
+            if (e.ChangedButton == MouseButton.Middle && IsInside(e.OriginalSource, _scroll))
+            {
+                BeginPan(e.GetPosition(_scroll));
+                e.Handled = true;
+            }
+            // Doble clic en el lienzo: copiar y cerrar, como Ctrl+C. Sobre un texto lo
+            // edita (EditText), y con un cuadro de texto abierto selecciona palabras.
+            else if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && _editing == null
+                     && IsInside(e.OriginalSource, _scroll) && !IsInside(e.OriginalSource, _textLayer))
+            {
+                if (CopyToClipboard()) CloseAfterFlash();
+                e.Handled = true;
+            }
+        };
+        _scroll.PreviewMouseMove += (s, e) => { if (PanMove(e.GetPosition(_scroll))) e.Handled = true; };
+        _scroll.PreviewMouseUp += (s, e) =>
+        {
+            if (e.ChangedButton != MouseButton.Middle || _panStart == null) return;
+            EndPan();
             e.Handled = true;
         };
+        _scroll.LostMouseCapture += (s, e) => EndPan();
         Deactivated += (s, e) => _altAlone = false;      // Alt+Tab: el Alt se suelta en otra ventana
 
         Open[session.Meta.Id] = this;
@@ -512,6 +530,7 @@ sealed partial class EditorWindow : Window
         double fit = Math.Min(availW / ShownImage.PixelWidth, availH / ShownImage.PixelHeight);
         // Nunca agrandar por encima del tamaño real en pantalla
         SetZoom(Math.Min(1 / DpiScale(), fit));
+        ResetPanShift(); // "Ajustar" vuelve a centrar
     }
 
     // ------------------------------------------------------------------ teclado
@@ -592,7 +611,6 @@ sealed partial class EditorWindow : Window
             case Key.D1: case Key.NumPad1: SetSize(SizePresets[0]); break;
             case Key.D2: case Key.NumPad2: SetSize(SizePresets[1]); break;
             case Key.D3: case Key.NumPad3: SetSize(SizePresets[2]); break;
-            case Key.D4: case Key.NumPad4: SetSize(SizePresets[3]); break;
             case Key.Delete: case Key.Back: DeleteSelection(); break;
             case Key.Enter when _cropMode: ConfirmCrop(); break;
             case Key.Escape:

@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------------------
 sealed partial class EditorWindow
 {
-    /// <summary>Grosores de la barra (teclas 1 a 4).</summary>
-    static readonly double[] SizePresets = { 2, 4, 8, 14 };
+    /// <summary>Grosores de la barra (teclas 1 a 3).</summary>
+    static readonly double[] SizePresets = { 2, 4, 8 };
 
     readonly Dictionary<Tool, ToggleButton> _toolButtons = new Dictionary<Tool, ToggleButton>();
     readonly List<(ToggleButton button, Color color)> _swatches = new List<(ToggleButton, Color)>();
@@ -26,7 +26,6 @@ sealed partial class EditorWindow
         left.Children.Add(Ui.Group(
             ToolButton(Icons.Select, Tool.Select, "Seleccionar (V) — clic en un trazo para cambiarle color o grosor; Supr lo borra"),
             ToolButton(Icons.Pen, Tool.Pen, "Lápiz (P) — Tab alterna con la flecha"),
-            ToolButton(Icons.Highlighter, Tool.Highlighter, "Resaltador (H)"),
             ToolButton(Icons.Arrow, Tool.Arrow, "Flecha (A) — sigue el mouse; casi recta se endereza; Shift: recta a 45°; Tab alterna con el lápiz"),
             BuildMoreTools(),
             ToolButton(Icons.Eraser, Tool.Eraser, "Borrador (E) — borra trazos completos"),
@@ -53,11 +52,11 @@ sealed partial class EditorWindow
         left.Children.Add(Ui.Divider());
 
         var sizes = new List<UIElement>();
-        string[] names = { "Fino", "Medio", "Grueso", "Muy grueso" };
+        string[] names = { "Fino", "Medio", "Grueso" };
         for (int i = 0; i < SizePresets.Length; i++)
         {
             double size = SizePresets[i];
-            double dot = new[] { 4.0, 7, 10, 14 }[i];
+            double dot = new[] { 4.0, 7, 10 }[i];
             var dotEl = new System.Windows.Shapes.Ellipse { Width = dot, Height = dot };
             dotEl.SetBinding(System.Windows.Shapes.Shape.FillProperty, new System.Windows.Data.Binding
             {
@@ -115,13 +114,8 @@ sealed partial class EditorWindow
 
         right.Children.Add(Ui.Divider());
 
-        // Solo ícono para que la barra quepa en una fila; el texto va en el tooltip.
         // Guardar como no tiene botón: queda con Ctrl+S.
-        var copy = Ui.IconBtn(Icons.Copy, "Copiar la imagen anotada sin cerrar", () => CopyToClipboard());
-        copy.Margin = new Thickness(0, 0, 8, 0);
-        right.Children.Add(copy);
-
-        var copyClose = Ui.Btn("Copiar y cerrar", "Copiar y cerrar (Ctrl+C o Ctrl+Enter)",
+        var copyClose = Ui.Btn("Copiar y cerrar", "Copiar y cerrar (Ctrl+C, Ctrl+Enter o doble clic en la captura)",
             () => { if (CopyToClipboard()) Close(); }, Icons.Check, "EstiloPrimario");
         var chip = new Border
         {
@@ -146,11 +140,12 @@ sealed partial class EditorWindow
     }
 
     // ------------------------------------------------------------------ otras herramientas
-    // Línea, rectángulo, texto y "texto con fondo" van en un menú para que la barra quede
-    // corta. El botón muestra la herramienta del menú que esté activa (y queda marcado);
-    // si no hay ninguna, un ícono genérico. Las teclas L, R y T siguen funcionando.
+    // Resaltador, línea, rectángulo, texto y "texto con fondo" van en un menú para que la barra
+    // quede corta. El botón muestra la herramienta del menú que esté activa (y queda marcado);
+    // si no hay ninguna, un ícono genérico. Las teclas H, L, R y T siguen funcionando.
     static readonly (Tool tool, string icon, string name, string key)[] MoreTools =
     {
+        (Tool.Highlighter, Icons.Highlighter, "Resaltador", "H"),
         (Tool.Line, Icons.Line, "Línea", "L"),
         (Tool.Rectangle, Icons.Rectangle, "Rectángulo", "R"),
         (Tool.Text, Icons.Text, "Texto", "T"),
@@ -162,7 +157,7 @@ sealed partial class EditorWindow
     {
         _moreButton = new ToggleButton
         {
-            ToolTip = "Otras herramientas: línea (L), rectángulo (R), texto (T) y texto con fondo",
+            ToolTip = "Otras herramientas: resaltador (H), línea (L), rectángulo (R), texto (T) y texto con fondo",
             Width = 48,
         };
         System.Windows.Automation.AutomationProperties.SetName(_moreButton, "Otras herramientas");
@@ -296,7 +291,7 @@ sealed partial class EditorWindow
         left.Children.Add(_status);
 
         var hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–4", "Grosor"), ("Alt / clic der.", "Otro color"), ("Supr", "Borrar selección") })
+        foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–3", "Grosor"), ("Alt / clic der.", "Otro color"), ("Supr", "Borrar selección") })
         {
             hints.Children.Add(Ui.Keycap(key));
             var t = new TextBlock { Text = text, Margin = new Thickness(6, 0, 14, 0), VerticalAlignment = VerticalAlignment.Center };

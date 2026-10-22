@@ -224,8 +224,10 @@ sealed class CaptureHost : IDisposable
             ContextMenuStrip = menu,
             Visible = true,
         };
-        _tray.DoubleClick += (s, e) =>
+        // Un clic izquierdo basta; el derecho queda para el menú
+        _tray.MouseClick += (s, e) =>
         {
+            if (e.Button != System.Windows.Forms.MouseButtons.Left) return;
             var last = History.List().FirstOrDefault();
             if (last != null) OpenEditor(last);
             else ShowHistory();

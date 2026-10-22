@@ -50,7 +50,7 @@ sealed class SettingsWindow : Window
         Choice("Lo recién dibujado queda seleccionado", new[] { ("No", 0), ("2 s", 2), ("3 s", 3), ("5 s", 5), ("10 s", 10) },
             s.SegundosSeleccion, v => Save(() => s.SegundosSeleccion = v),
             "Mientras está seleccionado, elegir color o grosor se le aplica.");
-        Choice("Grosor inicial", new[] { ("Fino", 2.0), ("Medio", 4.0), ("Grueso", 8.0), ("Muy grueso", 14.0) },
+        Choice("Grosor inicial", new[] { ("Fino", 2.0), ("Medio", 4.0), ("Grueso", 8.0) },
             s.GrosorInicial, v => Save(() => s.GrosorInicial = v));
         FolderRow();
 

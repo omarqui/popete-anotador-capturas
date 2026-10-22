@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  Editor — numeración automática
 //
-//  Cada trazo (lápiz, resaltador, formas) y cada texto lleva un círculo con su
+//  Cada trazo (lápiz, resaltador, formas; no las flechas) y cada texto lleva un círculo con su
 //  número de orden pegado a su punto más arriba a la izquierda. Los números se recalculan en cada
 //  cambio (MarkChanged): si se borra el 2, el 3 pasa a ser el 2.
 //
@@ -14,6 +14,11 @@
 sealed partial class EditorWindow
 {
     static readonly Guid OrderProperty = new Guid("5b0e3c1e-8f6a-4d8e-9c1f-2a7d1f0b6c11");
+
+    /// <summary>Marca de flecha (propiedad del ISF): las flechas no llevan número.</summary>
+    static readonly Guid ArrowProperty = new Guid("c3a1f6d2-7e4b-4b8a-a5d9-0f2e8b6c4a17");
+
+    static bool IsArrow(Stroke s) => s.ContainsPropertyData(ArrowProperty);
 
     Canvas _numbersLayer;
     ToggleButton _numbersButton;
@@ -77,7 +82,7 @@ sealed partial class EditorWindow
         var items = new List<(long order, Point at, double halfWidth, Color color, object target)>();
         foreach (var s in _ink.Strokes)
         {
-            if (s == _preview || s.StylusPoints.Count == 0) continue;
+            if (s == _preview || s.StylusPoints.Count == 0 || IsArrow(s)) continue;
             var corner = s.StylusPoints.Select(p => p.ToPoint()).MinBy(p => p.X + p.Y);
             var da = s.DrawingAttributes;
             items.Add((OrderOf(s), corner, Math.Max(da.Width, da.Height) / 2, da.Color, s));

@@ -3,7 +3,7 @@
 //
 //  El trazo o la forma recién dibujados quedan seleccionados unos segundos
 //  (ajustable; cada retoque reinicia la cuenta): elegir un color o un grosor
-//  (clic o teclas 1–4) se aplica a la selección, y Supr la borra.
+//  (clic o teclas 1–3) se aplica a la selección, y Supr la borra.
 //  Con la herramienta Seleccionar (V) se elige un trazo o un texto con un clic,
 //  o varios arrastrando un recuadro sobre una zona vacía (Shift suma a lo que ya
 //  había; Shift+clic agrega o quita uno). Ctrl+A selecciona todo. Con cualquier

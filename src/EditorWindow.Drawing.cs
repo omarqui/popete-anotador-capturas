@@ -34,6 +34,7 @@ sealed partial class EditorWindow
         _start = e.GetPosition(_ink);
         _arrowPath = _tool == Tool.Arrow ? new List<Point> { _start } : null;
         _preview = new NoteStroke(BuildPoints(_start, _start), MakeAttributes());
+        if (_tool == Tool.Arrow) _preview.AddPropertyData(ArrowProperty, true); // las flechas no se numeran
         _suppress = true;
         _ink.Strokes.Add(_preview);
         _suppress = false;
