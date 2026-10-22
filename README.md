@@ -2,7 +2,7 @@
 
 App de Windows que vive en la bandeja del sistema. Cuando tomas una captura de pantalla, se abre sola con herramientas para dibujar, subrayar y escribir sobre la imagen. Cada captura queda guardada en un historial y la puedes retomar después.
 
-Está escrita como un **file-based app de .NET 10**: un único archivo `AnotadorCapturas.cs`, sin `.csproj`.
+Es un proyecto WPF de .NET 10. El código está en `src/`.
 
 ## Requisitos
 
@@ -11,29 +11,19 @@ Está escrita como un **file-based app de .NET 10**: un único archivo `Anotador
 
 ## Ejecutar
 
-Pon el script en **su propia carpeta**. Con WPF activado, el build revisa la carpeta y sus subcarpetas, así que si hay otros proyectos alrededor puede fallar o ser lento.
+Desde la raíz del repositorio:
 
 ```powershell
-mkdir C:\Tools\AnotadorCapturas
-cd C:\Tools\AnotadorCapturas
-dotnet run AnotadorCapturas.cs
+dotnet run --project src
 ```
-
-La primera ejecución compila. Las siguientes usan la caché y arrancan más rápido.
 
 ## Publicar un .exe
 
 ```powershell
-dotnet publish AnotadorCapturas.cs
+dotnet publish src
 ```
 
-Usa el `.exe` publicado si vas a activar **Iniciar con Windows**. Con `dotnet run`, el ejecutable vive en una caché temporal y esa ruta puede dejar de existir.
-
-Para convertirlo en un proyecto normal:
-
-```powershell
-dotnet project convert AnotadorCapturas.cs
-```
+Usa el `.exe` publicado si vas a activar **Iniciar con Windows**. Con `dotnet run`, el ejecutable vive en `src\bin\` y cambia con cada compilación.
 
 ## Uso
 
@@ -109,6 +99,6 @@ Esto tiene dos consecuencias:
 
 | Problema | Causa y solución |
 |---|---|
-| `error MC3074 ... App.xaml` u otros `.xaml` ajenos | El script está en una carpeta con otros proyectos. Muévelo a una carpeta propia. |
-| Error de trimming o AOT con WPF | Los file-based apps activan `PublishAot` por defecto. El script lo desactiva con `#:property PublishAot=false`; no lo quites. |
+| Error de trimming o AOT con WPF | WPF no soporta AOT. El `.csproj` lo desactiva con `PublishAot=false`; no lo quites. |
+| La app no arranca y no da error | Ya hay una instancia corriendo (solo se permite una). Ciérrala desde la bandeja: **Salir**. |
 | Ctrl+C no copia mientras escribes un texto | Es intencional: dentro del cuadro de texto, Ctrl+C copia texto. Pulsa `Esc` primero. |
