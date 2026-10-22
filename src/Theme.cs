@@ -362,6 +362,166 @@ static class Theme
               </Setter.Value>
             </Setter>
           </Style>
+          <!-- ====== Estilos implícitos: toda la app, sin tocar cada ventana ====== -->
+
+          <!-- Tooltip: tarjeta redondeada con los colores del tema -->
+          <Style TargetType="ToolTip">
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource Texto}"/>
+            <Setter Property="Background" Value="{DynamicResource Superficie}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BordeFuerte}"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ToolTip">
+                  <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                          BorderThickness="1" CornerRadius="6" Padding="8,5">
+                    <ContentPresenter/>
+                  </Border>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
+          <!-- Menú contextual y sus opciones (con marca de "elegida") -->
+          <Style TargetType="ContextMenu">
+            <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="{DynamicResource Texto}"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                  <Border Background="{DynamicResource Superficie}" BorderBrush="{DynamicResource BordeFuerte}"
+                          BorderThickness="1" CornerRadius="8" Padding="4">
+                    <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"/>
+                  </Border>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+          <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource Texto}"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                  <Border x:Name="bd" Background="Transparent" CornerRadius="4" Padding="6,6,16,6">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="24"/>
+                        <ColumnDefinition Width="*"/>
+                      </Grid.ColumnDefinitions>
+                      <Path x:Name="check" Data="M3 8 L7 12 L14 4" Stroke="{DynamicResource Acento}" StrokeThickness="2"
+                            StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                            VerticalAlignment="Center" Visibility="Hidden"/>
+                      <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
+                    </Grid>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsHighlighted" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource Hover}"/>
+                    </Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                      <Setter TargetName="check" Property="Visibility" Value="Visible"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
+          <!-- Barras de desplazamiento finas, sin flechas -->
+          <ControlTemplate x:Key="PulgarBarra" TargetType="Thumb">
+            <Border x:Name="t" CornerRadius="4" Margin="2" Background="{DynamicResource BordeFuerte}"/>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="t" Property="Background" Value="{DynamicResource TextoSecundario}"/>
+              </Trigger>
+              <Trigger Property="IsDragging" Value="True">
+                <Setter TargetName="t" Property="Background" Value="{DynamicResource TextoSecundario}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+          <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="MinWidth" Value="10"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                  <Grid Background="{TemplateBinding Background}">
+                    <Track x:Name="PART_Track" IsDirectionReversed="True">
+                      <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False"/>
+                      </Track.DecreaseRepeatButton>
+                      <Track.Thumb>
+                        <Thumb Template="{StaticResource PulgarBarra}"/>
+                      </Track.Thumb>
+                      <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False"/>
+                      </Track.IncreaseRepeatButton>
+                    </Track>
+                  </Grid>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+              <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="MinWidth" Value="0"/>
+                <Setter Property="Height" Value="10"/>
+                <Setter Property="MinHeight" Value="10"/>
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                      <Grid Background="{TemplateBinding Background}">
+                        <Track x:Name="PART_Track">
+                          <Track.DecreaseRepeatButton>
+                            <RepeatButton Command="ScrollBar.PageLeftCommand" Opacity="0" Focusable="False"/>
+                          </Track.DecreaseRepeatButton>
+                          <Track.Thumb>
+                            <Thumb Template="{StaticResource PulgarBarra}"/>
+                          </Track.Thumb>
+                          <Track.IncreaseRepeatButton>
+                            <RepeatButton Command="ScrollBar.PageRightCommand" Opacity="0" Focusable="False"/>
+                          </Track.IncreaseRepeatButton>
+                        </Track>
+                      </Grid>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Trigger>
+            </Style.Triggers>
+          </Style>
+
+          <!-- ScrollViewer sin el cuadrado gris de la esquina entre las dos barras -->
+          <Style TargetType="ScrollViewer">
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                  <Grid Background="{TemplateBinding Background}">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="*"/>
+                      <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ScrollContentPresenter x:Name="PART_ScrollContentPresenter" Margin="{TemplateBinding Padding}"
+                                            CanContentScroll="{TemplateBinding CanContentScroll}"/>
+                    <ScrollBar x:Name="PART_VerticalScrollBar" Grid.Column="1"
+                               Value="{TemplateBinding VerticalOffset}" Maximum="{TemplateBinding ScrollableHeight}"
+                               ViewportSize="{TemplateBinding ViewportHeight}"
+                               Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                    <ScrollBar x:Name="PART_HorizontalScrollBar" Grid.Row="1" Orientation="Horizontal"
+                               Value="{TemplateBinding HorizontalOffset}" Maximum="{TemplateBinding ScrollableWidth}"
+                               ViewportSize="{TemplateBinding ViewportWidth}"
+                               Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"/>
+                  </Grid>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
         </ResourceDictionary>
         """;
 }

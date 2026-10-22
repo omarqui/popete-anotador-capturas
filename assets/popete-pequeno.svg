@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Versión para 16-24 px: sin ceja ni sonrisa, lente más grande y esquinas más gruesas -->
+  <rect x="4" y="4" width="248" height="248" rx="60" fill="#FFD600"/>
+  <path d="M30 86 V44 A14 14 0 0 1 44 30 H86 M170 30 H212 A14 14 0 0 1 226 44 V86 M226 170 V212 A14 14 0 0 1 212 226 H170 M86 226 H44 A14 14 0 0 1 30 212 V170" fill="none" stroke="#2E5C9A" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="128" cy="128" r="76" fill="#2E5C9A"/>
+  <circle cx="128" cy="128" r="50" fill="#FFFFFF"/>
+  <circle cx="140" cy="122" r="26" fill="#1B1B1F"/>
+</svg>
