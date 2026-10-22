@@ -46,6 +46,13 @@ Todo se guarda automáticamente en el historial mientras editas.
 | Texto | `T` | Clic para escribir; `Esc` o clic fuera para terminar |
 | Borrador | `E` | Borra trazos completos |
 
+Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 4 grosores, con las teclas `1` a `4`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo y se ve tanto en fondos claros como oscuros.
+
+### Tema y capturas recientes
+
+- El botón de la luna elige el tema: **Claro**, **Oscuro** o **Usar el tema de Windows** (por defecto). La elección se guarda en `%LOCALAPPDATA%\AnotadorCapturas\ajustes.json`.
+- El botón del reloj (o `Ctrl+H`) muestra una tira con las capturas recientes para abrir otra sin ir al historial. Siempre arranca oculta.
+
 ### Atajos
 
 | Atajo | Acción |
@@ -56,6 +63,8 @@ Todo se guarda automáticamente en el historial mientras editas.
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |
 | `Ctrl+0` | Ajustar a la ventana |
+| `1` a `4` | Grosor: fino, medio, grueso, muy grueso |
+| `Ctrl+H` | Mostrar u ocultar las capturas recientes |
 | `Esc` | Cerrar el editor |
 
 ### Menú de la bandeja

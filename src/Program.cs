@@ -27,6 +27,7 @@ public static class Program
         if (!esPrimera) return; // ya hay una instancia corriendo
 
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        Theme.Init();
         using var host = new CaptureHost(app);
         host.Start();
         app.Run();

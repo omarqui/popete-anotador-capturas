@@ -102,10 +102,10 @@ sealed partial class EditorWindow
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(_penColor),
             Background = new SolidColorBrush(Color.FromArgb(60, 255, 255, 255)),
-            BorderBrush = Brushes.DodgerBlue,
             BorderThickness = new Thickness(1),
             AcceptsReturn = true,
         };
+        _editing.SetResourceReference(BorderBrushProperty, "Acento");
         Canvas.SetLeft(_editing, p.X);
         Canvas.SetTop(_editing, p.Y);
         _textLayer.IsHitTestVisible = true;
@@ -159,6 +159,6 @@ sealed partial class EditorWindow
     static Color ParseColor(string s)
     {
         try { return (Color)ColorConverter.ConvertFromString(s); }
-        catch { return Palette[0]; }
+        catch { return Palette[0].color; }
     }
 }

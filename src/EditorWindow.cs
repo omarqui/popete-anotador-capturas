@@ -8,15 +8,16 @@ sealed partial class EditorWindow : Window
     /// <summary>Editores abiertos por Id de sesión (para no abrir la misma captura dos veces).</summary>
     public static readonly Dictionary<string, EditorWindow> Open = new Dictionary<string, EditorWindow>();
 
-    static readonly Color[] Palette =
+    static readonly (Color color, string name)[] Palette =
     {
-        Color.FromRgb(232, 17, 35),   // rojo
-        Color.FromRgb(255, 214, 0),   // amarillo
-        Color.FromRgb(0, 168, 80),    // verde
-        Color.FromRgb(0, 120, 215),   // azul
-        Color.FromRgb(255, 140, 0),   // naranja
-        Colors.Black,
-        Colors.White,
+        (Color.FromRgb(232, 17, 35), "Rojo"),
+        (Color.FromRgb(255, 214, 0), "Amarillo"),
+        (Color.FromRgb(0, 168, 80), "Verde"),
+        (Color.FromRgb(0, 120, 215), "Azul"),
+        (Color.FromRgb(142, 63, 208), "Morado"),
+        (Color.FromRgb(255, 140, 0), "Naranja"),
+        (Colors.Black, "Negro"),
+        (Colors.White, "Blanco"),
     };
 
     readonly Session _session;
@@ -29,15 +30,10 @@ sealed partial class EditorWindow : Window
     readonly Border _flash;
     readonly DispatcherTimer _saveTimer;
     readonly Stack<IUndo> _undo = new Stack<IUndo>();
-    readonly Dictionary<Tool, ToggleButton> _toolButtons = new Dictionary<Tool, ToggleButton>();
-    readonly List<(Border swatch, Color color)> _swatches = new List<(Border, Color)>();
-    readonly TextBlock _status = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
-    readonly TextBlock _saveText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0), Foreground = Brushes.Gray };
-    readonly TextBlock _zoomText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
 
     Tool _tool = Tool.Pen;
-    Color _penColor = Palette[0];
-    Color _highlightColor = Palette[1];
+    Color _penColor = Palette[0].color;
+    Color _highlightColor = Palette[1].color;
     double _size = 4;
     bool _suppress;      // no registrar cambios internos en el historial de deshacer
     bool _pendingSave;
@@ -62,8 +58,11 @@ sealed partial class EditorWindow : Window
         var work = SystemParameters.WorkArea;
         Width = Math.Min(work.Width * 0.85, Math.Max(760, pw + 80));
         Height = Math.Min(work.Height * 0.9, Math.Max(480, ph + 170));
+        Width = Math.Max(Width, Math.Min(work.Width * 0.85, 1100)); // que la barra quepa en una fila
+        MinWidth = 640;
+        MinHeight = 420;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Background = new SolidColorBrush(Color.FromRgb(243, 243, 243));
+        Theme.Attach(this);
         UseLayoutRounding = true;
 
         // Guardado automático en el historial, poco después de cada cambio
@@ -98,9 +97,9 @@ sealed partial class EditorWindow : Window
             Background = Brushes.White,
             Opacity = 0,
             IsHitTestVisible = false,
-            BorderBrush = Brushes.DodgerBlue,
             BorderThickness = new Thickness(6),
         };
+        _flash.SetResourceReference(Border.BorderBrushProperty, "Acento");
         var stack = new Grid();
         stack.Children.Add(_surface);
         stack.Children.Add(_flash);
@@ -112,7 +111,7 @@ sealed partial class EditorWindow : Window
             Margin = new Thickness(20),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 14, ShadowDepth = 2, Opacity = 0.5 },
+            Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 24, ShadowDepth = 4, Opacity = 0.25 },
         };
 
         _scroll = new ScrollViewer
@@ -120,8 +119,8 @@ sealed partial class EditorWindow : Window
             Content = host,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            Background = new SolidColorBrush(Color.FromRgb(45, 45, 48)),
         };
+        _scroll.SetResourceReference(BackgroundProperty, "Lienzo");
         _scroll.PreviewMouseWheel += (s, e) =>
         {
             if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) return;
@@ -135,20 +134,23 @@ sealed partial class EditorWindow : Window
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
-        var statusBar = new DockPanel { Margin = new Thickness(10, 4, 10, 4) };
-        DockPanel.SetDock(_zoomText, Dock.Right);
-        DockPanel.SetDock(_saveText, Dock.Right);
-        statusBar.Children.Add(_zoomText);
-        statusBar.Children.Add(_saveText);
-        statusBar.Children.Add(_status);
+        var statusBar = BuildStatusBar();
         DockPanel.SetDock(statusBar, Dock.Bottom);
         root.Children.Add(statusBar);
 
-        root.Children.Add(_scroll);
+        var recents = BuildRecents();
+        DockPanel.SetDock(recents, Dock.Bottom);
+        root.Children.Add(recents);
+
+        // El puntero va en una capa sobre el lienzo, fuera del zoom
+        var canvasArea = new Grid();
+        canvasArea.Children.Add(_scroll);
+        canvasArea.Children.Add(BuildPointerLayer());
+        root.Children.Add(canvasArea);
         Content = root;
 
         LoadAnnotations();
-        SetHint();
+        RefreshSizes();
         SetTool(Tool.Pen);
 
         // PreviewKeyDown: la ventana ve las teclas antes que el InkCanvas,
@@ -235,7 +237,7 @@ sealed partial class EditorWindow : Window
                 X = Canvas.GetLeft(tb),
                 Y = Canvas.GetTop(tb),
                 FontSize = tb.FontSize,
-                Color = (tb.Foreground as SolidColorBrush)?.Color.ToString() ?? Palette[0].ToString(),
+                Color = (tb.Foreground as SolidColorBrush)?.Color.ToString() ?? Palette[0].color.ToString(),
             }).ToList();
             var json = JsonSerializer.SerializeToUtf8Bytes(notes, History.JsonOptions);
             History.WriteAtomic(_session.TextsPath, fs => fs.Write(json, 0, json.Length));
@@ -248,11 +250,11 @@ sealed partial class EditorWindow : Window
             History.SaveMeta(_session);
 
             _pendingSave = false;
-            _saveText.Text = $"Guardado en historial {DateTime.Now:HH:mm:ss}";
+            ShowSaved($"Guardado en historial {DateTime.Now:HH:mm:ss}", true);
         }
         catch (Exception ex)
         {
-            _saveText.Text = "Error al guardar: " + ex.Message;
+            ShowSaved("Error al guardar: " + ex.Message, false);
         }
     }
 
@@ -294,7 +296,8 @@ sealed partial class EditorWindow : Window
     {
         z = Math.Clamp(z, 0.05, 8);
         _zoom.ScaleX = _zoom.ScaleY = z;
-        _zoomText.Text = $"Zoom {Math.Round(z * DpiScale() * 100)}%";
+        _zoomText.Text = $"{Math.Round(z * DpiScale() * 100)}%";
+        UpdatePointer();
     }
 
     void FitZoom()
@@ -320,6 +323,7 @@ sealed partial class EditorWindow : Window
                 case Key.C: if (CopyToClipboard()) CloseAfterFlash(); break;
                 case Key.S: Save(); break;
                 case Key.Enter: if (CopyToClipboard()) Close(); break;
+                case Key.H: ToggleRecents(); break;
                 case Key.D0: case Key.NumPad0: FitZoom(); break;
                 case Key.OemPlus: case Key.Add: SetZoom(_zoom.ScaleX * 1.15); break;
                 case Key.OemMinus: case Key.Subtract: SetZoom(_zoom.ScaleX / 1.15); break;
@@ -339,12 +343,13 @@ sealed partial class EditorWindow : Window
             case Key.R: SetTool(Tool.Rectangle); break;
             case Key.T: SetTool(Tool.Text); break;
             case Key.E: SetTool(Tool.Eraser); break;
+            case Key.D1: case Key.NumPad1: SetSize(SizePresets[0]); break;
+            case Key.D2: case Key.NumPad2: SetSize(SizePresets[1]); break;
+            case Key.D3: case Key.NumPad3: SetSize(SizePresets[2]); break;
+            case Key.D4: case Key.NumPad4: SetSize(SizePresets[3]); break;
             case Key.Escape: Close(); break;
             default: return;
         }
         e.Handled = true;
     }
-
-    void SetHint() =>
-        _status.Text = "Ctrl+rueda: zoom · Shift: líneas a 45° y cuadrados · Ctrl+Z: deshacer · Ctrl+C: copiar y cerrar · Ctrl+S: guardar";
 }
