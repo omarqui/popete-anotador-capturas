@@ -160,7 +160,6 @@ sealed partial class EditorWindow
     }
 
     static double HeadLength(double size) => Math.Max(18, size * 5);
-    double ArrowHeadLength => HeadLength(_size);
 
     /// <summary>
     /// El trazo de más arriba que pasa por <paramref name="p"/> (con 8 px en pantalla de
@@ -201,20 +200,25 @@ sealed partial class EditorWindow
     /// Flecha a mano alzada: el recorrido suavizado y la punta orientada según el
     /// último tramo (una cabeza de largo hacia atrás, para que el temblor final no la tuerza).
     /// </summary>
-    StylusPointCollection FreeArrow(List<Point> path)
+    StylusPointCollection FreeArrow(List<Point> path) => ArrowAlong(Smooth(path), _size);
+
+    /// <summary>
+    /// Flecha sobre un recorrido cuyo último punto es la punta. Los puntos del trazo son el
+    /// recorrido y después la cabeza, que termina en la punta (así la encuentra ArrowTip).
+    /// </summary>
+    static StylusPointCollection ArrowAlong(List<Point> body, double size)
     {
-        var smooth = Smooth(path);
-        var tip = smooth[^1];
-        var from = smooth[0];
+        var tip = body[^1];
+        var from = body[0];
         double walked = 0;
-        for (int i = smooth.Count - 2; i >= 0; i--)
+        for (int i = body.Count - 2; i >= 0; i--)
         {
-            walked += (smooth[i + 1] - smooth[i]).Length;
-            from = smooth[i];
-            if (walked >= ArrowHeadLength) break;
+            walked += (body[i + 1] - body[i]).Length;
+            from = body[i];
+            if (walked >= HeadLength(size)) break;
         }
-        var pts = smooth.Take(smooth.Count - 1).ToList();
-        AddArrowHead(pts, from, tip, _size);
+        var pts = body.Take(body.Count - 1).ToList();
+        AddArrowHead(pts, from, tip, size);
         return new StylusPointCollection(pts);
     }
 

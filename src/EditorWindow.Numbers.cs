@@ -133,9 +133,7 @@ sealed partial class EditorWindow
             badge.MouseLeftButtonDown += (s, e) => NumberDown(badge, target, e);
             badge.MouseMove += (s, e) => NumberMove(e);
             badge.MouseLeftButtonUp += (s, e) => NumberUp(e);
-            badge.LostMouseCapture += (s, e) => _numberDrag = null;
-            badge.MouseRightButtonUp += (s, e) => { SwapColors(); e.Handled = true; }; // como sobre la imagen
-            Canvas.SetLeft(badge, center.X - r);
+            badge.LostMouseCapture += (s, e) => _numberDrag = null;            Canvas.SetLeft(badge, center.X - r);
             Canvas.SetTop(badge, center.Y - r);
             _numbersLayer.Children.Add(badge);
         }
@@ -146,7 +144,7 @@ sealed partial class EditorWindow
     // sin arrastrar selecciona su trazo o texto, como antes. Doble clic: vuelve a su lugar.
     void NumberDown(FrameworkElement badge, object target, MouseButtonEventArgs e)
     {
-        e.Handled = true; // tampoco llega al doble clic de copiar y cerrar
+        e.Handled = true; // tampoco llega al doble clic del lienzo (elegir un trazo)
         CommitText();
         if (target is Stroke st && !_ink.Strokes.Contains(st)) return;
         if (e.ClickCount == 2)

@@ -4,10 +4,13 @@
 //  Con un solo trazo elegido a mano (herramienta Seleccionar o clic en su número; no
 //  la selección automática de lo recién dibujado, para no agarrar un asa al empezar
 //  el trazo siguiente) aparecen asas según su forma:
-//   - línea y flecha recta: una en cada extremo (Shift: 45° respecto del otro);
+//   - línea: una en cada extremo (Shift: 45° respecto del otro);
+//   - flecha, recta o curva: inicio y punta (el recorrido gira y se estira desde el
+//     otro extremo, MovedArrow) y una en el medio que la dobla (BentArrow; una recta
+//     pasa a ser curva); la cabeza se rehace;
 //   - rectángulo y óvalo: esquinas y lados; la forma se rehace con ShapePoints;
-//   - lápiz, resaltador, flecha curva y trazos de capturas viejas: esquinas y lados
-//     que escalan sus puntos sin cambiar el grosor.
+//   - lápiz, resaltador y trazos de capturas viejas: esquinas y lados que escalan
+//     sus puntos sin cambiar el grosor.
 //  El tipo de forma se guarda en el trazo al dibujarla (ShapeProperty). Las asas
 //  van en _selectionLayer (no se exportan) y funcionan con cualquier herramienta.
 //  Cada arrastre es un paso de Ctrl+Z.
@@ -17,13 +20,17 @@ sealed partial class EditorWindow
     /// <summary>Tipo de forma (propiedad del ISF: el valor de <see cref="Tool"/>).</summary>
     static readonly Guid ShapeProperty = new Guid("e7b5c9a1-3d2f-4c6e-8a0b-5f1d7e9c2a46");
 
-    /// <summary>Un extremo (<c>End</c> 0 o 1) o un lado/esquina del recuadro (<c>End</c> -1 y <c>Edge</c>).</summary>
+    /// <summary>
+    /// Un extremo (<c>End</c> 0 o 1), el medio de una flecha (<c>End</c> 2) o un lado/esquina
+    /// del recuadro (<c>End</c> -1 y <c>Edge</c>).
+    /// </summary>
     readonly record struct Handle(Point At, int End, CropEdge Edge);
 
     readonly List<Handle> _handles = new List<Handle>();
     Handle? _handleDrag;
     Stroke _handleStroke;
     Tool? _handleKind;
+    int? _handleTip;
     StylusPointCollection _handleBefore;
     Rect _handleFrom;
     Point _handleStart;
@@ -45,6 +52,98 @@ sealed partial class EditorWindow
         };
     }
 
+    /// <summary>
+    /// Índice de la punta de una flecha: el recorrido va hasta ahí y la cabeza (AddArrowHead)
+    /// termina otra vez en ella. Sirve también para flechas curvas y de capturas viejas, que
+    /// no guardan su forma. Null si no es una flecha.
+    /// </summary>
+    static int? ArrowTip(Stroke s)
+    {
+        if (!s.ContainsPropertyData(ArrowProperty)) return null;
+        var pts = s.StylusPoints;
+        var tip = pts[pts.Count - 1].ToPoint();
+        for (int i = 1; i < pts.Count; i++)
+            if ((pts[i].ToPoint() - tip).Length < 1e-3) return i;
+        return null;
+    }
+
+    /// <summary>
+    /// La flecha con el extremo <paramref name="end"/> (0 inicio, 1 punta) llevado a <paramref name="to"/>:
+    /// el recorrido gira y se estira alrededor del otro extremo (así una curva conserva su forma)
+    /// y la cabeza se rehace con el grosor actual.
+    /// </summary>
+    static StylusPointCollection MovedArrow(StylusPointCollection pts, int tip, int end, Point to, double size)
+    {
+        var body = pts.Take(tip + 1).Select(p => p.ToPoint()).ToList();
+        var pivot = end == 0 ? body[^1] : body[0];
+        var v = (end == 0 ? body[0] : body[^1]) - pivot;
+        var w = to - pivot;
+        if (v.Length < 1e-6 || w.Length < 1e-6) return pts.Clone();
+        var m = new Matrix();
+        m.Translate(-pivot.X, -pivot.Y);
+        m.Scale(w.Length / v.Length, w.Length / v.Length);
+        m.Rotate(Vector.AngleBetween(v, w));
+        m.Translate(pivot.X, pivot.Y);
+        return ArrowAlong(body.Select(m.Transform).ToList(), size);
+    }
+
+    /// <summary>El punto a mitad del recorrido de la flecha (por largo, no por cantidad de puntos).</summary>
+    static Point ArrowMiddle(StylusPointCollection pts, int tip)
+    {
+        var body = pts.Take(tip + 1).Select(p => p.ToPoint()).ToList();
+        double half = PathLength(body) / 2, walked = 0;
+        for (int i = 1; i < body.Count; i++)
+        {
+            double step = (body[i] - body[i - 1]).Length;
+            if (step > 0 && walked + step >= half) return body[i - 1] + (body[i] - body[i - 1]) * ((half - walked) / step);
+            walked += step;
+        }
+        return body[0];
+    }
+
+    /// <summary>
+    /// La flecha doblada: el medio del recorrido se corre <paramref name="d"/> y cada punto lo
+    /// acompaña según el seno de lo recorrido (los extremos no se mueven), así no quedan quiebres.
+    /// Una recta tiene dos puntos: antes se reparte en tramos de ~4 px para que pueda curvarse.
+    /// </summary>
+    static StylusPointCollection BentArrow(StylusPointCollection pts, int tip, Vector d, double size)
+    {
+        var body = pts.Take(tip + 1).Select(p => p.ToPoint()).ToList();
+        double total = PathLength(body);
+        if (total < 1) return pts.Clone();
+        if (body.Count < 24) body = Resample(body, Math.Clamp((int)(total / 4), 24, 200));
+        var bent = new List<Point>(body.Count);
+        double walked = 0;
+        for (int i = 0; i < body.Count; i++)
+        {
+            if (i > 0) walked += (body[i] - body[i - 1]).Length;
+            bent.Add(body[i] + d * Math.Sin(Math.PI * walked / total));
+        }
+        bent[^1] = body[^1]; // la punta exacta: la cabeza termina en ella (ArrowTip)
+        return ArrowAlong(bent, size);
+    }
+
+    /// <summary><paramref name="n"/> + 1 puntos repartidos parejo a lo largo del recorrido.</summary>
+    static List<Point> Resample(List<Point> path, int n)
+    {
+        double total = PathLength(path), start = 0;
+        var result = new List<Point> { path[0] };
+        int seg = 1;
+        for (int k = 1; k < n; k++)
+        {
+            double target = total * k / n;
+            while (seg < path.Count - 1 && start + (path[seg] - path[seg - 1]).Length < target)
+            {
+                start += (path[seg] - path[seg - 1]).Length;
+                seg++;
+            }
+            double len = (path[seg] - path[seg - 1]).Length;
+            result.Add(len > 0 ? path[seg - 1] + (path[seg] - path[seg - 1]) * ((target - start) / len) : path[seg]);
+        }
+        result.Add(path[^1]);
+        return result;
+    }
+
     static Rect PointBounds(StylusPointCollection pts)
     {
         var r = Rect.Empty;
@@ -63,10 +162,12 @@ sealed partial class EditorWindow
         var s = _handleStroke ?? EditableStroke;
         if (s == null) return;
 
-        if (ShapeOf(s) is Tool.Line or Tool.Arrow)
+        int? tip = ArrowTip(s);
+        if (tip != null || ShapeOf(s) == Tool.Line)
         {
             _handles.Add(new Handle(s.StylusPoints[0].ToPoint(), 0, CropEdge.None));
-            _handles.Add(new Handle(s.StylusPoints[1].ToPoint(), 1, CropEdge.None));
+            _handles.Add(new Handle(s.StylusPoints[tip ?? 1].ToPoint(), 1, CropEdge.None));
+            if (tip is int t) _handles.Add(new Handle(ArrowMiddle(s.StylusPoints, t), 2, CropEdge.None));
         }
         else
         {
@@ -122,6 +223,7 @@ sealed partial class EditorWindow
         _handleDrag = h;
         _handleStroke = s;
         _handleKind = ShapeOf(s);
+        _handleTip = ArrowTip(s);
         _handleBefore = s.StylusPoints.Clone();
         _handleFrom = PointBounds(_handleBefore);
         _handleStart = p;
@@ -153,14 +255,18 @@ sealed partial class EditorWindow
         var s = _handleStroke;
         var d = p - _handleStart;
         double width = s.DrawingAttributes.Width;
-        if (h.End >= 0)
+        if (h.End == 2)
+            s.StylusPoints = BentArrow(_handleBefore, _handleTip.Value, d, width);
+        else if (h.End >= 0)
         {
             var a = _handleBefore[0].ToPoint();
-            var b = _handleBefore[1].ToPoint();
+            var b = _handleBefore[_handleTip ?? 1].ToPoint();
             bool shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
             if (h.End == 0) a = shift ? Snap45(b, a + d) : a + d;
             else b = shift ? Snap45(a, b + d) : b + d;
-            s.StylusPoints = ShapePoints(_handleKind.Value, a, b, width);
+            s.StylusPoints = _handleTip is int tip
+                ? MovedArrow(_handleBefore, tip, h.End, h.End == 0 ? a : b, width)
+                : ShapePoints(Tool.Line, a, b, width);
         }
         else
         {

@@ -47,12 +47,9 @@ sealed partial class EditorWindow : Window
     readonly Stack<IUndo> _redo = new Stack<IUndo>();
 
     Tool _tool = Tool.Pen;
-    // Cada familia (lápiz/formas/texto y resaltador) tiene color principal y secundario
+    // Cada familia (lápiz/formas/texto y resaltador) tiene su color
     Color _penColor = Palette[0].color;          // rojo
-    Color _penColor2 = Palette[3].color;         // azul
     Color _highlightColor = Palette[1].color;    // amarillo
-    Color _highlightColor2 = Palette[2].color;   // verde
-    bool _altAlone;      // Alt presionado sin otra tecla ni clic: al soltarlo se intercambian los colores
     double _size = 4;
     bool _suppress;      // no registrar cambios internos en el historial de deshacer
     bool _pendingSave;
@@ -66,12 +63,6 @@ sealed partial class EditorWindow : Window
     {
         get => _tool == Tool.Highlighter ? _highlightColor : _penColor;
         set { if (_tool == Tool.Highlighter) _highlightColor = value; else _penColor = value; }
-    }
-
-    Color SecondaryColor
-    {
-        get => _tool == Tool.Highlighter ? _highlightColor2 : _penColor2;
-        set { if (_tool == Tool.Highlighter) _highlightColor2 = value; else _penColor2 = value; }
     }
 
     public EditorWindow(Session session)
@@ -188,14 +179,6 @@ sealed partial class EditorWindow : Window
             AdvanceColor();
         };
 
-        // Clic derecho sobre el lienzo: intercambia color principal y secundario (como tocar Alt)
-        _ink.PreviewMouseRightButtonUp += (s, e) =>
-        {
-            if (_editing != null) return;
-            SwapColors();
-            e.Handled = true;
-        };
-
         // El host mide lo que la captura: el margen queda por fuera del layout
         // (Canvas no recorta), así "Ajustar" encuadra la captura y no la tabla entera.
         _host = new Canvas
@@ -264,22 +247,29 @@ sealed partial class EditorWindow : Window
         EnableDrop();
         PreviewMouseDown += (s, e) =>
         {
-            _altAlone = false; // Alt+clic no cuenta como toque de Alt
             if (e.ChangedButton == MouseButton.Middle && IsInside(e.OriginalSource, _scroll))
             {
                 BeginPan(e.GetPosition(_scroll));
                 e.Handled = true;
             }
-            // Doble clic en el lienzo: copiar y cerrar, como Ctrl+C. Sobre un texto lo
-            // edita (EditText), sobre un número lo devuelve a su lugar (NumberDown), y con
-            // un cuadro de texto abierto selecciona palabras.
-            else if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && _editing == null
+            // Doble clic sobre un trazo: lo elige (con sus asas), con cualquier herramienta, y el
+            // segundo clic no llega a la tinta. Sobre un texto lo edita (EditText), sobre un número
+            // lo devuelve a su lugar (NumberDown), y con un cuadro de texto abierto selecciona palabras.
+            else if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && _editing == null && !_cropMode
                      && IsInside(e.OriginalSource, _scroll) && !IsInside(e.OriginalSource, _textLayer)
-                     && !IsInside(e.OriginalSource, _numbersLayer) && HandleAt(e.GetPosition(_ink)) == null)
+                     && !IsInside(e.OriginalSource, _numbersLayer) && HandleAt(e.GetPosition(_ink)) == null
+                     && StrokeUnder(e.GetPosition(_ink)) is Stroke hit)
             {
-                if (CopyToClipboard()) CloseAfterFlash();
+                SelectOnly(hit);
                 e.Handled = true;
             }
+        };
+        // Clic derecho en el lienzo: copiar y cerrar, como Ctrl+C
+        PreviewMouseRightButtonUp += (s, e) =>
+        {
+            if (_editing != null || !IsInside(e.OriginalSource, _scroll)) return;
+            if (CopyToClipboard()) CloseAfterFlash();
+            e.Handled = true;
         };
         _scroll.PreviewMouseMove += (s, e) => { if (PanMove(e.GetPosition(_scroll))) e.Handled = true; };
         _scroll.PreviewMouseUp += (s, e) =>
@@ -289,7 +279,6 @@ sealed partial class EditorWindow : Window
             e.Handled = true;
         };
         _scroll.LostMouseCapture += (s, e) => EndPan();
-        Deactivated += (s, e) => _altAlone = false;      // Alt+Tab: el Alt se suelta en otra ventana
 
         Open[session.Meta.Id] = this;
         Closed += (s, e) => Open.Remove(session.Meta.Id);
@@ -540,14 +529,10 @@ sealed partial class EditorWindow : Window
     }
 
     // ------------------------------------------------------------------ teclado
-    /// <summary>Tocar Alt (presionar y soltar sin nada en medio) intercambia color principal y secundario.</summary>
+    /// <summary>Alt solo no hace nada: que no active el modo menú de la ventana (se tragaría la tecla siguiente).</summary>
     void OnKeyUp(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.System || e.SystemKey is not (Key.LeftAlt or Key.RightAlt)) return;
-        e.Handled = true; // que Alt no active el modo menú de la ventana
-        if (!_altAlone || _editing != null) return;
-        _altAlone = false;
-        SwapColors();
+        if (e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt) e.Handled = true;
     }
 
     void OnKeyDown(object sender, KeyEventArgs e)
@@ -556,12 +541,9 @@ sealed partial class EditorWindow : Window
 
         if (e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt)
         {
-            // Solo un Alt "suelto" (sin Ctrl: AltGr llega como Ctrl+Alt) puede intercambiar colores
-            if (!e.IsRepeat) _altAlone = Keyboard.Modifiers == ModifierKeys.Alt;
             e.Handled = true;
             return;
         }
-        _altAlone = false; // Alt+otra tecla (Alt+Tab, Alt+F4...) no intercambia
 
         if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.Z)
         {

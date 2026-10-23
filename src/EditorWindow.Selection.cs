@@ -7,11 +7,11 @@
 //  Con la herramienta Seleccionar (V) se elige un trazo o un texto con un clic,
 //  o varios arrastrando un recuadro sobre una zona vacía (Shift suma a lo que ya
 //  había; Shift+clic agrega o quita uno). Ctrl+A selecciona todo. Con cualquier
-//  herramienta, un clic en el número de un trazo lo selecciona.
+//  herramienta, un clic en el número de un trazo o un doble clic sobre el trazo lo
+//  selecciona (el doble clic está en el constructor de EditorWindow).
 //  Arrastrar algo seleccionado mueve toda la selección; las flechas la mueven
 //  1 px (Shift: 10 px). Todo se deshace con Ctrl+Z.
-//  Tocar Alt o clic derecho NO cambia la selección: sirven para dibujar el
-//  siguiente en el otro color. Esc quita la selección (y con nada seleccionado cierra).
+//  Esc quita la selección (y con nada seleccionado cierra).
 //
 //  El recuadro de selección va en _selectionLayer, fuera de _surface: no sale
 //  en la imagen exportada.
@@ -251,17 +251,24 @@ sealed partial class EditorWindow
         }
         RefreshSwatches();
         RefreshSizes();
+        UpdateDrawingAttributes(); // se puede elegir sin soltar el lápiz (doble clic): el próximo trazo sale así
+        UpdatePointer();
     }
 
     // ------------------------------------------------------------------ elegir con el mouse
     /// <summary>Herramienta Seleccionar sobre la tinta: el trazo bajo el clic o, si no hay, un recuadro.</summary>
     void SelectToolDown(Point p)
     {
-        var hits = _ink.Strokes.HitTest(p, Math.Max(6, 10 / _zoom.ScaleX));
-        if (hits.Count > 0) PickAndDrag(hits[hits.Count - 1], p);
+        if (StrokeUnder(p) is Stroke hit) PickAndDrag(hit, p);
         else BeginMarquee(p);
     }
 
+    /// <summary>El trazo de más arriba bajo <paramref name="p"/>, con la tolerancia de Seleccionar (o null).</summary>
+    Stroke StrokeUnder(Point p)
+    {
+        var hits = _ink.Strokes.HitTest(p, Math.Max(6, 10 / _zoom.ScaleX));
+        return hits.Count > 0 ? hits[hits.Count - 1] : null;
+    }
     /// <summary>
     /// Clic sobre un trazo, un texto o su número. Si ya estaba seleccionado se arrastra
     /// toda la selección; si no, queda solo él. Con Shift se agrega o se quita.

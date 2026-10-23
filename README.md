@@ -73,7 +73,7 @@ Si hay un borrador pendiente en Partner Center, el envío lo reemplaza. Enviar a
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
 2. Toma una captura con **Impr Pant**, **Win+Shift+S**, la Herramienta Recortes o **Win+Impr Pant**.
 3. Se abre el editor con la captura. Anota lo que necesites.
-4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **doble clic** sobre la imagen.
+4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **clic derecho** sobre la imagen.
 
 Todo se guarda automáticamente en el historial mientras editas.
 
@@ -98,19 +98,19 @@ El botón de la papelera quita todas las anotaciones, después de pedir confirma
 
 Resaltador, Línea, Rectángulo, Óvalo, Texto y «Texto con fondo» están en el botón **Otras herramientas** (el de las figuras, con una flechita), al lado de la flecha. El botón muestra la que esté activa. Sus teclas (`H`, `L`, `R`, `O`, `T`) siguen funcionando.
 
+**Organizar la barra:** arrastra cualquier botón de herramienta (también el de Otras herramientas) para cambiarlo de lugar. Clic derecho en un botón: **Pasar a Otras herramientas**; clic derecho en una herramienta del menú Otras: la pone en la barra. **Restablecer la barra** (clic derecho en cualquier botón) vuelve al orden de fábrica. Se recuerda entre sesiones.
+
 El editor abre con la última herramienta que usaste, también después de reiniciar la app (salvo Recortar: en ese caso, el lápiz).
 
 Los trazos llevan un borde blanco fino para que se destaquen sobre cualquier fondo (también en la imagen copiada); el resaltador no.
 
 Hay 8 colores (rojo, amarillo, verde, azul, morado, naranja, negro y blanco) y 3 grosores (2, 4 y 8 px), con las teclas `1` a `3`. Sobre la imagen, el puntero muestra el tamaño y el color reales del trazo, cuatro marcas de retícula y el grosor ("4 px"), y se ve tanto en fondos claros como oscuros.
 
-### Color principal y secundario
-
-Clic en un color elige el **principal**; clic derecho, el **secundario** (los dos se ven superpuestos al inicio de la paleta). Para dibujar rápido con el otro, **toca Alt** o haz **clic derecho sobre la imagen**: se intercambian. El lápiz y el resaltador tienen cada uno su par (rojo/azul y amarillo/verde por defecto).
+El lápiz (con las formas y el texto) y el resaltador recuerdan cada uno su color: rojo y amarillo al empezar.
 
 ### Lo recién dibujado queda seleccionado
 
-Después de un trazo o una forma, queda marcado unos segundos con un recuadro punteado (3 por defecto; se cambia en Ajustes): elegir un color o un grosor se le aplica, y `Supr` lo borra. Cada retoque reinicia la cuenta. Tocar Alt o el clic derecho **no** lo cambian (son para el próximo trazo). `Esc` quita la selección. Con **Seleccionar** (`V`) se puede elegir cualquier trazo anterior, y queda seleccionado hasta que lo sueltes.
+Después de un trazo o una forma, queda marcado unos segundos con un recuadro punteado (3 por defecto; se cambia en Ajustes): elegir un color o un grosor se le aplica, y `Supr` lo borra. Cada retoque reinicia la cuenta. `Esc` quita la selección. Con **Seleccionar** (`V`) se puede elegir cualquier trazo anterior, y queda seleccionado hasta que lo sueltes.
 
 ### Numeración automática
 
@@ -126,19 +126,20 @@ Después de cada trazo, el color pasa solo al siguiente: rojo → azul → verde
 
 Con **Seleccionar** (`V`), un clic sobre un trazo o un texto lo elige y arrastrarlo lo mueve. Para elegir **varios**, arrastra un recuadro desde una zona vacía: queda seleccionado todo lo que toque. `Shift` + recuadro suma a lo que ya había, `Shift`+clic agrega o quita uno, y `Ctrl+A` elige todo. Arrastrar cualquiera de los elegidos mueve todos juntos; el color, el grosor y `Supr` se aplican a todos.
 
-**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta (arrastrar el número mueve solo el número; ver «Numeración automática»).
+**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta (arrastrar el número mueve solo el número; ver «Numeración automática»). Con cualquier herramienta, **doble clic sobre un trazo** lo elige (sin cambiar de herramienta). **Clic derecho** sobre la imagen copia y cierra.
 
 Con algo seleccionado, las flechas del teclado lo corren 1 px (con `Shift`, 10 px). Todo se deshace con Ctrl+Z.
 
 ### Reajustar un trazo
 
-Elige **un** trazo con **Seleccionar** (`V`) o con un clic en su número y aparecen asas blancas:
+Elige **un** trazo (doble clic sobre él, un clic con **Seleccionar** o un clic en su número) y aparecen asas blancas:
 
-- **Línea y flecha recta:** un asa redonda en cada extremo; arrástrala para mover ese extremo (`Shift`: 45°).
+- **Línea:** un asa redonda en cada extremo; arrástrala para mover ese extremo (`Shift`: 45°).
+- **Flecha** (recta o a mano alzada): asas en el **inicio**, la **punta** y el **medio**. Los extremos se mueven y la curva conserva su forma (gira y se estira); el asa del medio la dobla, y una flecha recta pasa a ser curva. La cabeza se rehace en la punta.
 - **Rectángulo y óvalo:** asas en las esquinas y los lados para cambiar el tamaño.
-- **Lápiz, resaltador y flecha curva:** las mismas asas estiran o encogen el trazo (el grosor no cambia).
+- **Lápiz y resaltador:** las mismas asas estiran o encogen el trazo (el grosor no cambia).
 
-Las asas no salen en lo recién dibujado (para que puedas empezar otro trazo justo al lado) y los trazos de capturas anteriores a esta versión solo se pueden estirar con el recuadro. Cada arrastre se deshace con Ctrl+Z.
+Las asas no salen en lo recién dibujado (para que puedas empezar otro trazo justo al lado). Los rectángulos, óvalos y líneas de capturas anteriores a la versión 1.0.2 solo se pueden estirar con el recuadro. Cada arrastre se deshace con Ctrl+Z.
 
 ### Texto con fondo
 
@@ -154,7 +155,7 @@ Doble clic sobre un texto lo vuelve a abrir para editarlo, con el cursor al fina
 
 ### Recortar
 
-Con **Recortar** (`C`) aparece la captura completa con un marco: arrastra sus **bordes** o **esquinas** hacia adentro (o de nuevo hacia afuera), o arrástralo desde adentro para moverlo. Lo que queda afuera se oscurece. **Enter** (o cambiar de herramienta, copiar o guardar) aplica el recorte; **Esc** lo cancela. Lo dibujado que quede totalmente afuera se borra; lo que cruza el borde se mantiene. La captura original no se toca: **Quitar recorte** (en la barra de estado) vuelve a la imagen completa, y Ctrl+Z / Ctrl+Y deshacen y rehacen el recorte.
+Con **Recortar** (`C`) aparece la captura completa con un marco: arrastra sus **bordes** o **esquinas** hacia adentro (o de nuevo hacia afuera), o arrástralo desde adentro para moverlo. Lo que queda afuera se oscurece. **Enter**, volver a tocar **Recortar** (botón o `C`), cambiar de herramienta, copiar o guardar aplican el recorte (las dos primeras vuelven a la herramienta que tenías); **Esc** lo cancela. Lo dibujado que quede totalmente afuera se borra; lo que cruza el borde se mantiene. La captura original no se toca: **Quitar recorte** (en la barra de estado) vuelve a la imagen completa, y Ctrl+Z / Ctrl+Y deshacen y rehacen el recorte.
 
 ### Ajustes
 
@@ -173,7 +174,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 
 | Atajo | Acción |
 |---|---|
-| `Ctrl+C` o doble clic en la imagen | Copiar la imagen anotada y cerrar el editor |
+| `Ctrl+C` o clic derecho en la imagen | Copiar la imagen anotada y cerrar el editor |
 | `Ctrl+Enter` | Copiar y cerrar (sin esperar el parpadeo) |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
@@ -183,7 +184,6 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 | `Ctrl+rueda`, `Ctrl+` / `Ctrl-` | Zoom |
 | `Shift+rueda` | Desplazar en horizontal |
 | Clic central y arrastrar | Mover la vista (con la mano), aunque la imagen entre entera; `Ctrl+0` la vuelve a centrar |
-| `Alt` (tocar) o clic derecho en la imagen | Intercambiar color principal y secundario |
 | `Supr` | Borrar lo seleccionado |
 | `Ctrl+A` | Seleccionar todo |
 | `Enter` / `Esc` con Recortar | Aplicar / cancelar el recorte |

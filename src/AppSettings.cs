@@ -34,6 +34,12 @@ sealed class AppSettings
     /// <summary>Herramienta con la que abre el editor: la última que se eligió (nunca Recortar).</summary>
     public Tool UltimaHerramienta { get; set; } = Tool.Pen;
 
+    /// <summary>
+    /// Botones del grupo de herramientas, en orden: nombres de <see cref="Tool"/> y "Otras" (el
+    /// menú, donde va lo demás). null = la barra de fábrica. Lo arma EditorWindow.ToolOrder.cs.
+    /// </summary>
+    public List<string> BarraHerramientas { get; set; }
+
     /// <summary>Carpeta que propone "Guardar como"; null = Imágenes.</summary>
     public string CarpetaGuardar { get; set; }
 
