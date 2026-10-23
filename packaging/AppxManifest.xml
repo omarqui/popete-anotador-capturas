@@ -18,8 +18,10 @@
     ProcessorArchitecture="$ARCH$" />
 
   <Properties>
-    <!-- Tiene que ser el nombre reservado en Partner Center -->
-    <DisplayName>Popete · anotador de capturas</DisplayName>
+    <!-- Tiene que ser uno de los nombres reservados en Partner Center ("Popete" y
+         "Popete · anotador de capturas"). Aquí va el corto, que es el que se ve en Inicio;
+         la ficha de la Store usa el largo, que se elige en Partner Center. -->
+    <DisplayName>Popete</DisplayName>
     <PublisherDisplayName>$PUBLISHER_DISPLAY_NAME$</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>Anotador de capturas de pantalla: detecta cada captura y abre un editor para marcarla.</Description>
@@ -36,7 +38,7 @@
   <Applications>
     <Application Id="Popete" Executable="Popete.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Popete · anotador de capturas"
+        DisplayName="Popete"
         Description="Anotador de capturas"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
