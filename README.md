@@ -41,6 +41,24 @@ powershell -File tools\empaquetar-msix.ps1 -Store -Version 1.0.0.0
 
 La versión tiene que terminar en `.0` y subir en cada envío. Instalada como MSIX, la app guarda sus datos en la carpeta del paquete (se borran al desinstalarla), y **Iniciar con Windows** usa la tarea de inicio del paquete, que también se puede apagar en **Configuración › Aplicaciones › Inicio**.
 
+### Publicar con GitHub Actions
+
+El workflow **Publicar en la Microsoft Store** (`.github/workflows/publicar-store.yml`) se lanza a mano desde **Actions › Run workflow**. Pide la versión (`N.N.N.0`) y:
+
+- genera el `.msix` para la Store con el mismo script y lo deja como artefacto de la ejecución;
+- si **crear_release** está marcado (lo está por defecto), crea el Release `vN.N.N` con el `.msix` adjunto;
+- si **enviar_store** está marcado, lo sube a Partner Center. Sin **confirmar_envio** queda como borrador, para revisarlo y enviarlo desde Partner Center; con **confirmar_envio** va directo a certificación.
+
+Enviar a la Store requiere que la primera versión ya esté publicada y una app de Microsoft Entra asociada a Partner Center con rol *Manager*. En el repo, **Settings › Secrets and variables › Actions**:
+
+| Nombre | Tipo | Valor |
+|---|---|---|
+| `PARTNER_CENTER_TENANT_ID` | Secreto | Id. de inquilino de la app de Entra |
+| `PARTNER_CENTER_SELLER_ID` | Secreto | Id. de vendedor (Partner Center › Configuración de la cuenta) |
+| `PARTNER_CENTER_CLIENT_ID` | Secreto | Id. de cliente de la app de Entra |
+| `PARTNER_CENTER_CLIENT_SECRET` | Secreto | Clave de la app de Entra |
+| `MSSTORE_PRODUCT_ID` | Variable | El **Store ID** del producto (Partner Center › Identidad del producto) |
+
 ## Uso
 
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
