@@ -13,9 +13,12 @@ static class ClipboardHelper
                 var data = System.Windows.Forms.Clipboard.GetDataObject();
                 if (data == null) return null;
 
-                // 1) Formato PNG (Herramienta Recortes lo publica; conserva transparencia)
-                if (data.GetDataPresent("PNG") && data.GetData("PNG") is MemoryStream png)
-                    return Decode(png);
+                // 1) Formato PNG (Herramienta Recortes lo publica; conserva transparencia).
+                //    Hay programas que publican "PNG" con datos que no son un PNG válido:
+                //    si no se puede leer, se prueba con el bitmap.
+                if (data.GetDataPresent("PNG") && data.GetData("PNG") is MemoryStream png
+                    && TryDecode(png) is BitmapSource fromPng)
+                    return fromPng;
 
                 // 2) Bitmap clásico (Impr Pant). Se pasa por PNG para evitar el
                 //    problema conocido de WPF con el canal alfa de CF_DIB.
@@ -25,16 +28,27 @@ static class ClipboardHelper
                     if (image == null) return null;
                     var ms = new MemoryStream();
                     image.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-                    return Decode(ms);
+                    return TryDecode(ms);
                 }
                 return null;
             }
             catch (ExternalException)
             {
-                Thread.Sleep(100);
+                Thread.Sleep(100); // portapapeles bloqueado por otra app
+            }
+            catch (Exception)
+            {
+                return null; // lo que otro programa deje en el portapapeles nunca debe tumbar la app
             }
         }
         return null;
+    }
+
+    /// <summary>Como <see cref="Decode"/>, pero null si los datos no son una imagen que Windows sepa leer.</summary>
+    public static BitmapSource TryDecode(Stream s)
+    {
+        try { return Decode(s); }
+        catch (Exception) { return null; } // NotSupportedException, FileFormatException, COMException...
     }
 
     public static BitmapSource Decode(Stream s)

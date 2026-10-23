@@ -31,6 +31,13 @@ public static class Program
         AppInfo.MigrateLegacy();
 
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        // Red de seguridad: un error suelto (por ejemplo, algo raro en el portapapeles) se anota
+        // en errores.log y la app sigue en la bandeja en vez de cerrarse.
+        app.DispatcherUnhandledException += (s, e) =>
+        {
+            AppInfo.LogError(e.Exception);
+            e.Handled = true;
+        };
         Theme.Init();
         using var host = new CaptureHost(app);
         host.Start();

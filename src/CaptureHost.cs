@@ -96,13 +96,13 @@ sealed class CaptureHost : IDisposable
                 try { images.Add(History.LoadImage(f)); } catch { /* formato que Windows no sabe abrir */ }
             }
         }
-        else if (data.GetData("PNG") is MemoryStream png)
+        else if (data.GetData("PNG") is MemoryStream png && ClipboardHelper.TryDecode(png) is BitmapSource fromPng)
         {
-            images.Add(ClipboardHelper.Decode(png));
+            images.Add(fromPng);
         }
         else if (data.GetData(DataFormats.Bitmap) is BitmapSource bmp)
         {
-            images.Add(bmp);
+            images.Add(bmp); // también si el "PNG" no se pudo leer
         }
         return images;
     }

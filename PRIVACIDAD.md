@@ -26,7 +26,7 @@ Por cada captura, Popete guarda en tu equipo:
 - las anotaciones (trazos y textos);
 - datos técnicos: fecha y hora, tamaño de la imagen, el recorte aplicado y una "huella" (un resumen SHA-256 de los píxeles) que sirve para no abrir dos veces la misma imagen.
 
-También guarda tus **ajustes** (tema, grosor inicial, etc.) en un archivo `ajustes.json`.
+También guarda tus **ajustes** (tema, grosor inicial, etc.) en un archivo `ajustes.json`. Si ocurre un error inesperado, anota sus datos técnicos (tipo de error y en qué parte del programa ocurrió, sin imágenes ni anotaciones) en `errores.log`, que no se envía a ningún lado.
 
 La carpeta es `%LOCALAPPDATA%\Popete`. Si instalaste Popete desde la Microsoft Store, es la carpeta privada de la aplicación dentro de `%LOCALAPPDATA%\Packages`. En ambos casos, el botón **Abrir carpeta del historial** de Ajustes te lleva a ella.
 

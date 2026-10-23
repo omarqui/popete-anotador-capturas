@@ -52,6 +52,22 @@ static class AppInfo
         IsPackaged ? Windows.Storage.ApplicationData.Current.LocalFolder.Path
         : !Directory.Exists(NewRoot) && Directory.Exists(LegacyRoot) ? LegacyRoot : NewRoot;
 
+    /// <summary>
+    /// Anota un error inesperado en errores.log (carpeta de datos). Solo datos técnicos
+    /// (tipo, mensaje y pila); si pasa de 512 KB se empieza de nuevo.
+    /// </summary>
+    public static void LogError(Exception e)
+    {
+        try
+        {
+            var path = Path.Combine(DataRoot, "errores.log");
+            Directory.CreateDirectory(DataRoot);
+            if (File.Exists(path) && new FileInfo(path).Length > 512 * 1024) File.Delete(path);
+            File.AppendAllText(path, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {e}{Environment.NewLine}{Environment.NewLine}");
+        }
+        catch { /* sin disco o sin permisos: no hay dónde anotarlo */ }
+    }
+
     /// <summary>Se llama una vez al arrancar, antes de leer historial o ajustes.</summary>
     public static void MigrateLegacy()
     {
