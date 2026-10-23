@@ -3,10 +3,9 @@
 # Uso (desde la raiz del repo):
 #   Prueba local (firmado con un certificado propio):
 #     powershell -File tools\empaquetar-msix.ps1
-#   Para subir a la Microsoft Store (sin firmar: la Store lo firma), con los datos
-#   de Partner Center (Producto > Identidad del producto):
-#     powershell -File tools\empaquetar-msix.ps1 -Store -IdentityName "12345Nombre.Popete" `
-#       -Publisher "CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" -PublisherDisplayName "Nombre" -Version 1.0.0.0
+#   Para subir a la Microsoft Store (sin firmar: la Store lo firma). La identidad de
+#   Partner Center ya esta abajo como valor por defecto; solo cambia la version:
+#     powershell -File tools\empaquetar-msix.ps1 -Store -Version 1.0.0.0
 #
 # Pasos: dotnet publish (self-contained) -> carpeta del paquete con el manifiesto
 # (packaging\AppxManifest.xml) y los logos (packaging\Assets) -> resources.pri (makepri)
@@ -24,6 +23,13 @@ param(
     [switch]$Store
 )
 $ErrorActionPreference = 'Stop'
+
+# Identidad de Partner Center (Producto > Identidad del producto), salvo que se pase otra
+if ($Store) {
+    if (-not $PSBoundParameters.ContainsKey('IdentityName')) { $IdentityName = 'OmarquiAybar.Popeteanotadordecapturas' }
+    if (-not $PSBoundParameters.ContainsKey('Publisher')) { $Publisher = 'CN=EC098364-9CE9-46BE-B0B5-F8B4753B53CA' }
+    if (-not $PSBoundParameters.ContainsKey('PublisherDisplayName')) { $PublisherDisplayName = 'Omarqui Aybar' }
+}
 $root = [IO.Path]::GetFullPath("$PSScriptRoot\..")
 $out = Join-Path $root 'artifacts\msix'
 

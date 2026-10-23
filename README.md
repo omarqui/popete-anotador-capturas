@@ -33,11 +33,10 @@ powershell -File tools\empaquetar-msix.ps1
 
 Genera `artifacts\msix\Popete_1.0.0.0_x64-prueba.msix`, firmado con un certificado de prueba que el script crea en tu usuario. Para instalarlo, confía una vez en ese certificado (como administrador) y luego instala el paquete; el script imprime los dos comandos. Si no tienes el Windows SDK, el script descarga una vez `makeappx`, `makepri` y `signtool` del paquete NuGet oficial `Microsoft.Windows.SDK.BuildTools`.
 
-Para la Store, usa los datos de **Partner Center › tu app › Identidad del producto**. Sale sin firmar, porque la Store lo firma:
+Para la Store, `-Store` usa la identidad de **Partner Center › Identidad del producto** (ya está en el script; con `-IdentityName`, `-Publisher` y `-PublisherDisplayName` se puede usar otra). Sale sin firmar, porque la Store lo firma:
 
 ```powershell
-powershell -File tools\empaquetar-msix.ps1 -Store -IdentityName "12345Nombre.Popete" `
-  -Publisher "CN=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" -PublisherDisplayName "Tu nombre" -Version 1.0.0.0
+powershell -File tools\empaquetar-msix.ps1 -Store -Version 1.0.0.0
 ```
 
 La versión tiene que terminar en `.0` y subir en cada envío. Instalada como MSIX, la app guarda sus datos en la carpeta del paquete (se borran al desinstalarla), y **Iniciar con Windows** usa la tarea de inicio del paquete, que también se puede apagar en **Configuración › Aplicaciones › Inicio**.

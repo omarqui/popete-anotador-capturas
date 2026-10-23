@@ -18,7 +18,8 @@
     ProcessorArchitecture="$ARCH$" />
 
   <Properties>
-    <DisplayName>Popete</DisplayName>
+    <!-- Tiene que ser el nombre reservado en Partner Center -->
+    <DisplayName>Popete · anotador de capturas</DisplayName>
     <PublisherDisplayName>$PUBLISHER_DISPLAY_NAME$</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>Anotador de capturas de pantalla: detecta cada captura y abre un editor para marcarla.</Description>
@@ -35,7 +36,7 @@
   <Applications>
     <Application Id="Popete" Executable="Popete.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="Popete"
+        DisplayName="Popete · anotador de capturas"
         Description="Anotador de capturas"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
