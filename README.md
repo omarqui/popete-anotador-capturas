@@ -43,13 +43,22 @@ La versión tiene que terminar en `.0` y subir en cada envío. Instalada como MS
 
 ### Publicar con GitHub Actions
 
-El workflow **Publicar en la Microsoft Store** (`.github/workflows/publicar-store.yml`) se lanza a mano desde **Actions › Run workflow**. Pide la versión (`N.N.N.0`) y:
+El workflow **Publicar en la Microsoft Store** (`.github/workflows/publicar-store.yml`) publica solo al subir un tag `vX.Y.Z`:
 
-- genera el `.msix` para la Store con el mismo script y lo deja como artefacto de la ejecución;
+```powershell
+git tag v1.0.2
+git push origin v1.0.2
+```
+
+Eso genera el `.msix` `1.0.2.0` con el mismo script, crea el Release `v1.0.2` con el paquete adjunto y lo envía a certificación. La versión tiene que ser mayor que la última enviada a la Store. Los push a `main` no publican nada.
+
+También se puede lanzar a mano desde **Actions › Run workflow**, con la versión (`N.N.N.0`) y cada paso opcional:
+
+- siempre genera el `.msix` y lo deja como artefacto de la ejecución;
 - si **crear_release** está marcado (lo está por defecto), crea el Release `vN.N.N` con el `.msix` adjunto;
 - si **enviar_store** está marcado, lo sube a Partner Center. Sin **confirmar_envio** queda como borrador, para revisarlo y enviarlo desde Partner Center; con **confirmar_envio** va directo a certificación.
 
-Enviar a la Store requiere que la primera versión ya esté publicada y una app de Microsoft Entra asociada a Partner Center con rol *Manager*. En el repo, **Settings › Secrets and variables › Actions**:
+Si hay un borrador pendiente en Partner Center, el envío lo reemplaza. Enviar a la Store requiere que la app ya esté **publicada y en vivo** (la primera versión se envía a mano) y una app de Microsoft Entra asociada a Partner Center con rol *Manager*. En el repo, **Settings › Secrets and variables › Actions**:
 
 | Nombre | Tipo | Valor |
 |---|---|---|

@@ -1,15 +1,20 @@
-# Genera el paquete MSIX de Popete y, si se pide, lo envía a la Microsoft Store.
+# Genera el paquete MSIX de Popete, crea el Release en GitHub y lo envía a la Microsoft Store.
 #
-# Manual por ahora: GitHub › Actions › "Publicar en la Microsoft Store" › Run workflow.
+# Automático: al subir un tag vX.Y.Z (git tag v1.0.2 && git push origin v1.0.2) se genera el
+# paquete X.Y.Z.0, se crea el Release y se manda a certificación.
+# Manual: GitHub › Actions › "Publicar en la Microsoft Store" › Run workflow (cada paso es opcional).
+#
 # Requisitos para enviar a la Store (la generación del .msix y el Release no los necesitan):
-#   Secretos:  PARTNER_CENTER_TENANT_ID, PARTNER_CENTER_SELLER_ID,
-#              PARTNER_CENTER_CLIENT_ID, PARTNER_CENTER_CLIENT_SECRET
-#              (app de Microsoft Entra asociada a Partner Center con rol Manager)
-#   Variable:  MSSTORE_PRODUCT_ID (el "Store ID" de Partner Center › Identidad del producto)
-# La primera versión se publica a mano desde Partner Center; esto es para las siguientes.
+#   - La app ya publicada y en vivo en la Store (la primera versión se envía a mano).
+#   - Secretos:  PARTNER_CENTER_TENANT_ID, PARTNER_CENTER_SELLER_ID,
+#                PARTNER_CENTER_CLIENT_ID, PARTNER_CENTER_CLIENT_SECRET
+#                (app de Microsoft Entra asociada a Partner Center con rol Manager)
+#   - Variable:  MSSTORE_PRODUCT_ID (el "Store ID" de Partner Center › Identidad del producto)
 name: Publicar en la Microsoft Store
 
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       version:
@@ -40,16 +45,36 @@ jobs:
   publicar:
     runs-on: windows-latest
     env:
-      VERSION: ${{ inputs.version }}
+      # Con un tag se hace todo; a mano, lo que se marque
+      POR_TAG: ${{ github.event_name == 'push' }}
+      CREAR_RELEASE: ${{ github.event_name == 'push' || inputs.crear_release }}
+      ENVIAR_STORE: ${{ github.event_name == 'push' || inputs.enviar_store }}
+      CONFIRMAR: ${{ github.event_name == 'push' || inputs.confirmar_envio }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validar versión
+      - name: Determinar la versión
         shell: pwsh
+        env:
+          VERSION_MANUAL: ${{ inputs.version }}
         run: |
-          if ($env:VERSION -notmatch '^\d+\.\d+\.\d+\.0$') {
-            throw "La versión debe ser N.N.N.0 (la Store exige el último número en 0): $env:VERSION"
+          if ($env:POR_TAG -eq 'true') {
+            if ($env:GITHUB_REF_NAME -notmatch '^v(\d+\.\d+\.\d+)$') {
+              throw "El tag debe ser vX.Y.Z (ej. v1.0.2): $env:GITHUB_REF_NAME"
+            }
+            $version = "$($Matches[1]).0"
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            $version = $env:VERSION_MANUAL
+            if ($version -notmatch '^\d+\.\d+\.\d+\.0$') {
+              throw "La versión debe ser N.N.N.0 (la Store exige el último número en 0): $version"
+            }
+            $tag = 'v' + ($version -replace '\.0$', '')
           }
+          "VERSION=$version" >> $env:GITHUB_ENV
+          "TAG=$tag" >> $env:GITHUB_ENV
+          "MSIX=artifacts/msix/Popete_$($version)_x64.msix" >> $env:GITHUB_ENV
+          "Versión $version (tag $tag)"
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -64,27 +89,28 @@ jobs:
       - name: Guardar el .msix como artefacto
         uses: actions/upload-artifact@v4
         with:
-          name: popete-msix-${{ inputs.version }}
-          path: artifacts/msix/Popete_${{ inputs.version }}_x64.msix
+          name: popete-msix-${{ env.VERSION }}
+          path: ${{ env.MSIX }}
           if-no-files-found: error
 
       - name: Crear el Release en GitHub
-        if: ${{ inputs.crear_release }}
+        if: ${{ env.CREAR_RELEASE == 'true' }}
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = 'v' + ($env:VERSION -replace '\.0$', '')
-          gh release create $tag "artifacts/msix/Popete_$($env:VERSION)_x64.msix" `
-            --target $env:GITHUB_SHA --title "Popete $tag" --generate-notes
-          if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el Release $tag (¿ya existe?)" }
+          # Con un tag, el Release usa ese tag; a mano, se crea el tag sobre este commit
+          $opciones = @($env:TAG, $env:MSIX, '--title', "Popete $env:TAG", '--generate-notes')
+          if ($env:POR_TAG -ne 'true') { $opciones += @('--target', $env:GITHUB_SHA) }
+          gh release create @opciones
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el Release $env:TAG (¿ya existe?)" }
 
       - name: Instalar Microsoft Store Developer CLI
-        if: ${{ inputs.enviar_store }}
+        if: ${{ env.ENVIAR_STORE == 'true' }}
         uses: microsoft/microsoft-store-apppublisher@v1.1
 
       - name: Enviar a Partner Center
-        if: ${{ inputs.enviar_store }}
+        if: ${{ env.ENVIAR_STORE == 'true' }}
         shell: pwsh
         env:
           TENANT_ID: ${{ secrets.PARTNER_CENTER_TENANT_ID }}
@@ -92,20 +118,19 @@ jobs:
           CLIENT_ID: ${{ secrets.PARTNER_CENTER_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.PARTNER_CENTER_CLIENT_SECRET }}
           PRODUCT_ID: ${{ vars.MSSTORE_PRODUCT_ID }}
-          CONFIRMAR: ${{ inputs.confirmar_envio }}
         run: |
           $faltan = @{
             TENANT_ID = 'secreto PARTNER_CENTER_TENANT_ID'; SELLER_ID = 'secreto PARTNER_CENTER_SELLER_ID'
             CLIENT_ID = 'secreto PARTNER_CENTER_CLIENT_ID'; CLIENT_SECRET = 'secreto PARTNER_CENTER_CLIENT_SECRET'
             PRODUCT_ID = 'variable MSSTORE_PRODUCT_ID'
           }.GetEnumerator() | Where-Object { -not [Environment]::GetEnvironmentVariable($_.Key) } | ForEach-Object { $_.Value }
-          if ($faltan) { throw "Falta configurar en el repo: $($faltan -join ', ')" }
+          if ($faltan) { throw "Falta configurar en el repo: $($faltan -join ', ') (ver README › Publicar con GitHub Actions)" }
 
           msstore reconfigure --tenantId $env:TENANT_ID --sellerId $env:SELLER_ID --clientId $env:CLIENT_ID --clientSecret $env:CLIENT_SECRET
           if ($LASTEXITCODE -ne 0) { throw 'msstore reconfigure falló (revisa los secretos)' }
 
-          $msix = "artifacts/msix/Popete_$($env:VERSION)_x64.msix"
-          $opciones = @('publish', 'artifacts/msix', '--inputFile', $msix, '--appId', $env:PRODUCT_ID)
+          # Reemplaza el borrador pendiente, si lo hay, por uno nuevo con este paquete
+          $opciones = @('publish', $env:MSIX, '--appId', $env:PRODUCT_ID)
           if ($env:CONFIRMAR -ne 'true') { $opciones += '--noCommit' } # queda en borrador
           msstore @opciones
           if ($LASTEXITCODE -ne 0) { throw 'msstore publish falló' }

@@ -11,7 +11,7 @@ dotnet run --project src       # compilar y ejecutar
 dotnet build src               # solo compilar (úsalo para verificar cambios)
 dotnet publish src             # generar .exe
 powershell -File tools\empaquetar-msix.ps1   # paquete MSIX (ver README)
-# Store desde CI: .github/workflows/publicar-store.yml (solo manual, workflow_dispatch)
+# Store desde CI: .github/workflows/publicar-store.yml (tag vX.Y.Z → X.Y.Z.0, Release y certificación; también a mano)
 ```
 
 Si la app ya está abierta, `dotnet run` sale enseguida por el mutex de instancia única: hay que cerrarla antes desde la bandeja (**Salir**).
