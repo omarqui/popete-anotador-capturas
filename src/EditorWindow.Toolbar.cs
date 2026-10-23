@@ -140,14 +140,15 @@ sealed partial class EditorWindow
     }
 
     // ------------------------------------------------------------------ otras herramientas
-    // Resaltador, línea, rectángulo, texto y "texto con fondo" van en un menú para que la barra
-    // quede corta. El botón muestra la herramienta del menú que esté activa (y queda marcado);
-    // si no hay ninguna, un ícono genérico. Las teclas H, L, R y T siguen funcionando.
+    // Resaltador, línea, rectángulo, óvalo, texto y "texto con fondo" van en un menú para que la
+    // barra quede corta. El botón muestra la herramienta del menú que esté activa (y queda marcado);
+    // si no hay ninguna, un ícono genérico. Las teclas H, L, R, O y T siguen funcionando.
     static readonly (Tool tool, string icon, string name, string key)[] MoreTools =
     {
         (Tool.Highlighter, Icons.Highlighter, "Resaltador", "H"),
         (Tool.Line, Icons.Line, "Línea", "L"),
         (Tool.Rectangle, Icons.Rectangle, "Rectángulo", "R"),
+        (Tool.Ellipse, Icons.Ellipse, "Óvalo", "O"),
         (Tool.Text, Icons.Text, "Texto", "T"),
     };
 
@@ -157,7 +158,7 @@ sealed partial class EditorWindow
     {
         _moreButton = new ToggleButton
         {
-            ToolTip = "Otras herramientas: resaltador (H), línea (L), rectángulo (R), texto (T) y texto con fondo",
+            ToolTip = "Otras herramientas: resaltador (H), línea (L), rectángulo (R), óvalo (O; Shift: círculo), texto (T) y texto con fondo",
             Width = 48,
         };
         System.Windows.Automation.AutomationProperties.SetName(_moreButton, "Otras herramientas");
@@ -347,21 +348,32 @@ sealed partial class EditorWindow
         // Elegir una herramienta de dibujo es para dibujar algo nuevo: se suelta la selección
         if (t != Tool.Select) ClearSelection();
 
-        _ink.EditingMode = t switch
+        // Se recuerda para el próximo editor, también después de reiniciar
+        if (t != Tool.Crop && AppSettings.Current.UltimaHerramienta != t)
         {
-            Tool.Pen or Tool.Highlighter => InkCanvasEditingMode.Ink,
-            Tool.Eraser => InkCanvasEditingMode.EraseByStroke,
-            _ => InkCanvasEditingMode.None,
-        };
-        // El puntero del sistema se oculta: lo reemplaza el de EditorWindow.Pointer.cs.
-        // Seleccionar y Recortar usan los del sistema (Recortar los cambia según el borde).
+            AppSettings.Current.UltimaHerramienta = t;
+            try { AppSettings.Current.Save(); } catch { /* se aplica igual en esta sesión */ }
+        }
+
+        _ink.EditingMode = EditingModeFor(t);
         _ink.UseCustomCursor = true;
-        _ink.Cursor = t is Tool.Select or Tool.Crop ? Cursors.Arrow : Cursors.None;
+        _ink.Cursor = ToolCursor;
 
         RefreshSwatches();
         UpdateDrawingAttributes();
         UpdatePointer();
     }
+
+    static InkCanvasEditingMode EditingModeFor(Tool t) => t switch
+    {
+        Tool.Pen or Tool.Highlighter => InkCanvasEditingMode.Ink,
+        Tool.Eraser => InkCanvasEditingMode.EraseByStroke,
+        _ => InkCanvasEditingMode.None,
+    };
+
+    // El puntero del sistema se oculta: lo reemplaza el de EditorWindow.Pointer.cs.
+    // Seleccionar y Recortar usan los del sistema (Recortar los cambia según el borde).
+    Cursor ToolCursor => _tool is Tool.Select or Tool.Crop ? Cursors.Arrow : Cursors.None;
 
     /// <param name="applyToSelection">Si hay trazos seleccionados, también se pintan (no al intercambiar con Alt).</param>
     void SetColor(Color color, bool applyToSelection = true)

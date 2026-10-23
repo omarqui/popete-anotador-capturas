@@ -31,6 +31,9 @@ sealed class AppSettings
     /// <summary>Grosor con el que abre el editor.</summary>
     public double GrosorInicial { get; set; } = 4;
 
+    /// <summary>Herramienta con la que abre el editor: la última que se eligió (nunca Recortar).</summary>
+    public Tool UltimaHerramienta { get; set; } = Tool.Pen;
+
     /// <summary>Carpeta que propone "Guardar como"; null = Imágenes.</summary>
     public string CarpetaGuardar { get; set; }
 

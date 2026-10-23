@@ -20,6 +20,31 @@ sealed partial class EditorWindow
 
     static bool IsArrow(Stroke s) => s.ContainsPropertyData(ArrowProperty);
 
+    /// <summary>Desplazamiento del número que puso el usuario (propiedad del ISF: [dx, dy]).</summary>
+    static readonly Guid NumberOffsetProperty = new Guid("8d2f4a6b-1c3e-4f5a-9b7d-6e0a2c4f8b13");
+
+    static Vector NumberOffsetOf(object target) => target switch
+    {
+        Stroke s when s.ContainsPropertyData(NumberOffsetProperty)
+            && s.GetPropertyData(NumberOffsetProperty) is double[] { Length: 2 } d => new Vector(d[0], d[1]),
+        NoteText nt => nt.NumberOffset,
+        _ => new Vector(),
+    };
+
+    static void SetNumberOffset(object target, Vector v)
+    {
+        switch (target)
+        {
+            case Stroke s when v.Length == 0: s.RemovePropertyData(NumberOffsetProperty); break;
+            case Stroke s: s.AddPropertyData(NumberOffsetProperty, new[] { v.X, v.Y }); break;
+            case NoteText nt: nt.NumberOffset = v; break;
+        }
+    }
+
+    // Arrastre de un número: (círculo, su trazo o texto, dónde se agarró, desplazamiento al empezar)
+    (FrameworkElement badge, object target, Point start, Vector from)? _numberDrag;
+    bool _numberMoved;
+
     Canvas _numbersLayer;
     ToggleButton _numbersButton;
     long _nextOrder = 1;
@@ -99,17 +124,69 @@ sealed partial class EditorWindow
         int n = 1;
         foreach (var item in items.OrderBy(i => i.order))
         {
-            // Borde del círculo a 2 px del borde del trazo
-            var center = item.at + upLeft * (r + item.halfWidth + 2);
+            // Borde del círculo a 2 px del borde del trazo, más lo que lo haya movido el usuario
+            var center = item.at + upLeft * (r + item.halfWidth + 2) + NumberOffsetOf(item.target);
             var badge = NumberBadge(n++, item.color, r);
             var target = item.target;
-            badge.Cursor = Cursors.Hand;
-            badge.MouseLeftButtonDown += (s, e) => NumberClicked(target, e);
+            badge.Cursor = Cursors.SizeAll;
+            badge.ToolTip = "Arrastra para mover el número · clic para seleccionar · doble clic: volver a su lugar";
+            badge.MouseLeftButtonDown += (s, e) => NumberDown(badge, target, e);
+            badge.MouseMove += (s, e) => NumberMove(e);
+            badge.MouseLeftButtonUp += (s, e) => NumberUp(e);
+            badge.LostMouseCapture += (s, e) => _numberDrag = null;
             badge.MouseRightButtonUp += (s, e) => { SwapColors(); e.Handled = true; }; // como sobre la imagen
             Canvas.SetLeft(badge, center.X - r);
             Canvas.SetTop(badge, center.Y - r);
             _numbersLayer.Children.Add(badge);
         }
+    }
+
+    // ------------------------------------------------------------------ mover un número
+    // Arrastrar el círculo mueve solo el número (su trazo o texto queda donde está); un clic
+    // sin arrastrar selecciona su trazo o texto, como antes. Doble clic: vuelve a su lugar.
+    void NumberDown(FrameworkElement badge, object target, MouseButtonEventArgs e)
+    {
+        e.Handled = true; // tampoco llega al doble clic de copiar y cerrar
+        CommitText();
+        if (target is Stroke st && !_ink.Strokes.Contains(st)) return;
+        if (e.ClickCount == 2)
+        {
+            MoveNumber(target, NumberOffsetOf(target), new Vector());
+            return;
+        }
+        _numberDrag = (badge, target, e.GetPosition(_numbersLayer), NumberOffsetOf(target));
+        _numberMoved = false;
+        badge.CaptureMouse();
+    }
+
+    void NumberMove(MouseEventArgs e)
+    {
+        if (_numberDrag is not { } d) return;
+        var delta = e.GetPosition(_numbersLayer) - d.start;
+        if (!_numberMoved && delta.Length * _zoom.ScaleX < 3) return; // todavía es un clic
+        _numberMoved = true;
+        // Mientras se arrastra solo se corre el círculo; al soltar se guarda y se redibuja
+        d.badge.RenderTransform = new TranslateTransform(delta.X, delta.Y);
+        e.Handled = true;
+    }
+
+    void NumberUp(MouseButtonEventArgs e)
+    {
+        if (_numberDrag is not { } d) return;
+        _numberDrag = null; // antes de soltar el mouse: LostMouseCapture también lo limpia
+        d.badge.ReleaseMouseCapture();
+        e.Handled = true;
+        if (_numberMoved) MoveNumber(d.target, d.from, d.from + (e.GetPosition(_numbersLayer) - d.start));
+        else PickAndDrag(d.target, e.GetPosition(_ink)); // fue un clic: selecciona su trazo o texto
+        DragEnd(); // el clic no arrastra nada: suelta lo que PickAndDrag dejó empezado
+    }
+
+    /// <summary>Cambia el desplazamiento del número (con deshacer) y lo redibuja.</summary>
+    void MoveNumber(object target, Vector before, Vector after)
+    {
+        if (before == after) return;
+        SetNumberOffset(target, after);
+        PushUndo(new ActionChange(() => SetNumberOffset(target, before), () => SetNumberOffset(target, after)));
     }
 
     /// <summary>

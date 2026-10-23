@@ -144,6 +144,7 @@ sealed partial class EditorWindow
             Canvas.SetTop(rect, b.Y);
             _selectionLayer.Children.Add(rect);
         }
+        AddHandles(); // asas para reajustar un trazo elegido a mano (EditorWindow.Handles.cs)
         if (_marquee != null) _selectionLayer.Children.Add(_marquee);
         if (_cropMode) AddCropOverlay();
     }
@@ -279,15 +280,6 @@ sealed partial class EditorWindow
             RestartSelectionTimer();
         }
         BeginDrag(p);
-    }
-
-    /// <summary>Clic en el círculo con el número: selecciona su trazo o texto, con cualquier herramienta.</summary>
-    void NumberClicked(object item, MouseButtonEventArgs e)
-    {
-        e.Handled = true;
-        CommitText();
-        if (item is Stroke s && !_ink.Strokes.Contains(s)) return;
-        PickAndDrag(item, e.GetPosition(_ink));
     }
 
     void BeginMarquee(Point p)

@@ -17,6 +17,9 @@ sealed class NoteText : TextBlock
 
     bool _fondo;
 
+    /// <summary>Cuánto movió el usuario el número del texto desde su lugar automático.</summary>
+    public Vector NumberOffset { get; set; }
+
     public bool Fondo
     {
         get => _fondo;

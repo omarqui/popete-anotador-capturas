@@ -80,13 +80,16 @@ El botón de la papelera quita todas las anotaciones, después de pedir confirma
 | Lápiz | `P` | Trazo libre (un clic suelto o un trazo de menos de 5 px no se aplica) |
 | Resaltador | `H` | Semitransparente; tiene su propio color (amarillo por defecto) |
 | Línea | `L` | `Shift` para ángulos de 45° |
-| Flecha | `A` | Sigue el mouse (curva); si sale casi recta se endereza sola. `Shift`: recta a 45° |
+| Flecha | `A` | Sigue el mouse (curva); si sale casi recta se endereza sola. `Shift`: recta a 45°. Si empieza sobre un trazo, toma su color |
 | Rectángulo | `R` | `Shift` para cuadrado |
+| Óvalo | `O` | `Shift` para círculo |
 | Texto | `T` | Clic para escribir; `Esc` o clic fuera para terminar |
 | Borrador | `E` | Borra trazos completos |
 | Recortar | `C` | Arrastra los bordes de la captura; ver «Recortar» más abajo |
 
-Resaltador, Línea, Rectángulo, Texto y «Texto con fondo» están en el botón **Otras herramientas** (el de las figuras, con una flechita), al lado de la flecha. El botón muestra la que esté activa. Sus teclas (`H`, `L`, `R`, `T`) siguen funcionando.
+Resaltador, Línea, Rectángulo, Óvalo, Texto y «Texto con fondo» están en el botón **Otras herramientas** (el de las figuras, con una flechita), al lado de la flecha. El botón muestra la que esté activa. Sus teclas (`H`, `L`, `R`, `O`, `T`) siguen funcionando.
+
+El editor abre con la última herramienta que usaste, también después de reiniciar la app (salvo Recortar: en ese caso, el lápiz).
 
 Los trazos llevan un borde blanco fino para que se destaquen sobre cualquier fondo (también en la imagen copiada); el resaltador no.
 
@@ -104,6 +107,8 @@ Después de un trazo o una forma, queda marcado unos segundos con un recuadro pu
 
 Cada trazo y cada texto (las flechas no) lleva un círculo con su número, en el color del trazo, pegado al punto del trazo que está más arriba a la izquierda (en un círculo, sobre su arco superior izquierdo), sin taparlo. Si borras uno, los demás se renumeran. Sale en la imagen copiada. El botón **123** (o `N`) la prende o apaga en cada captura; el valor inicial y el tamaño de los números (normal, grande, muy grande, enorme) se eligen en Ajustes.
 
+**Arrastrar un número** lo cambia de lugar (su trazo o texto no se mueve); si después mueves el trazo, el número lo acompaña. **Doble clic** en el número lo devuelve a su lugar automático. Se deshace con Ctrl+Z.
+
 ### Un color distinto por trazo
 
 Después de cada trazo, el color pasa solo al siguiente: rojo → azul → verde → morado → naranja (el resaltador: amarillo → verde → azul). Así cada paso numerado queda de un color distinto. Si eliges un color a mano, el próximo trazo lo usa y la rotación sigue desde ahí. Se apaga en Ajustes.
@@ -112,9 +117,19 @@ Después de cada trazo, el color pasa solo al siguiente: rojo → azul → verde
 
 Con **Seleccionar** (`V`), un clic sobre un trazo o un texto lo elige y arrastrarlo lo mueve. Para elegir **varios**, arrastra un recuadro desde una zona vacía: queda seleccionado todo lo que toque. `Shift` + recuadro suma a lo que ya había, `Shift`+clic agrega o quita uno, y `Ctrl+A` elige todo. Arrastrar cualquiera de los elegidos mueve todos juntos; el color, el grosor y `Supr` se aplican a todos.
 
-**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta, y arrastrar desde el número lo mueve.
+**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta (arrastrar el número mueve solo el número; ver «Numeración automática»).
 
 Con algo seleccionado, las flechas del teclado lo corren 1 px (con `Shift`, 10 px). Todo se deshace con Ctrl+Z.
+
+### Reajustar un trazo
+
+Elige **un** trazo con **Seleccionar** (`V`) o con un clic en su número y aparecen asas blancas:
+
+- **Línea y flecha recta:** un asa redonda en cada extremo; arrástrala para mover ese extremo (`Shift`: 45°).
+- **Rectángulo y óvalo:** asas en las esquinas y los lados para cambiar el tamaño.
+- **Lápiz, resaltador y flecha curva:** las mismas asas estiran o encogen el trazo (el grosor no cambia).
+
+Las asas no salen en lo recién dibujado (para que puedas empezar otro trazo justo al lado) y los trazos de capturas anteriores a esta versión solo se pueden estirar con el recuadro. Cada arrastre se deshace con Ctrl+Z.
 
 ### Texto con fondo
 

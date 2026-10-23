@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-//  Editor — formas (línea, flecha, rectángulo) y textos
+//  Editor — formas (línea, flecha, rectángulo, óvalo) y textos
 // ----------------------------------------------------------------------------
 sealed partial class EditorWindow
 {
@@ -8,6 +8,11 @@ sealed partial class EditorWindow
     // ------------------------------------------------------------------ formas (línea, flecha, rectángulo) y texto
     void Ink_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        if (HandleDown(e.GetPosition(_ink))) // asa de un trazo seleccionado, con cualquier herramienta
+        {
+            e.Handled = true;
+            return;
+        }
         if (_tool == Tool.Select)
         {
             SelectToolDown(e.GetPosition(_ink)); // un trazo (y arrastrar lo mueve) o un recuadro
@@ -29,11 +34,14 @@ sealed partial class EditorWindow
             e.Handled = true;
             return;
         }
-        if (_tool is not (Tool.Line or Tool.Arrow or Tool.Rectangle)) return;
+        if (_tool is not (Tool.Line or Tool.Arrow or Tool.Rectangle or Tool.Ellipse)) return;
 
         _start = e.GetPosition(_ink);
         _arrowPath = _tool == Tool.Arrow ? new List<Point> { _start } : null;
-        _preview = new NoteStroke(BuildPoints(_start, _start), MakeAttributes());
+        var attributes = MakeAttributes();
+        // Una flecha que sale de un trazo toma su color (el color actual no cambia)
+        if (_tool == Tool.Arrow && StrokeAt(_start) is Stroke origin) attributes.Color = origin.DrawingAttributes.Color;
+        _preview = new NoteStroke(BuildPoints(_start, _start), attributes);
         if (_tool == Tool.Arrow) _preview.AddPropertyData(ArrowProperty, true); // las flechas no se numeran
         _suppress = true;
         _ink.Strokes.Add(_preview);
@@ -44,6 +52,7 @@ sealed partial class EditorWindow
 
     void Ink_MouseMove(object sender, MouseEventArgs e)
     {
+        if (HandleMove(e.GetPosition(_ink))) return;
         if (DragMove(e.GetPosition(_ink))) return;
         if (MarqueeMove(e.GetPosition(_ink))) return;
         if (CropMouseMove(e.GetPosition(_ink))) return;
@@ -63,7 +72,7 @@ sealed partial class EditorWindow
 
     void Ink_MouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (DragEnd() || MarqueeEnd(e.GetPosition(_ink)))
+        if (HandleUp() || DragEnd() || MarqueeEnd(e.GetPosition(_ink)))
         {
             e.Handled = true;
             return;
@@ -81,12 +90,16 @@ sealed partial class EditorWindow
         _arrowPath = null;
 
         var end = e.GetPosition(_ink);
+        bool straight = true;
         if (path != null && !Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
         {
             if ((end - path[^1]).Length > 0) path.Add(end);
             // Casi recta: se endereza; si no, queda la curva suavizada
-            stroke.StylusPoints = IsNearlyStraight(path) ? BuildPoints(_start, end) : FreeArrow(path);
+            straight = IsNearlyStraight(path);
+            stroke.StylusPoints = straight ? BuildPoints(_start, end) : FreeArrow(path);
         }
+        // Las formas de dos puntos recuerdan su tipo: las asas las rehacen (EditorWindow.Handles.cs)
+        if (straight) stroke.AddPropertyData(ShapeProperty, (int)_tool);
 
         double extent = path != null ? PathLength(path) : (end - _start).Length;
         if (extent * _zoom.ScaleX < 5)
@@ -105,17 +118,38 @@ sealed partial class EditorWindow
         e.Handled = true;
     }
 
-    StylusPointCollection BuildPoints(Point a, Point b)
+    StylusPointCollection BuildPoints(Point a, Point b) => ShapePoints(_tool, a, b, _size);
+
+    /// <summary>
+    /// Puntos de una forma entre <paramref name="a"/> y <paramref name="b"/> (extremos de línea
+    /// y flecha, esquinas opuestas de rectángulo y óvalo). También la usan las asas para rehacerla.
+    /// </summary>
+    static StylusPointCollection ShapePoints(Tool kind, Point a, Point b, double size)
     {
         var pts = new List<Point>();
-        switch (_tool)
+        switch (kind)
         {
             case Tool.Rectangle:
                 pts.AddRange(new[] { a, new Point(b.X, a.Y), b, new Point(a.X, b.Y), a });
                 break;
+            case Tool.Ellipse:
+            {
+                // Inscrito en el recuadro a-b; un punto cada ~4 px de contorno (mín. 24). Múltiplo
+                // de 4: así hay un punto en cada extremo y el recuadro de los puntos es el del óvalo.
+                var c = new Point((a.X + b.X) / 2, (a.Y + b.Y) / 2);
+                double rx = Math.Abs(b.X - a.X) / 2, ry = Math.Abs(b.Y - a.Y) / 2;
+                int n = Math.Clamp((int)(Math.PI * (rx + ry) / 4), 24, 360);
+                n -= n % 4;
+                for (int i = 0; i <= n; i++)
+                {
+                    double t = 2 * Math.PI * i / n;
+                    pts.Add(new Point(c.X + rx * Math.Cos(t), c.Y + ry * Math.Sin(t)));
+                }
+                break;
+            }
             case Tool.Arrow:
                 pts.Add(a);
-                AddArrowHead(pts, a, b);
+                AddArrowHead(pts, a, b, size);
                 break;
             default: // línea
                 pts.Add(a);
@@ -125,26 +159,37 @@ sealed partial class EditorWindow
         return new StylusPointCollection(pts);
     }
 
-    double ArrowHeadLength => Math.Max(18, _size * 5);
+    static double HeadLength(double size) => Math.Max(18, size * 5);
+    double ArrowHeadLength => HeadLength(_size);
+
+    /// <summary>
+    /// El trazo de más arriba que pasa por <paramref name="p"/> (con 8 px en pantalla de
+    /// tolerancia). Los del resaltador no cuentan: su color es translúcido.
+    /// </summary>
+    Stroke StrokeAt(Point p)
+    {
+        double tolerance = 8 / _zoom.ScaleX;
+        return _ink.Strokes.LastOrDefault(s => !s.DrawingAttributes.IsHighlighter && s.HitTest(p, tolerance));
+    }
 
     /// <summary>
     /// Agrega la punta en <paramref name="tip"/>, apuntando desde <paramref name="from"/>: un
     /// triángulo relleno. Como es un solo trazo, el relleno es un abanico de líneas desde la
     /// punta a la base, más juntas que el grosor, así no quedan huecos.
     /// </summary>
-    void AddArrowHead(List<Point> pts, Point from, Point tip)
+    static void AddArrowHead(List<Point> pts, Point from, Point tip, double size)
     {
         var v = tip - from;
         double len = v.Length;
         pts.Add(tip);
         if (len < 1) return;
         v /= len;
-        double head = ArrowHeadLength;
+        double head = HeadLength(size);
         var n = new Vector(-v.Y, v.X);
         var w1 = tip - v * head + n * head * 0.55;
         var w2 = tip - v * head - n * head * 0.55;
         pts.AddRange(new[] { w1, w2, tip }); // contorno
-        int steps = (int)Math.Ceiling((w2 - w1).Length / Math.Max(1, _size * 0.8));
+        int steps = (int)Math.Ceiling((w2 - w1).Length / Math.Max(1, size * 0.8));
         for (int i = 1; i < steps; i++)
         {
             pts.Add(w1 + (w2 - w1) * i / steps);
@@ -169,7 +214,7 @@ sealed partial class EditorWindow
             if (walked >= ArrowHeadLength) break;
         }
         var pts = smooth.Take(smooth.Count - 1).ToList();
-        AddArrowHead(pts, from, tip);
+        AddArrowHead(pts, from, tip, _size);
         return new StylusPointCollection(pts);
     }
 
@@ -218,11 +263,18 @@ sealed partial class EditorWindow
     Point Constrain(Point a, Point b)
     {
         var v = b - a;
-        if (_tool == Tool.Rectangle)
+        if (_tool is Tool.Rectangle or Tool.Ellipse) // cuadrado / círculo
         {
             double m = Math.Max(Math.Abs(v.X), Math.Abs(v.Y));
             return new Point(a.X + Math.Sign(v.X) * m, a.Y + Math.Sign(v.Y) * m);
         }
+        return Snap45(a, b);
+    }
+
+    /// <summary><paramref name="b"/> llevado al ángulo múltiplo de 45° más cercano visto desde <paramref name="a"/>.</summary>
+    static Point Snap45(Point a, Point b)
+    {
+        var v = b - a;
         double step = Math.PI / 4;
         double ang = Math.Round(Math.Atan2(v.Y, v.X) / step) * step;
         return a + new Vector(Math.Cos(ang), Math.Sin(ang)) * v.Length;
@@ -326,6 +378,7 @@ sealed partial class EditorWindow
         Canvas.SetLeft(block, n.X);
         Canvas.SetTop(block, n.Y);
         if (n.Orden > 0) block.Tag = n.Orden; // orden para la numeración (si no, se asigna al refrescar)
+        block.NumberOffset = new Vector(n.NumeroDx, n.NumeroDy);
         // Doble clic para corregirlo. Con Seleccionar, un clic lo elige y arrastrar lo mueve;
         // con las demás herramientas un clic simple no hace nada (no empieza un trazo encima).
         block.Cursor = Cursors.IBeam;

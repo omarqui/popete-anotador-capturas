@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  Editor
 // ----------------------------------------------------------------------------
-enum Tool { Select, Pen, Highlighter, Line, Arrow, Rectangle, Text, Eraser, Crop }
+enum Tool { Select, Pen, Highlighter, Line, Arrow, Rectangle, Text, Eraser, Crop, Ellipse }
 
 sealed partial class EditorWindow : Window
 {
@@ -253,7 +253,9 @@ sealed partial class EditorWindow : Window
         InitOrders();
         RefreshNumbers();
         RefreshSizes();
-        SetTool(Tool.Pen);
+        // La última herramienta usada, aunque se haya reiniciado la app (Recortar no: es de una captura)
+        var last = AppSettings.Current.UltimaHerramienta;
+        SetTool(Enum.IsDefined(last) && last != Tool.Crop ? last : Tool.Pen);
 
         // PreviewKeyDown: la ventana ve las teclas antes que el InkCanvas,
         // que de otro modo se queda con Ctrl+C / Ctrl+X / Ctrl+V.
@@ -269,9 +271,11 @@ sealed partial class EditorWindow : Window
                 e.Handled = true;
             }
             // Doble clic en el lienzo: copiar y cerrar, como Ctrl+C. Sobre un texto lo
-            // edita (EditText), y con un cuadro de texto abierto selecciona palabras.
+            // edita (EditText), sobre un número lo devuelve a su lugar (NumberDown), y con
+            // un cuadro de texto abierto selecciona palabras.
             else if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && _editing == null
-                     && IsInside(e.OriginalSource, _scroll) && !IsInside(e.OriginalSource, _textLayer))
+                     && IsInside(e.OriginalSource, _scroll) && !IsInside(e.OriginalSource, _textLayer)
+                     && !IsInside(e.OriginalSource, _numbersLayer) && HandleAt(e.GetPosition(_ink)) == null)
             {
                 if (CopyToClipboard()) CloseAfterFlash();
                 e.Handled = true;
@@ -430,6 +434,8 @@ sealed partial class EditorWindow : Window
                 Y = Canvas.GetTop(tb) - _pad,
                 Orden = tb.Tag is long orden ? orden : 0,
                 Fondo = tb is NoteText nt && nt.Fondo,
+                NumeroDx = NumberOffsetOf(tb).X,
+                NumeroDy = NumberOffsetOf(tb).Y,
                 FontSize = tb.FontSize,
                 Color = (tb.Foreground as SolidColorBrush)?.Color.ToString() ?? Palette[0].color.ToString(),
             }).ToList();
@@ -604,6 +610,7 @@ sealed partial class EditorWindow : Window
             case Key.L: SetTool(Tool.Line); break;
             case Key.A: SetTool(Tool.Arrow); break;
             case Key.R: SetTool(Tool.Rectangle); break;
+            case Key.O: SetTool(Tool.Ellipse); break;
             case Key.T: SetTool(Tool.Text); break;
             case Key.E: SetTool(Tool.Eraser); break;
             case Key.C: SetTool(Tool.Crop); break;

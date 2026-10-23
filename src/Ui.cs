@@ -108,6 +108,7 @@ static class Icons
     public const string Line = "M5 19 L19 5";
     public const string Arrow = "M5 19 L19 5 M10 5 H19 V14";
     public const string Rectangle = "M4 6 H20 V18 H4 Z";
+    public const string Ellipse = "M21 12 A9 6.5 0 1 1 3 12 A9 6.5 0 1 1 21 12 Z";
     public const string Text = "M5 7 V5 H19 V7 M12 5 V19 M9 19 H15";
     public const string TextLabel = "M5 5 H19 A2 2 0 0 1 21 7 V17 A2 2 0 0 1 19 19 H5 A2 2 0 0 1 3 17 V7 A2 2 0 0 1 5 5 Z M8 9 H16 M12 9 V15.5";
     public const string Shapes = "M3 12 H11 V20 H3 Z M21 7.5 A4.5 4.5 0 1 1 12 7.5 A4.5 4.5 0 1 1 21 7.5 Z M14 20 L17.5 14 L21 20 Z";
