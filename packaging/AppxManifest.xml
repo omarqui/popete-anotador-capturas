@@ -18,10 +18,9 @@
     ProcessorArchitecture="$ARCH$" />
 
   <Properties>
-    <!-- Tiene que ser uno de los nombres reservados en Partner Center ("Popete" y
-         "Popete · anotador de capturas"). Aquí va el corto, que es el que se ve en Inicio;
-         la ficha de la Store usa el largo, que se elige en Partner Center. -->
-    <DisplayName>Popete</DisplayName>
+    <!-- Tiene que ser un nombre reservado para este producto en Partner Center: la Store
+         rechazó "Popete". En Inicio se ve el de VisualElements, más abajo. -->
+    <DisplayName>Popete · anotador de capturas</DisplayName>
     <PublisherDisplayName>$PUBLISHER_DISPLAY_NAME$</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <Description>Anotador de capturas de pantalla: detecta cada captura y abre un editor para marcarla.</Description>
