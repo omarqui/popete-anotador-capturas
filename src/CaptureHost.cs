@@ -21,6 +21,7 @@ sealed class CaptureHost : IDisposable
     System.Windows.Forms.ToolStripMenuItem _pauseItem;
     System.Windows.Forms.ToolStripMenuItem _startupItem;
     HistoryWindow _historyWindow;
+    UpdateChecker _updates;
     bool _paused;
 
     public CaptureHost(Application app)
@@ -234,6 +235,8 @@ sealed class CaptureHost : IDisposable
         };
         _tray.ShowBalloonTip(2500, AppInfo.FullName,
             "Activo. Toma una captura con Impr Pant o Win+Shift+S.", System.Windows.Forms.ToolTipIcon.Info);
+
+        _updates = new UpdateChecker(_tray, menu); // aviso de versión nueva (solo desde la Store)
     }
 
     void ApplyTrayTheme(System.Windows.Forms.ContextMenuStrip menu)

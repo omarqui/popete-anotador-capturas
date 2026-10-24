@@ -195,6 +195,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 
 ### Menú de la bandeja
 
+- **Actualizar Popete:** solo aparece cuando hay una versión nueva en la Store (ver abajo).
 - **Retomar captura:** las 12 más recientes, con miniatura.
 - **Ver historial…:** todas las capturas, con opciones para retomar y eliminar.
 - **Abrir imagen del portapapeles:** abre lo que haya en el portapapeles. Si ya está en el historial, abre esa sesión.
@@ -203,6 +204,8 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 - **Salir**
 
 Un clic en el ícono abre la captura más reciente.
+
+**Versión nueva:** instalada desde la Store, Popete pregunta si hay una versión nueva al rato de arrancar y cada 6 horas (la Store no actualiza una app abierta, y Popete casi siempre lo está). Si la hay, avisa con un globo en la bandeja; un clic en el globo o en **Actualizar Popete** cierra los editores (se guardan), instala la versión nueva y Popete vuelve a abrirse. Si la Store no permite instalarla así, se abre la página de Popete en la Store. El `.exe` suelto no avisa.
 
 ## Historial
 

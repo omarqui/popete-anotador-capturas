@@ -22,7 +22,7 @@ Solo compila y corre en **Windows** (`net10.0-windows10.0.19041.0`, WPF y WinFor
 
 - Funciona y fue probado en Windows: detección por portapapeles, editor, Ctrl+C con parpadeo.
 - Compila sin advertencias (`dotnet build src`).
-- **Pendiente de probar a mano:** el historial persistente (guardado automático, "Retomar captura" en la bandeja, ventana de historial), la deduplicación por huella completa y el cierre automático tras Ctrl+C.
+- **Pendiente de probar a mano:** el historial persistente (guardado automático, "Retomar captura" en la bandeja, ventana de historial), la deduplicación por huella completa y el cierre automático tras Ctrl+C. El aviso de versión nueva (`UpdateChecker`) solo se puede probar de verdad con Popete instalado desde la Store y una versión más nueva ya publicada.
 
 ## Arquitectura (`src/`)
 
@@ -56,6 +56,7 @@ Solo compila y corre en **Windows** (`net10.0-windows10.0.19041.0`, WPF y WinFor
 | `Theme.cs` | `Theme` | Tema claro/oscuro: pinceles en `Application.Resources` con claves fijas (`Fondo`, `Superficie`, `Borde`, `Texto`, `Acento`, `Lienzo`...) y estilos de botón en XAML (`XamlReader.Parse`). `Toggle()` alterna claro/oscuro; mientras el ajuste sea `Sistema` (nunca tocado) sigue al tema de Windows (`AppsUseLightTheme` + `SystemEvents.UserPreferenceChanged`). Barra de título oscura con `DwmSetWindowAttribute`. |
 | `AppSettings.cs` | `AppSettings`, `ModoTema` | `%LOCALAPPDATA%\Popete\ajustes.json`: tema, `MaxCapturas` (50 por defecto, 0 = sin límite), `UltimaHerramienta`, `BarraHerramientas` (null = de fábrica) y demás preferencias. |
 | `Undo.cs` | `IUndo` y sus implementaciones | Pila de deshacer: `StrokeChange`, `AttributeChange`, `ElementAdd`, `ElementRemove`, `TextEdit`, `ActionChange`, `CompositeChange` (varios en un paso), `ClearAllChange`. |
+| `UpdateChecker.cs` | `UpdateChecker` | Aviso de versión nueva, solo en el MSIX: `StoreContext.GetAppAndOptionalStorePackageUpdatesAsync` a los 30 s y cada 6 h. Si hay, globo en la bandeja (una vez por sesión) y "Actualizar Popete" arriba en el menú (`Available`). Instalar: cierra los editores (guardan), `RegisterApplicationRestart` y `TrySilentDownloadAndInstallStorePackageUpdatesAsync`; si no se puede en silencio o falla, abre `ms-windows-store://pdp/?PFN=…`. Los errores al consultar se ignoran (sin red o paquete de prueba). Lo crea `CaptureHost.CreateTray`. |
 | `StartupHelper.cs` | `StartupHelper` | Inicio con Windows: clave `HKCU\...\Run` como .exe; en el MSIX, la API `StartupTask` (TaskId `PopeteInicio`, declarado en el manifiesto). `Set` devuelve el estado real (el usuario puede bloquearlo en Configuración). |
 | `Ui.cs` | `Ui`, `Icons` | Botones con estilo, íconos de trazo (`Path` en grilla 24×24 que toma el color del texto), separadores, grupos y teclas. |
 
