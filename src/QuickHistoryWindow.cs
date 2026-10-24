@@ -36,12 +36,18 @@ sealed class QuickHistoryWindow : Window
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
 
+    [DllImport("user32.dll")]
+    static extern uint GetDpiForSystem();
+
     const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     const int DWMWCP_ROUND = 2;
     const int VK_SHIFT = 0x10, VK_CONTROL = 0x11, VK_MENU = 0x12;
 
     const double ThumbWidth = 72, ThumbHeight = 44;
-    const int PreviewDecodeWidth = 1200;
+    const double ListWidth = 280;
+    const double PreviewMargin = 16;
+    /// <summary>Parte del área de trabajo del monitor que ocupa la ventana, sin bajar de 760×480.</summary>
+    const double ScreenShare = 0.8, MinWindowWidth = 760, MinWindowHeight = 480;
     const int PageStep = 5;
 
     static readonly System.Globalization.CultureInfo Spanish = new System.Globalization.CultureInfo("es");
@@ -52,6 +58,7 @@ sealed class QuickHistoryWindow : Window
     readonly Image _preview = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
     readonly TextBlock _previewInfo = new TextBlock { FontSize = 12, TextAlignment = TextAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
     readonly DispatcherTimer _releaseWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+    int _previewDecodeWidth; // ancho del panel de la vista previa en píxeles: decodificar más no se notaría
     int _index = -1;
     bool _repeated;   // se movió la selección manteniendo los modificadores: al soltarlos, se abre
     bool _done;       // ya se está cerrando (abrir el editor le quita el foco: que no cierre dos veces)
@@ -60,13 +67,11 @@ sealed class QuickHistoryWindow : Window
     {
         _hotkey = hotkey;
         Title = $"Historial rápido — {AppInfo.Name}";
-        Width = 760;
-        Height = 480;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         ShowInTaskbar = false;
         Topmost = true;
-        WindowStartupLocation = WindowStartupLocation.CenterScreen; // en el monitor donde está el ratón
+        PlaceOnMouseMonitor();
         Theme.Attach(this);
 
         _sessions = History.List();
@@ -75,7 +80,7 @@ sealed class QuickHistoryWindow : Window
         var preview = BuildPreview();
         Grid.SetColumn(preview, 1);
         var body = new Grid();
-        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
+        body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(ListWidth) });
         body.ColumnDefinitions.Add(new ColumnDefinition());
         body.Children.Add(BuildList());
         body.Children.Add(preview);
@@ -105,6 +110,25 @@ sealed class QuickHistoryWindow : Window
     }
 
     // ------------------------------------------------------------------ construcción
+    /// <summary>
+    /// Ocupa <see cref="ScreenShare"/> del área de trabajo del monitor donde está el ratón y se centra en él.
+    /// La app usa el DPI del sistema (no hay manifiesto que pida otro modo), así que los píxeles de
+    /// Windows pasan a DIP con ese DPI en cualquier monitor.
+    /// </summary>
+    void PlaceOnMouseMonitor()
+    {
+        var work = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position).WorkingArea;
+        double dpi = GetDpiForSystem() / 96.0;
+        double left = work.Left / dpi, top = work.Top / dpi, w = work.Width / dpi, h = work.Height / dpi;
+        Width = Math.Min(w, Math.Max(MinWindowWidth, w * ScreenShare));
+        Height = Math.Min(h, Math.Max(MinWindowHeight, h * ScreenShare));
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Left = left + (w - Width) / 2;
+        Top = top + (h - Height) / 2;
+        // Lista, su borde, el marco de la ventana y los márgenes de la vista previa
+        _previewDecodeWidth = (int)Math.Ceiling((Width - ListWidth - 3 - 2 * PreviewMargin) * dpi);
+    }
+
     FrameworkElement BuildHeader()
     {
         var title = new TextBlock { Text = "Historial rápido", FontSize = 14, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
@@ -223,7 +247,7 @@ sealed class QuickHistoryWindow : Window
         }
 
         _previewInfo.Margin = new Thickness(16, 0, 16, 12);
-        _preview.Margin = new Thickness(16, 16, 16, 10);
+        _preview.Margin = new Thickness(PreviewMargin, PreviewMargin, PreviewMargin, 10);
         RenderOptions.SetBitmapScalingMode(_preview, BitmapScalingMode.HighQuality);
         DockPanel.SetDock(_previewInfo, Dock.Bottom);
         area.Children.Add(_previewInfo);
@@ -269,7 +293,7 @@ sealed class QuickHistoryWindow : Window
     void ShowPreview(Session s)
     {
         var path = File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath;
-        _preview.Source = TryLoad(path, Math.Min(s.Meta.Width, PreviewDecodeWidth));
+        _preview.Source = TryLoad(path, Math.Min(s.Meta.Width, _previewDecodeWidth));
         bool abierta = EditorShell.IsOpen(s.Meta.Id);
         _previewInfo.Text = $"{Capitalize(s.Meta.Updated.ToString("dddd d 'de' MMMM, HH:mm", Spanish))}"
             + $"   ·   {s.Meta.Width}×{s.Meta.Height}{(abierta ? "   ·   abierta" : "")}";
