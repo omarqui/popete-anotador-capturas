@@ -314,9 +314,9 @@ sealed partial class EditorView
         }
 
         var zoom = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        zoom.Children.Add(Ui.Btn("−", "Alejar (Ctrl+−)", () => SetZoom(_zoom.ScaleX / 1.15), style: "EstiloPlano"));
+        zoom.Children.Add(Ui.Btn("−", "Alejar (Ctrl+−)", () => StepZoom(-1), style: "EstiloPlano"));
         zoom.Children.Add(_zoomText);
-        zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => SetZoom(_zoom.ScaleX * 1.15), style: "EstiloPlano"));
+        zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => StepZoom(1), style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "EstiloPlano"));
         var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(_shell));

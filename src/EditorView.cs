@@ -207,7 +207,7 @@ sealed partial class EditorView : UserControl
         _scroll.PreviewMouseWheel += (s, e) =>
         {
             if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
-                SetZoom(_zoom.ScaleX * (e.Delta > 0 ? 1.15 : 1 / 1.15));
+                StepZoom(e.Delta > 0 ? 1 : -1);
             else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
                 _scroll.ScrollToHorizontalOffset(_scroll.HorizontalOffset - e.Delta); // Shift+rueda: horizontal
             else
@@ -552,13 +552,26 @@ sealed partial class EditorView : UserControl
     }
 
     // ------------------------------------------------------------------ zoom
+    /// <summary>
+    /// Niveles de acercar y alejar, en píxeles de pantalla por píxel de la captura (1 = 100 %).
+    /// Pasan por 100 % exacto y, desde 200 %, por múltiplos enteros: ahí cada píxel sale como un cuadrado parejo.
+    /// </summary>
+    static readonly double[] ZoomLevels = { 0.1, 0.15, 0.2, 0.25, 1 / 3.0, 0.5, 2 / 3.0, 0.75, 1, 1.25, 1.5, 2, 3, 4, 6, 8 };
+
+    /// <summary>Desde este zoom la captura se dibuja con píxeles nítidos en vez de suavizada.</summary>
+    const double PixelZoom = 2;
+
     double DpiScale() => VisualTreeHelper.GetDpi(this).DpiScaleX;
 
     void SetZoom(double z)
     {
         z = Math.Clamp(z, 0.05, 8);
         _zoom.ScaleX = _zoom.ScaleY = z;
-        _zoomText.Text = $"{Math.Round(z * DpiScale() * 100)}%";
+        double real = z * DpiScale();
+        _zoomText.Text = $"{Math.Round(real * 100)}%";
+        // Suavizar al agrandar deja borrosos el texto y los bordes de 1 px de una captura
+        RenderOptions.SetBitmapScalingMode(_imageCtl,
+            real >= PixelZoom * 0.999 ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
 
         UpdateFrameClip();
         UpdateSelectionVisual();
@@ -573,6 +586,16 @@ sealed partial class EditorView : UserControl
         // Nunca agrandar por encima del tamaño real en pantalla
         SetZoom(Math.Min(1 / DpiScale(), fit));
         ResetPanShift(); // "Ajustar" vuelve a centrar
+    }
+
+    /// <summary>Pasa al nivel siguiente (+1) o anterior (−1) de <see cref="ZoomLevels"/>; desde un zoom libre (Ajustar), al más cercano en esa dirección.</summary>
+    void StepZoom(int direction)
+    {
+        double dpi = DpiScale(), real = _zoom.ScaleX * dpi;
+        double next = direction > 0
+            ? ZoomLevels.FirstOrDefault(l => l > real * 1.001, real)
+            : ZoomLevels.LastOrDefault(l => l < real / 1.001, real);
+        SetZoom(next / dpi);
     }
 
     // ------------------------------------------------------------------ teclado
@@ -613,8 +636,8 @@ sealed partial class EditorView : UserControl
                 case Key.A: SelectAll(); break;
                 case Key.OemComma: SettingsWindow.Show(_shell); break;
                 case Key.D0: case Key.NumPad0: FitZoom(); break;
-                case Key.OemPlus: case Key.Add: SetZoom(_zoom.ScaleX * 1.15); break;
-                case Key.OemMinus: case Key.Subtract: SetZoom(_zoom.ScaleX / 1.15); break;
+                case Key.OemPlus: case Key.Add: StepZoom(1); break;
+                case Key.OemMinus: case Key.Subtract: StepZoom(-1); break;
                 default: return;
             }
             e.Handled = true;
