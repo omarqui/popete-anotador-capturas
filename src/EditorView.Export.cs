@@ -68,40 +68,20 @@ sealed partial class EditorView
     {
         CommitText();
         if (_cropMode) ConfirmCrop(); // copiar con el marco ajustado: se aplica primero
-        var bmp = Render();
-
         var png = new MemoryStream();
         var enc = new PngBitmapEncoder();
-        enc.Frames.Add(BitmapFrame.Create(bmp));
+        enc.Frames.Add(BitmapFrame.Create(Render()));
         enc.Save(png);
 
-        // Se registra la huella de lo que se copia para que la app no
-        // vuelva a abrir su propia imagen exportada.
-        var exportSig = ClipboardHelper.Signature(ClipboardHelper.Decode(new MemoryStream(png.ToArray())));
-        History.RegisterExport(_session, exportSig);
-        png.Position = 0;
-
-        var data = new DataObject();
-        data.SetImage(bmp);
-        data.SetData("PNG", png, false);
-
-        for (int intento = 0; intento < 5; intento++)
+        if (!ClipboardHelper.SetPng(png.ToArray(), _session))
         {
-            try
-            {
-                Clipboard.SetDataObject(data, true);
-                _status.Text = "✓ Imagen anotada copiada al portapapeles";
-                FlashCopied();
-                if (_pendingSave) SaveSession();
-                return true;
-            }
-            catch (ExternalException)
-            {
-                Thread.Sleep(100);
-            }
+            _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
+            return false;
         }
-        _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
-        return false;
+        _status.Text = "✓ Imagen anotada copiada al portapapeles";
+        FlashCopied();
+        if (_pendingSave) SaveSession();
+        return true;
     }
 
     /// <summary>

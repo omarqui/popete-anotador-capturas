@@ -63,6 +63,35 @@ static class ClipboardHelper
         return bi;
     }
 
+    /// <summary>
+    /// Pone un PNG en el portapapeles (como "PNG" y como bitmap). Antes registra su huella en
+    /// <paramref name="session"/>, para que la app no tome la imagen por una captura nueva.
+    /// Devuelve false si otra app no suelta el portapapeles.
+    /// </summary>
+    public static bool SetPng(byte[] png, Session session)
+    {
+        // La huella sale de decodificar el mismo PNG que va al portapapeles: es lo que se leerá después
+        var bmp = Decode(new MemoryStream(png));
+        History.RegisterExport(session, Signature(bmp));
+
+        var data = new DataObject();
+        data.SetImage(bmp);
+        data.SetData("PNG", new MemoryStream(png), false);
+        for (int intento = 0; intento < 5; intento++)
+        {
+            try
+            {
+                Clipboard.SetDataObject(data, true);
+                return true;
+            }
+            catch (ExternalException)
+            {
+                Thread.Sleep(100); // portapapeles bloqueado por otra app
+            }
+        }
+        return false;
+    }
+
     /// <summary>Huella de la imagen completa (tamaño + SHA-256 de los píxeles).</summary>
     public static string Signature(BitmapSource img)
     {

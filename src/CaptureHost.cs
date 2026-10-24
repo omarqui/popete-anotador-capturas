@@ -205,6 +205,10 @@ sealed class CaptureHost : IDisposable
     /// <param name="autoClose">Captura nueva del portapapeles: se cierra sola si se deja sin tocar.</param>
     public static void OpenEditor(Session s, bool autoClose = false) => EditorShell.Open(s, autoClose);
 
+    /// <summary>Globo en la bandeja: para avisos de ventanas que ya se cerraron (el historial rápido).</summary>
+    public static void Notify(string text) =>
+        _current?._tray.ShowBalloonTip(3000, AppInfo.Name, text, System.Windows.Forms.ToolTipIcon.Warning);
+
     void OpenFromClipboardManually()
     {
         var img = ClipboardHelper.TryGetImage();

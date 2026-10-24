@@ -7,10 +7,11 @@
 //  bandeja: el atajo lo registra CaptureHost.
 //
 //  Al abrir queda elegida la más reciente. Manteniendo los modificadores del
-//  atajo, cada repetición de la tecla baja una (con Shift sube) y al soltarlos se
-//  abre la elegida en el editor. Si solo se tocó el atajo una vez, la ventana se
-//  queda abierta: flechas, rueda o ratón para elegir; Enter o doble clic abren;
-//  Esc o un clic fuera la cierran.
+//  atajo, cada repetición de la tecla baja una (con Shift sube) y al soltarlos la
+//  elegida se copia y se pega en la ventana que estaba al frente, como Ditto.
+//  Si solo se tocó el atajo una vez, la ventana se queda abierta: flechas, rueda
+//  o ratón para elegir; Enter o doble clic pegan; Esc o un clic fuera la cierran.
+//  E (con o sin los modificadores) o el botón "Abrir en Popete" la abren en el editor.
 // ----------------------------------------------------------------------------
 sealed class QuickHistoryWindow : Window
 {
@@ -39,9 +40,22 @@ sealed class QuickHistoryWindow : Window
     [DllImport("user32.dll")]
     static extern uint GetDpiForSystem();
 
+    [DllImport("user32.dll")]
+    static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll")]
+    static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint processId);
+
+    [DllImport("user32.dll")]
+    static extern void keybd_event(byte vk, byte scan, uint flags, UIntPtr extraInfo);
+
     const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     const int DWMWCP_ROUND = 2;
-    const int VK_SHIFT = 0x10, VK_CONTROL = 0x11, VK_MENU = 0x12;
+    const int VK_SHIFT = 0x10, VK_CONTROL = 0x11, VK_MENU = 0x12, VK_LWIN = 0x5B, VK_RWIN = 0x5C, VK_V = 0x56;
+    const uint KEYEVENTF_KEYUP = 0x2;
 
     const double ThumbWidth = 72, ThumbHeight = 44;
     const double ListWidth = 280;
@@ -53,6 +67,7 @@ sealed class QuickHistoryWindow : Window
     static readonly System.Globalization.CultureInfo Spanish = new System.Globalization.CultureInfo("es");
 
     readonly Hotkey _hotkey;
+    readonly IntPtr _target;  // la ventana que estaba al frente al tocar el atajo: ahí se pega
     readonly List<Session> _sessions;
     readonly List<(Border row, Border mark)> _rows = new List<(Border, Border)>();
     readonly Image _preview = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly };
@@ -66,6 +81,7 @@ sealed class QuickHistoryWindow : Window
     QuickHistoryWindow(Hotkey hotkey)
     {
         _hotkey = hotkey;
+        _target = GetForegroundWindow(); // antes de mostrarse
         Title = $"Historial rápido — {AppInfo.Name}";
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -134,7 +150,7 @@ sealed class QuickHistoryWindow : Window
         var title = new TextBlock { Text = "Historial rápido", FontSize = 14, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center };
 
         var hints = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var (key, text) in new[] { (_hotkey.Text, "siguiente"), ("Enter", "abrir"), ("Esc", "cerrar") })
+        foreach (var (key, text) in new[] { (_hotkey.Text, "siguiente"), ("Enter", "pegar"), ("E", "editar"), ("Esc", "cerrar") })
         {
             hints.Children.Add(Ui.Keycap(key));
             var t = new TextBlock { Text = text, FontSize = 12, Margin = new Thickness(5, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -220,7 +236,7 @@ sealed class QuickHistoryWindow : Window
         int index = i;
         row.MouseLeftButtonDown += (o, e) =>
         {
-            if (e.ClickCount == 2) OpenSelected();
+            if (e.ClickCount == 2) PasteSelected();
             else Select(index);
             e.Handled = true;
         };
@@ -246,11 +262,20 @@ sealed class QuickHistoryWindow : Window
             return area;
         }
 
-        _previewInfo.Margin = new Thickness(16, 0, 16, 12);
+        _previewInfo.VerticalAlignment = VerticalAlignment.Center;
+        _previewInfo.TextAlignment = TextAlignment.Left; // el botón va a la derecha
         _preview.Margin = new Thickness(PreviewMargin, PreviewMargin, PreviewMargin, 10);
         RenderOptions.SetBitmapScalingMode(_preview, BitmapScalingMode.HighQuality);
-        DockPanel.SetDock(_previewInfo, Dock.Bottom);
-        area.Children.Add(_previewInfo);
+
+        var open = Ui.Btn("Abrir en Popete", "Abrir en el editor para seguir anotando (E)", OpenSelected, Icons.Pen);
+        open.Margin = new Thickness(12, 0, 0, 0);
+        var footer = new DockPanel { Margin = new Thickness(PreviewMargin, 0, PreviewMargin, 12) };
+        DockPanel.SetDock(open, Dock.Right);
+        footer.Children.Add(open);
+        footer.Children.Add(_previewInfo);
+
+        DockPanel.SetDock(footer, Dock.Bottom);
+        area.Children.Add(footer);
         area.Children.Add(_preview);
         return area;
     }
@@ -306,7 +331,8 @@ sealed class QuickHistoryWindow : Window
         switch (key)
         {
             case Key.Escape: Cancel(); break;
-            case Key.Enter: OpenSelected(); break;
+            case Key.Enter: PasteSelected(); break;
+            case Key.E when _hotkey.Tecla != Key.E: OpenSelected(); break;
             case Key.Down: Step(+1); break;
             case Key.Up: Step(-1); break;
             case Key.PageDown: Select(_index + PageStep); break;
@@ -346,10 +372,58 @@ sealed class QuickHistoryWindow : Window
     {
         if (!_repeated || ModifiersHeld()) return;
         _releaseWatch.Stop();
-        OpenSelected();
+        PasteSelected();
     }
 
-    // ------------------------------------------------------------------ abrir y cerrar
+    // ------------------------------------------------------------------ pegar, abrir y cerrar
+    /// <summary>Copia la elegida, con sus anotaciones, y la pega en la ventana que estaba al frente.</summary>
+    void PasteSelected()
+    {
+        if (_done || _index < 0) return;
+        _done = true;
+        _releaseWatch.Stop();
+        var s = _sessions[_index];
+        bool copied;
+        try { copied = ClipboardHelper.SetPng(File.ReadAllBytes(File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath), s); }
+        catch (Exception) { copied = false; } // archivo borrado o dañado
+        Close();
+        if (copied) PasteInto(_target);
+        else CaptureHost.Notify("No se pudo copiar la captura al portapapeles.");
+    }
+
+    /// <summary>
+    /// Como Ditto: devuelve el foco a <paramref name="target"/> y le manda Ctrl+V cuando ya es la ventana
+    /// activa y no queda ninguna tecla modificadora apretada (si no, llegaría Ctrl+Alt+V o Ctrl+Shift+V).
+    /// Si no se da en 2 s, no pega: la imagen igual queda en el portapapeles. Tampoco pega en una ventana
+    /// de Popete ni en una abierta como administrador (Windows no deja mandarle teclas).
+    /// </summary>
+    static void PasteInto(IntPtr target)
+    {
+        GetWindowThreadProcessId(target, out uint pid);
+        if (target == IntPtr.Zero || pid == Environment.ProcessId) return;
+        SetForegroundWindow(target);
+
+        var deadline = DateTime.Now.AddSeconds(2);
+        int ready = 0;
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+        timer.Tick += (s, e) =>
+        {
+            bool modifiers = IsDown(VK_SHIFT) || IsDown(VK_CONTROL) || IsDown(VK_MENU) || IsDown(VK_LWIN) || IsDown(VK_RWIN);
+            ready = GetForegroundWindow() == target && !modifiers ? ready + 1 : 0;
+            if (ready >= 2) // dos vueltas seguidas: que la ventana termine de activarse
+            {
+                timer.Stop();
+                keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_V, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            }
+            else if (DateTime.Now > deadline)
+                timer.Stop();
+        };
+        timer.Start();
+    }
+
     void OpenSelected()
     {
         if (_done || _index < 0) return;

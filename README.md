@@ -179,8 +179,10 @@ Botón de ajustes en la barra de estado, `Ctrl+,` o **Ajustes…** en la bandeja
 
 Con **`` Alt+` ``** (la tecla bajo `Esc`) aparece, desde cualquier programa y aunque Popete esté solo en la bandeja, una ventana con todas las capturas: a la izquierda la lista con miniatura, hora y tamaño, y a la derecha la elegida en grande. Funciona como `Alt+Tab` o Ditto:
 
-- Al abrirse queda elegida la más reciente. **Mantén `Alt` y vuelve a tocar `` ` ``** para bajar una (con `Shift` sube); **al soltar `Alt`** se abre la elegida en el editor.
-- Si tocas el atajo una sola vez y sueltas, la ventana se queda abierta: elige con las flechas, la rueda o el ratón, y abre con `Enter` o doble clic. `Esc` o un clic fuera la cierran.
+- Al abrirse queda elegida la más reciente. **Mantén `Alt` y vuelve a tocar `` ` ``** para bajar una (con `Shift` sube); **al soltar `Alt`** la elegida, con sus anotaciones, se copia y se pega en el programa donde estabas.
+- Si tocas el atajo una sola vez y sueltas, la ventana se queda abierta: elige con las flechas, la rueda o el ratón, y pega con `Enter` o doble clic. `Esc` o un clic fuera la cierran.
+- Para **abrirla en el editor** en vez de pegarla: `E` (también con `Alt` apretado) o el botón **Abrir en Popete**.
+- El pegado no llega a programas abiertos como administrador (Windows no lo permite) ni a una ventana de Popete: en esos casos la imagen queda copiada y la pegas con `Ctrl+V`.
 
 El atajo se cambia en **Ajustes › Atajo del historial rápido**: tocas el botón y aprietas la combinación nueva (con `Ctrl` o `Alt`; `Esc` cancela). **Quitar** lo deja sin atajo. Una combinación que ya usa otro programa (Ditto usa `` Ctrl+` ``) no llega a Popete: ese programa se la queda y la grabación se cancela. Si la combinación guardada queda ocupada (por ejemplo, porque el otro programa arrancó antes), Ajustes lo avisa en rojo y, al arrancar, también aparece un globo en la bandeja.
 
@@ -199,7 +201,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 |---|---|
 | `Ctrl+C` o clic derecho en la imagen | Copiar la imagen anotada y cerrar el editor (o solo copiar, según Ajustes) |
 | `Ctrl+Enter` | Copiar y cerrar siempre (sin esperar el parpadeo) |
-| `` Alt+` `` (global, configurable) | Historial rápido; ver «Historial rápido» |
+| `` Alt+` `` (global, configurable) | Historial rápido: elegir una captura y pegarla; ver «Historial rápido» |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+Y` o `Ctrl+Shift+Z` | Rehacer |
