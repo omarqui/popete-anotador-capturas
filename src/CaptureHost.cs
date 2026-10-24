@@ -269,10 +269,12 @@ sealed class CaptureHost : IDisposable
             ContextMenuStrip = menu,
             Visible = true,
         };
-        // Un clic izquierdo basta; el derecho queda para el menú
+        // Un clic izquierdo basta; el derecho queda para el menú. Vuelve la ventana como quedó
+        // (con la pestaña elegida); si no había pestañas, la captura más reciente.
         _tray.MouseClick += (s, e) =>
         {
             if (e.Button != System.Windows.Forms.MouseButtons.Left) return;
+            if (EditorShell.Reopen()) return;
             var last = History.List().FirstOrDefault();
             if (last != null) OpenEditor(last);
             else ShowHistory();

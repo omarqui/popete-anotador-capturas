@@ -84,7 +84,8 @@ Todas las capturas se abren en una sola ventana, cada una en su pestaña, en la 
 - **Arrastra** una pestaña para cambiarla de lugar. La **×**, el **clic central** o `Ctrl+W` la cierran (la captura sigue en el historial). `Ctrl+Tab` / `Ctrl+Shift+Tab` pasan a la siguiente o la anterior, y `Ctrl+1` a `Ctrl+8` a esa pestaña (`Ctrl+9`, a la última).
 - **Clic derecho** en una pestaña: Cerrar, Cerrar las demás, Cerrar las de la derecha, Cerrar todas, Mostrar en el Explorador y Eliminar del historial.
 - Al cambiar de pestaña se mantienen la herramienta, el color y el grosor; el zoom y lo que se puede deshacer son de cada captura.
-- Si cierras la ventana con la **X**, las pestañas vuelven en el mismo orden la próxima vez que se abra, también después de reiniciar. **Cerrar todas** las vacía.
+- Si cierras la ventana con la **X**, las pestañas vuelven en el mismo orden la próxima vez que se abra, también después de reiniciar. Un **clic en el ícono de la bandeja** la vuelve a abrir con la pestaña que tenías elegida; una captura nueva se abre elegida, y al copiarla y cerrarla queda otra vez elegida la de antes. **Cerrar todas** las vacía.
+- Al cerrar una pestaña recién abierta vuelves a la que estabas mirando antes de abrirla (si no cambiaste de pestaña entretanto).
 - Copiar y cerrar, `Esc` y el cierre solo a los 4 s cierran la pestaña. Si la ventana se abrió por esa captura y no tocaste las otras pestañas, se cierra la ventana entera (las demás quedan guardadas para la próxima vez).
 - Desde el espacio libre de la barra de título se arrastra la ventana; doble clic la maximiza y, en Windows 11, pasar sobre el botón de maximizar muestra los diseños de Snap.
 
@@ -227,7 +228,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 - **Iniciar con Windows**
 - **Salir**
 
-Un clic en el ícono abre la captura más reciente.
+Un clic en el ícono trae la ventana del editor como quedó, con la pestaña que estaba elegida. Si no había pestañas abiertas, abre la captura más reciente.
 
 **Versión nueva:** instalada desde la Store, Popete pregunta si hay una versión nueva al rato de arrancar y cada 6 horas (la Store no actualiza una app abierta, y Popete casi siempre lo está). Si la hay, avisa con un globo en la bandeja; un clic en el globo o en **Actualizar Popete** cierra los editores (se guardan), instala la versión nueva y Popete vuelve a abrirse. Si la Store no permite instalarla así, se abre la página de Popete en la Store. El `.exe` suelto no avisa.
 

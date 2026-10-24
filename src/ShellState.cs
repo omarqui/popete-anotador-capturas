@@ -11,6 +11,9 @@ sealed class ShellState
     /// <summary>Ids de las capturas abiertas en pestañas, en orden.</summary>
     public List<string> Pestanas { get; set; } = new List<string>();
 
+    /// <summary>Id de la pestaña elegida: vuelve elegida al reabrir la ventana desde la bandeja.</summary>
+    public string Activa { get; set; }
+
     /// <summary>Lugar y tamaño de la ventana sin maximizar, en DIP. Ancho 0 = nunca se guardó.</summary>
     public double Izquierda { get; set; }
     public double Arriba { get; set; }

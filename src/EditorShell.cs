@@ -28,6 +28,7 @@ sealed partial class EditorShell : Window
         public Button CloseButton;
         public bool Engaged;        // se abrió en esta ventana o se eligió a mano (no es solo restaurada)
         public bool AutoClose;      // captura nueva del portapapeles: se cierra sola si no se toca
+        public Tab ReturnTo;        // la que estaba elegida cuando se abrió esta: al cerrarla se vuelve ahí
     }
 
     static EditorShell _current;
@@ -36,6 +37,7 @@ sealed partial class EditorShell : Window
     readonly Grid _content = new Grid();     // los editores creados; solo el elegido está visible
     readonly DockPanel _root = new DockPanel();
     Tab _selected;
+    Tab _restoredActive;                      // la que estaba elegida cuando se cerró la ventana la vez anterior
     bool _closing;
     bool _clearOnClose;                       // "Cerrar todas": no queda nada para la próxima vez
     WindowState _restoreState = WindowState.Normal; // a qué vuelve si está minimizada
@@ -54,13 +56,7 @@ sealed partial class EditorShell : Window
             return;
         }
         bool created = _current == null;
-        if (created)
-        {
-            _current = new EditorShell();
-            _current.Restore();
-            _current.PlaceFor(s);
-        }
-        var shell = _current;
+        var shell = created ? Create(s) : _current;
         var tab = shell.Find(s.Meta.Id);
         if (tab == null)
         {
@@ -68,6 +64,9 @@ sealed partial class EditorShell : Window
             tab.AutoClose = autoClose;
         }
         tab.Engaged = true;
+        // Al cerrarla se vuelve a la que se estaba mirando (con la ventana recién abierta, la de la vez anterior)
+        var before = shell._selected ?? shell._restoredActive;
+        if (tab != shell._selected) tab.ReturnTo = before != tab ? before : null;
         if (!shell.Select(tab, byUser: false))
         {
             // No llegó a mostrarse: sin esa pestaña no se abre (las restauradas siguen guardadas)
@@ -81,6 +80,25 @@ sealed partial class EditorShell : Window
         if (created) shell.Show();
         shell.BringToFront();
         shell.SaveState();
+    }
+
+    /// <summary>
+    /// Clic en la bandeja: trae la ventana o la vuelve a abrir como quedó, con la pestaña que
+    /// estaba elegida. Devuelve false si está cerrada y no hay pestañas guardadas.
+    /// </summary>
+    public static bool Reopen()
+    {
+        if (_current != null)
+        {
+            _current.BringToFront();
+            return true;
+        }
+        var saved = SavedSessions();
+        if (saved.Count == 0) return false;
+        // Si la elegida ya no está (se cerró con la ventana), la que se tocó por última vez
+        Open(saved.FirstOrDefault(s => s.Meta.Id == ShellState.Current.Activa)
+             ?? saved.OrderByDescending(s => s.Meta.Updated).First());
+        return true;
     }
 
     public static bool IsOpen(string id) => _current?.Find(id) != null;
@@ -126,12 +144,24 @@ sealed partial class EditorShell : Window
         };
     }
 
-    /// <summary>Las pestañas de la vez anterior que sigan en el historial, sin cargarlas.</summary>
-    void Restore()
+    /// <summary>Las capturas de las pestañas guardadas que siguen en el historial, en orden.</summary>
+    static List<Session> SavedSessions()
     {
         var byId = History.List().ToDictionary(x => x.Meta.Id);
-        foreach (var id in ShellState.Current.Pestanas)
-            if (byId.TryGetValue(id, out var s) && Find(id) == null) AddTab(s, _tabs.Count);
+        return ShellState.Current.Pestanas.Distinct().Where(byId.ContainsKey).Select(id => byId[id]).ToList();
+    }
+
+    /// <summary>
+    /// Crea la ventana (sin mostrarla) con las pestañas de la vez anterior, sin cargarlas, en el
+    /// lugar de la vez anterior o a la medida de <paramref name="placeFor"/>.
+    /// </summary>
+    static EditorShell Create(Session placeFor)
+    {
+        var shell = new EditorShell();
+        foreach (var s in SavedSessions()) shell.AddTab(s, shell._tabs.Count);
+        shell._restoredActive = shell.Find(ShellState.Current.Activa);
+        shell.PlaceFor(placeFor);
+        return _current = shell;
     }
 
     /// <summary>Lugar al abrirse: el de la vez anterior o, la primera vez, a la medida de la captura.</summary>
@@ -174,11 +204,12 @@ sealed partial class EditorShell : Window
         st.Save();
     }
 
-    /// <summary>Qué pestañas hay y en qué orden. En cada cambio: así sobrevive a un cierre inesperado.</summary>
+    /// <summary>Qué pestañas hay, en qué orden y cuál está elegida. En cada cambio: así sobrevive a un cierre inesperado.</summary>
     void SaveState()
     {
         var st = ShellState.Current;
         st.Pestanas = _clearOnClose ? new List<string>() : _tabs.Select(t => t.Session.Meta.Id).ToList();
+        st.Activa = _clearOnClose ? null : _selected?.Session.Meta.Id;
         st.Save();
     }
 
@@ -235,6 +266,8 @@ sealed partial class EditorShell : Window
     {
         if (byUser) tab.Engaged = true;
         if (tab == _selected) return true;
+        // Cambiar de pestaña a mano: cerrar una ya no vuelve a la que estaba antes de abrirla
+        if (byUser) foreach (var t in _tabs) t.ReturnTo = null;
         if (tab.View == null)
         {
             try
@@ -269,8 +302,13 @@ sealed partial class EditorShell : Window
         return true;
     }
 
-    /// <summary>Cierra una pestaña (la captura queda en el historial). Si era la última, cierra la ventana.</summary>
-    void CloseTab(Tab tab)
+    /// <summary>
+    /// Cierra una pestaña (la captura queda en el historial). Si era la elegida, pasa a la que se
+    /// estaba mirando antes de abrirla (ReturnTo) o, si no, a la vecina. Si era la última, cierra
+    /// la ventana.
+    /// </summary>
+    /// <param name="closeWindow">Cierra también la ventana; la que sigue solo queda anotada como elegida, sin cargarla.</param>
+    void CloseTab(Tab tab, bool closeWindow = false)
     {
         int index = _tabs.IndexOf(tab);
         if (index < 0 || _closing) return;
@@ -285,9 +323,12 @@ sealed partial class EditorShell : Window
         if (tab == _selected)
         {
             _selected = null;
-            SelectNear(index, tab.View);
+            var next = tab.ReturnTo != null && _tabs.Contains(tab.ReturnTo) ? tab.ReturnTo : _tabs[Math.Min(index, _tabs.Count - 1)];
+            if (closeWindow) _selected = next; // vuelve elegida la próxima vez (SaveState en Closing)
+            else if (!Select(next, byUser: false, tab.View)) SelectNear(index, tab.View);
         }
-        SaveState();
+        if (closeWindow) Close();
+        else SaveState();
     }
 
     /// <summary>Elige la que quedó en <paramref name="index"/> (o la anterior), salteando las que no cargan.</summary>
@@ -306,8 +347,7 @@ sealed partial class EditorShell : Window
     {
         var tab = TabOf(view);
         if (tab == null || _closing) return;
-        CloseTab(tab);
-        if (!_closing && !_tabs.Any(t => t.Engaged)) Close();
+        CloseTab(tab, closeWindow: !_tabs.Any(t => t != tab && t.Engaged));
     }
 
     /// <summary>Soltar una imagen sobre una pestaña sin anotaciones: la nueva toma su lugar.</summary>
