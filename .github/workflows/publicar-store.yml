@@ -10,6 +10,9 @@
 #                PARTNER_CENTER_CLIENT_ID, PARTNER_CENTER_CLIENT_SECRET
 #                (app de Microsoft Entra asociada a Partner Center con rol Manager)
 #   - Variable:  MSSTORE_PRODUCT_ID (el "Store ID" de Partner Center › Identidad del producto)
+#   Sin ninguno de ellos, un tag igual genera el .msix y el Release, y saltea la Store con un
+#   aviso: el paquete se sube a mano. (Una cuenta Individual de Partner Center no admite apps de
+#   Microsoft Entra, así que no puede tener estos secretos.)
 name: Publicar en la Microsoft Store
 
 on:
@@ -76,6 +79,37 @@ jobs:
           "MSIX=artifacts/msix/Popete_$($version)_x64.msix" >> $env:GITHUB_ENV
           "Versión $version (tag $tag)"
 
+      # Los secretos no se pueden usar en un "if:": se revisan acá y, si no hay ninguno, SALTEAR_STORE
+      # apaga los pasos de la Store. Un tag sigue sin la Store; a mano con enviar_store marcado, o
+      # con la configuración a medias, falla (se pidió enviar y no se puede).
+      - name: Ver si hay credenciales de la Store
+        if: ${{ env.ENVIAR_STORE == 'true' }}
+        shell: pwsh
+        env:
+          TENANT_ID: ${{ secrets.PARTNER_CENTER_TENANT_ID }}
+          SELLER_ID: ${{ secrets.PARTNER_CENTER_SELLER_ID }}
+          CLIENT_ID: ${{ secrets.PARTNER_CENTER_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.PARTNER_CENTER_CLIENT_SECRET }}
+          PRODUCT_ID: ${{ vars.MSSTORE_PRODUCT_ID }}
+        run: |
+          $nombres = [ordered]@{
+            TENANT_ID = 'secreto PARTNER_CENTER_TENANT_ID'; SELLER_ID = 'secreto PARTNER_CENTER_SELLER_ID'
+            CLIENT_ID = 'secreto PARTNER_CENTER_CLIENT_ID'; CLIENT_SECRET = 'secreto PARTNER_CENTER_CLIENT_SECRET'
+            PRODUCT_ID = 'variable MSSTORE_PRODUCT_ID'
+          }
+          $faltan = @($nombres.GetEnumerator() | Where-Object { -not [Environment]::GetEnvironmentVariable($_.Key) } | ForEach-Object { $_.Value })
+          if ($faltan.Count -eq 0) { 'Credenciales de la Store completas.'; return }
+          if ($faltan.Count -lt $nombres.Count) {
+            throw "Falta configurar en el repo: $($faltan -join ', ') (ver README › Publicar con GitHub Actions)"
+          }
+          if ($env:POR_TAG -ne 'true') {
+            throw 'Marcaste enviar_store, pero el repo no tiene las credenciales de Partner Center (ver README › Publicar con GitHub Actions)'
+          }
+          'SALTEAR_STORE=true' >> $env:GITHUB_ENV
+          $paquete = Split-Path $env:MSIX -Leaf
+          "::warning title=No se envió a la Store::El repo no tiene credenciales de Partner Center. Sube $paquete a mano desde Partner Center."
+          "### Microsoft Store`n`nNo se envió: el repo no tiene credenciales de Partner Center. Sube ``$paquete`` (está en el Release y en los artefactos de esta ejecución) desde Partner Center." >> $env:GITHUB_STEP_SUMMARY
+
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -106,11 +140,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "No se pudo crear el Release $env:TAG (¿ya existe?)" }
 
       - name: Instalar Microsoft Store Developer CLI
-        if: ${{ env.ENVIAR_STORE == 'true' }}
+        if: ${{ env.ENVIAR_STORE == 'true' && env.SALTEAR_STORE != 'true' }}
         uses: microsoft/microsoft-store-apppublisher@v1.1
 
       - name: Enviar a Partner Center
-        if: ${{ env.ENVIAR_STORE == 'true' }}
+        if: ${{ env.ENVIAR_STORE == 'true' && env.SALTEAR_STORE != 'true' }}
         shell: pwsh
         env:
           TENANT_ID: ${{ secrets.PARTNER_CENTER_TENANT_ID }}
@@ -119,13 +153,7 @@ jobs:
           CLIENT_SECRET: ${{ secrets.PARTNER_CENTER_CLIENT_SECRET }}
           PRODUCT_ID: ${{ vars.MSSTORE_PRODUCT_ID }}
         run: |
-          $faltan = @{
-            TENANT_ID = 'secreto PARTNER_CENTER_TENANT_ID'; SELLER_ID = 'secreto PARTNER_CENTER_SELLER_ID'
-            CLIENT_ID = 'secreto PARTNER_CENTER_CLIENT_ID'; CLIENT_SECRET = 'secreto PARTNER_CENTER_CLIENT_SECRET'
-            PRODUCT_ID = 'variable MSSTORE_PRODUCT_ID'
-          }.GetEnumerator() | Where-Object { -not [Environment]::GetEnvironmentVariable($_.Key) } | ForEach-Object { $_.Value }
-          if ($faltan) { throw "Falta configurar en el repo: $($faltan -join ', ') (ver README › Publicar con GitHub Actions)" }
-
+          # Que estén todas las credenciales ya lo comprobó "Ver si hay credenciales de la Store"
           msstore reconfigure --tenantId $env:TENANT_ID --sellerId $env:SELLER_ID --clientId $env:CLIENT_ID --clientSecret $env:CLIENT_SECRET
           if ($LASTEXITCODE -ne 0) { throw 'msstore reconfigure falló (revisa los secretos)' }
 

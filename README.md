@@ -68,6 +68,8 @@ Si hay un borrador pendiente en Partner Center, el envío lo reemplaza. Enviar a
 | `PARTNER_CENTER_CLIENT_SECRET` | Secreto | Clave de la app de Entra |
 | `MSSTORE_PRODUCT_ID` | Variable | El **Store ID** del producto (Partner Center › Identidad del producto) |
 
+**Sin estos valores** (por ejemplo, con una cuenta **Individual** de Partner Center, que no admite apps de Microsoft Entra), un tag igual genera el `.msix` y el Release, y saltea la Store: la ejecución termina bien, con un aviso y una nota en el resumen para subir el paquete a mano desde Partner Center. A mano con **enviar_store** marcado, o con solo algunos de los valores, falla.
+
 ## Uso
 
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
