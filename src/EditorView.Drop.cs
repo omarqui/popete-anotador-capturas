@@ -2,13 +2,13 @@
 //  Editor — soltar imágenes
 //
 //  Se puede arrastrar una imagen (archivo del Explorador o imagen de otra app)
-//  sobre el editor. Si este editor todavía no tiene anotaciones, la imagen lo
-//  reemplaza en la misma ventana; si ya tiene algo, se abre en otra ventana.
+//  sobre el editor. Si esta pestaña todavía no tiene anotaciones, la imagen la
+//  reemplaza en el mismo lugar; si ya tiene algo, se abre en otra pestaña.
 //  La captura reemplazada queda en el historial.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
-    /// <summary>Sin trazos, textos ni recorte: se puede reusar la ventana para otra imagen.</summary>
+    /// <summary>Sin trazos, textos ni recorte: se puede reusar la pestaña para otra imagen.</summary>
     public bool IsEmpty => _ink.Strokes.Count == 0 && !TextBlocks.Any() && !IsCropped;
 
     void EnableDrop()
@@ -19,7 +19,7 @@ sealed partial class EditorWindow
         {
             if (!CaptureHost.HasImages(e.Data)) return;
             e.Effects = DragDropEffects.Copy;
-            _status.Text = IsEmpty ? "Suelta para abrir la imagen aquí" : "Suelta para abrir la imagen en otra ventana";
+            _status.Text = IsEmpty ? "Suelta para abrir la imagen aquí" : "Suelta para abrir la imagen en otra pestaña";
             e.Handled = true;
         };
         PreviewDragLeave += (s, e) => _status.Text = "";
@@ -34,19 +34,6 @@ sealed partial class EditorWindow
         };
     }
 
-    /// <summary>Abre <paramref name="session"/> en lugar de esta captura, en la misma posición y tamaño.</summary>
-    public void ReplaceWith(Session session)
-    {
-        var next = new EditorWindow(session)
-        {
-            WindowStartupLocation = WindowStartupLocation.Manual,
-            Left = Left,
-            Top = Top,
-            Width = Width,
-            Height = Height,
-        };
-        next.Show();
-        if (WindowState == WindowState.Maximized) next.WindowState = WindowState.Maximized;
-        Close();
-    }
+    /// <summary>Abre <paramref name="session"/> en lugar de esta captura, en la misma posición de la barra.</summary>
+    public void ReplaceWith(Session session) => _shell.Replace(this, session);
 }

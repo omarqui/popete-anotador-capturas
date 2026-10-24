@@ -87,8 +87,8 @@ sealed class UpdateChecker
             var store = Store();
             if (store.CanSilentlyDownloadStorePackageUpdates)
             {
-                // Los editores se cierran antes: al cerrarse guardan lo pendiente
-                foreach (var w in EditorWindow.Open.Values.ToList()) w.Close();
+                // La ventana del editor se cierra antes: guarda lo pendiente y sus pestañas vuelven después
+                EditorShell.CloseWindow();
                 RegisterApplicationRestart(null, 0); // que Windows vuelva a abrir Popete después de instalar
                 _tray.ShowBalloonTip(3000, AppInfo.Name, "Descargando la versión nueva…", System.Windows.Forms.ToolTipIcon.Info);
                 var result = await store.TrySilentDownloadAndInstallStorePackageUpdatesAsync(_updates).AsTask();

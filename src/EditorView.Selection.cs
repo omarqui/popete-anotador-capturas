@@ -8,7 +8,7 @@
 //  o varios arrastrando un recuadro sobre una zona vacía (Shift suma a lo que ya
 //  había; Shift+clic agrega o quita uno). Ctrl+A selecciona todo. Con cualquier
 //  herramienta, un clic en el número de un trazo o un doble clic sobre el trazo lo
-//  selecciona (el doble clic está en el constructor de EditorWindow).
+//  selecciona (el doble clic está en el constructor de EditorView).
 //  Arrastrar algo seleccionado mueve toda la selección; las flechas la mueven
 //  1 px (Shift: 10 px). Todo se deshace con Ctrl+Z.
 //  Esc quita la selección (y con nada seleccionado cierra).
@@ -16,7 +16,7 @@
 //  El recuadro de selección va en _selectionLayer, fuera de _surface: no sale
 //  en la imagen exportada.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     StrokeCollection _selection = new StrokeCollection();
     List<TextBlock> _selectedTexts = new List<TextBlock>();
@@ -144,7 +144,7 @@ sealed partial class EditorWindow
             Canvas.SetTop(rect, b.Y);
             _selectionLayer.Children.Add(rect);
         }
-        AddHandles(); // asas para reajustar un trazo elegido a mano (EditorWindow.Handles.cs)
+        AddHandles(); // asas para reajustar un trazo elegido a mano (EditorView.Handles.cs)
         if (_marquee != null) _selectionLayer.Children.Add(_marquee);
         if (_cropMode) AddCropOverlay();
     }

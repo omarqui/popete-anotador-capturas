@@ -92,7 +92,7 @@ sealed class HistoryWindow : Window
         var thumb = new Image { Height = 150, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 0, 6) };
         try { if (File.Exists(s.ThumbPath)) thumb.Source = History.LoadImage(s.ThumbPath); } catch { }
 
-        bool abierta = EditorWindow.Open.ContainsKey(s.Meta.Id);
+        bool abierta = EditorShell.IsOpen(s.Meta.Id);
         var info = new TextBlock
         {
             Text = $"{s.Meta.Updated:dd/MM/yyyy HH:mm}   ·   {s.Meta.Width}×{s.Meta.Height}{(abierta ? "   ·   abierta" : "")}",
@@ -130,10 +130,11 @@ sealed class HistoryWindow : Window
 
     void Delete(Session s)
     {
-        if (EditorWindow.Open.TryGetValue(s.Meta.Id, out var w))
+        if (EditorShell.IsOpen(s.Meta.Id))
         {
-            ConfirmDialog.Inform(this, "Esta captura está abierta", "Ciérrala antes de eliminarla.");
-            w.Activate();
+            ConfirmDialog.Inform(this, "Esta captura está abierta",
+                "Ciérrala antes de eliminarla, o elimínala con el clic derecho en su pestaña.");
+            _open(s); // lleva a su pestaña
             return;
         }
         if (!ConfirmDialog.Ask(this, "¿Eliminar esta captura?",

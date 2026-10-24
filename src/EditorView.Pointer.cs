@@ -8,7 +8,7 @@
 //  de grosor. Todo lleva contraste claro y oscuro para verse sobre cualquier
 //  fondo. El tamaño sigue al grosor y al zoom.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     static readonly Brush PointerLight = Freeze(Brushes.White);
     static readonly Brush PointerDark = Freeze(new SolidColorBrush(Color.FromRgb(17, 17, 17)));

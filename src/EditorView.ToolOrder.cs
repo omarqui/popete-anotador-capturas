@@ -8,7 +8,7 @@
 //  Lo que no está en la barra va al menú. Se guarda en AppSettings.BarraHerramientas
 //  (nombres de Tool y "Otras") y todos los editores abiertos se reacomodan.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     /// <summary>Todas las herramientas, en el orden en que aparecen en el menú "Otras".</summary>
     static readonly (Tool tool, string icon, string name, string key, string tip)[] AllTools =

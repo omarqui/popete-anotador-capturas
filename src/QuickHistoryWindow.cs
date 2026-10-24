@@ -152,7 +152,7 @@ sealed class QuickHistoryWindow : Window
         }, DispatcherPriority.Background);
 
         var when = new TextBlock { Text = When(s.Meta.Updated), TextTrimming = TextTrimming.CharacterEllipsis };
-        bool abierta = EditorWindow.Open.ContainsKey(s.Meta.Id);
+        bool abierta = EditorShell.IsOpen(s.Meta.Id);
         var details = new TextBlock
         {
             Text = $"{s.Meta.Width}×{s.Meta.Height}{(abierta ? " · abierta" : "")}",
@@ -270,7 +270,7 @@ sealed class QuickHistoryWindow : Window
     {
         var path = File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath;
         _preview.Source = TryLoad(path, Math.Min(s.Meta.Width, PreviewDecodeWidth));
-        bool abierta = EditorWindow.Open.ContainsKey(s.Meta.Id);
+        bool abierta = EditorShell.IsOpen(s.Meta.Id);
         _previewInfo.Text = $"{Capitalize(s.Meta.Updated.ToString("dddd d 'de' MMMM, HH:mm", Spanish))}"
             + $"   ·   {s.Meta.Width}×{s.Meta.Height}{(abierta ? "   ·   abierta" : "")}";
     }

@@ -77,6 +77,7 @@ static class Theme
             r["TextoSobreAcento"] = Solid(0x0B, 0x1A, 0x26);
             r["Exito"] = Solid(0x6C, 0xCB, 0x5F);
             r["Error"] = Solid(0xFF, 0x99, 0xA4);
+            r["BarraTitulo"] = Solid(0x1C, 0x1D, 0x20); // más oscura que Fondo: la pestaña elegida se destaca
             r["Lienzo"] = DotGrid(Color.FromRgb(0x38, 0x3A, 0x40), Color.FromRgb(0x4A, 0x4C, 0x53));
         }
         else
@@ -94,8 +95,12 @@ static class Theme
             r["TextoSobreAcento"] = Solid(0xFF, 0xFF, 0xFF);
             r["Exito"] = Solid(0x0F, 0x7B, 0x0F);
             r["Error"] = Solid(0xC4, 0x2B, 0x1C);
+            r["BarraTitulo"] = Solid(0xE4, 0xE6, 0xEA);
             r["Lienzo"] = DotGrid(Color.FromRgb(0xE6, 0xE8, 0xEC), Color.FromRgb(0xCD, 0xD1, 0xD8));
         }
+        // El botón de cerrar la ventana se pone rojo al pasar, igual en los dos temas (como en Windows)
+        r["CerrarVentana"] = Solid(0xC4, 0x2B, 0x1C);
+        r["TextoSobreCerrar"] = Solid(0xFF, 0xFF, 0xFF);
         Changed?.Invoke();
     }
 
@@ -260,6 +265,55 @@ static class Theme
                     </Trigger>
                     <Trigger Property="IsEnabled" Value="False">
                       <Setter Property="Opacity" Value="0.4"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
+          <!-- Minimizar y maximizar de la barra de título propia (EditorShell): rectos, a toda la altura -->
+          <Style x:Key="EstiloBotonVentana" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Texto}"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource Hover}"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource BordeFuerte}"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
+          <!-- Cerrar la ventana: rojo al pasar -->
+          <Style x:Key="EstiloCerrarVentana" TargetType="Button">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Texto}"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                  <Border x:Name="bd" Background="{TemplateBinding Background}">
+                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource CerrarVentana}"/>
+                      <Setter Property="Foreground" Value="{DynamicResource TextoSobreCerrar}"/>
+                    </Trigger>
+                    <Trigger Property="IsPressed" Value="True">
+                      <Setter TargetName="bd" Property="Opacity" Value="0.85"/>
                     </Trigger>
                   </ControlTemplate.Triggers>
                 </ControlTemplate>

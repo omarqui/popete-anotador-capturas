@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  Editor — barra de herramientas, barra de estado y selección de herramienta
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     /// <summary>Grosores de la barra (teclas 1 a 3).</summary>
     static readonly double[] SizePresets = { 2, 4, 8 };
@@ -24,7 +24,7 @@ sealed partial class EditorWindow
     {
         // Izquierda: se reparte en varias filas si la ventana es angosta.
         var left = new WrapPanel { VerticalAlignment = VerticalAlignment.Center };
-        left.Children.Add(BuildToolGroup()); // el usuario elige cuáles y en qué orden (EditorWindow.ToolOrder.cs)
+        left.Children.Add(BuildToolGroup()); // el usuario elige cuáles y en qué orden (EditorView.ToolOrder.cs)
 
         left.Children.Add(Ui.Divider());
 
@@ -319,7 +319,7 @@ sealed partial class EditorWindow
         zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => SetZoom(_zoom.ScaleX * 1.15), style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "EstiloPlano"));
-        var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(this));
+        var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(_shell));
         settings.Width = settings.Height = 28;
         settings.Margin = new Thickness(6, 0, 0, 0);
         zoom.Children.Add(settings);
@@ -390,7 +390,7 @@ sealed partial class EditorWindow
         _ => InkCanvasEditingMode.None,
     };
 
-    // El puntero del sistema se oculta: lo reemplaza el de EditorWindow.Pointer.cs.
+    // El puntero del sistema se oculta: lo reemplaza el de EditorView.Pointer.cs.
     // Seleccionar y Recortar usan los del sistema (Recortar los cambia según el borde).
     Cursor ToolCursor => _tool is Tool.Select or Tool.Crop ? Cursors.Arrow : Cursors.None;
 

@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  Editor — formas (línea, flecha, rectángulo, óvalo) y textos
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     List<Point> _arrowPath;   // recorrido de la flecha mientras se dibuja (a mano alzada)
 
@@ -98,7 +98,7 @@ sealed partial class EditorWindow
             straight = IsNearlyStraight(path);
             stroke.StylusPoints = straight ? BuildPoints(_start, end) : FreeArrow(path);
         }
-        // Las formas de dos puntos recuerdan su tipo: las asas las rehacen (EditorWindow.Handles.cs)
+        // Las formas de dos puntos recuerdan su tipo: las asas las rehacen (EditorView.Handles.cs)
         if (straight) stroke.AddPropertyData(ShapeProperty, (int)_tool);
 
         double extent = path != null ? PathLength(path) : (end - _start).Length;

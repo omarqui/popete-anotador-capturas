@@ -42,7 +42,7 @@ sealed class AppSettings
 
     /// <summary>
     /// Botones del grupo de herramientas, en orden: nombres de <see cref="Tool"/> y "Otras" (el
-    /// menú, donde va lo demás). null = la barra de fábrica. Lo arma EditorWindow.ToolOrder.cs.
+    /// menú, donde va lo demás). null = la barra de fábrica. Lo arma EditorView.ToolOrder.cs.
     /// </summary>
     public List<string> BarraHerramientas { get; set; }
 

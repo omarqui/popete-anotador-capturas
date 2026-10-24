@@ -168,21 +168,21 @@ sealed class CaptureHost : IDisposable
 
     /// <summary>
     /// Abre en el editor las imágenes soltadas. Si <paramref name="target"/> es un editor que
-    /// todavía no tiene anotaciones, la primera lo reemplaza (misma ventana); las demás, y
-    /// todas si el editor ya tiene algo dibujado, se abren en ventanas nuevas.
+    /// todavía no tiene anotaciones, la primera lo reemplaza (misma pestaña); las demás, y
+    /// todas si el editor ya tiene algo dibujado, se abren en pestañas nuevas.
     /// Una imagen que ya está en el historial abre esa sesión en vez de duplicarla.
     /// </summary>
-    public static int OpenDropped(IDataObject data, EditorWindow target)
+    public static int OpenDropped(IDataObject data, EditorView target)
     {
         int opened = 0;
         foreach (var img in ImagesFrom(data))
         {
             var sig = ClipboardHelper.Signature(img);
             var session = History.FindBySignature(sig) ?? History.Create(img, sig);
-            if (target != null && target.IsEmpty && !EditorWindow.Open.ContainsKey(session.Meta.Id))
+            if (target != null && target.IsEmpty && !EditorShell.IsOpen(session.Meta.Id))
             {
                 target.ReplaceWith(session);
-                target = null; // solo la primera reusa la ventana
+                target = null; // solo la primera reusa la pestaña
             }
             else
             {
@@ -194,30 +194,16 @@ sealed class CaptureHost : IDisposable
         return opened;
     }
 
-    /// <summary>Aplica el límite de capturas del historial, sin tocar las que están abiertas.</summary>
+    /// <summary>
+    /// Aplica el límite de capturas del historial, sin tocar las que están en pestañas (abiertas, o
+    /// guardadas para cuando se vuelva a abrir la ventana).
+    /// </summary>
     public static void PruneHistory() =>
-        History.Prune(AppSettings.Current.MaxCapturas, s => EditorWindow.Open.ContainsKey(s.Meta.Id));
+        History.Prune(AppSettings.Current.MaxCapturas, s => EditorShell.Keeps(s.Meta.Id));
 
+    /// <summary>Abre la captura en una pestaña de la ventana del editor (o elige la que ya la tiene).</summary>
     /// <param name="autoClose">Captura nueva del portapapeles: se cierra sola si se deja sin tocar.</param>
-    public static void OpenEditor(Session s, bool autoClose = false)
-    {
-        if (EditorWindow.Open.TryGetValue(s.Meta.Id, out var existing))
-        {
-            if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
-            existing.Activate();
-            return;
-        }
-        try
-        {
-            var editor = new EditorWindow(s);
-            if (autoClose) editor.EnableAutoClose();
-            editor.Show();
-        }
-        catch (Exception ex)
-        {
-            ConfirmDialog.Inform(null, "No se pudo abrir la captura", ex.Message);
-        }
-    }
+    public static void OpenEditor(Session s, bool autoClose = false) => EditorShell.Open(s, autoClose);
 
     void OpenFromClipboardManually()
     {
@@ -356,7 +342,7 @@ sealed class CaptureHost : IDisposable
         foreach (var s in sessions)
         {
             var session = s;
-            bool abierta = EditorWindow.Open.ContainsKey(s.Meta.Id);
+            bool abierta = EditorShell.IsOpen(s.Meta.Id);
             var item = new System.Windows.Forms.ToolStripMenuItem(
                 $"{s.Meta.Updated:dd/MM HH:mm}   ·   {s.Meta.Width}×{s.Meta.Height}{(abierta ? "   (abierta)" : "")}",
                 LoadMenuThumb(s.ThumbPath),

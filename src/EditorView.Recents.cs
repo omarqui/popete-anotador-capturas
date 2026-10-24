@@ -1,13 +1,17 @@
 // ----------------------------------------------------------------------------
 //  Editor — panel de capturas recientes
 //
-//  Tira de miniaturas sobre la barra de estado. Siempre arranca oculto para no
-//  quitarle espacio a la captura; se abre con el botón de la barra o Ctrl+H.
+//  Tira de miniaturas sobre la barra de estado. Arranca oculto para no quitarle
+//  espacio a la captura; se abre con el botón de la barra o Ctrl+H, y mostrarlo u
+//  ocultarlo vale para todas las pestañas (hasta que se cierra Popete).
 //  Cada miniatura tiene una × para eliminarla; arriba, "Eliminar todas" y el
 //  límite de capturas que se conservan (las más viejas se eliminan solas).
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
+    /// <summary>Mostrado u oculto para toda la ventana: cada pestaña lo aplica al pasar al frente (OnSelected).</summary>
+    static bool _recentsShown;
+
     Border _recents;
     StackPanel _recentsList;
     Button _keepButton;
@@ -66,6 +70,7 @@ sealed partial class EditorWindow
     void ToggleRecents(bool? show = null)
     {
         bool on = show ?? _recents.Visibility != Visibility.Visible;
+        _recentsShown = on;
         _recents.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
         _recentsButton.IsChecked = on;
         if (on) LoadRecents();
@@ -98,7 +103,7 @@ sealed partial class EditorWindow
         RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
         try { if (File.Exists(s.ThumbPath)) img.Source = History.LoadImage(s.ThumbPath); } catch { }
 
-        bool abierta = !actual && Open.ContainsKey(s.Meta.Id);
+        bool abierta = !actual && EditorShell.IsOpen(s.Meta.Id);
         var label = new TextBlock
         {
             Text = actual ? "Esta captura" : $"{s.Meta.Updated:dd/MM HH:mm}{(abierta ? " · abierta" : "")}",
@@ -151,10 +156,10 @@ sealed partial class EditorWindow
 
     void DeleteAllRecents()
     {
-        var deletable = History.List().Where(s => !Open.ContainsKey(s.Meta.Id)).ToList();
+        var deletable = History.List().Where(s => !EditorShell.Keeps(s.Meta.Id)).ToList();
         if (deletable.Count == 0) return;
         var title = deletable.Count == 1 ? "¿Eliminar 1 captura?" : $"¿Eliminar {deletable.Count} capturas?";
-        if (!ConfirmDialog.Ask(this, title,
+        if (!ConfirmDialog.Ask(_shell, title,
                 "Se borran del historial con sus anotaciones, y no se puede deshacer. Las que están abiertas se conservan.",
                 "Eliminar"))
             return;

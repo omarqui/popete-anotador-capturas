@@ -1,13 +1,14 @@
 // ----------------------------------------------------------------------------
-//  Editor
+//  Editor de una captura: el contenido de una pestaña de EditorShell
+//
+//  Lo de ventana (título, tamaño, foco, cerrar) es de EditorShell. La pestaña
+//  avisa con Closed cuando se cierra (para soltar eventos estáticos) y pide
+//  salir con Dismiss (copiar y cerrar, Esc, cierre automático).
 // ----------------------------------------------------------------------------
 enum Tool { Select, Pen, Highlighter, Line, Arrow, Rectangle, Text, Eraser, Crop, Ellipse }
 
-sealed partial class EditorWindow : Window
+sealed partial class EditorView : UserControl
 {
-    /// <summary>Editores abiertos por Id de sesión (para no abrir la misma captura dos veces).</summary>
-    public static readonly Dictionary<string, EditorWindow> Open = new Dictionary<string, EditorWindow>();
-
     static readonly (Color color, string name)[] Palette =
     {
         (Color.FromRgb(232, 17, 35), "Rojo"),
@@ -20,6 +21,7 @@ sealed partial class EditorWindow : Window
         (Colors.White, "Blanco"),
     };
 
+    readonly EditorShell _shell;     // la ventana: dueña de los diálogos y de la salida rápida
     readonly Session _session;
     readonly BitmapSource _original; // la captura tal como llegó; nunca se modifica
     BitmapSource _image;             // lo que se ve y se exporta: la captura, recortada si hay recorte
@@ -54,6 +56,7 @@ sealed partial class EditorWindow : Window
     bool _suppress;      // no registrar cambios internos en el historial de deshacer
     bool _pendingSave;
     bool _closeScheduled;
+    bool _closed;        // su pestaña ya se cerró
     Stroke _preview;
     Point _start;
     TextBox _editing;
@@ -65,24 +68,26 @@ sealed partial class EditorWindow : Window
         set { if (_tool == Tool.Highlighter) _highlightColor = value; else _penColor = value; }
     }
 
-    public EditorWindow(Session session)
+    public Session Session => _session;
+
+    /// <summary>Se cerró su pestaña (o la ventana): para soltar las suscripciones a eventos estáticos.</summary>
+    public event EventHandler Closed;
+
+    /// <summary>Después de guardar en el historial (la pestaña actualiza su miniatura).</summary>
+    public event Action Saved;
+
+    public EditorView(EditorShell shell, Session session)
     {
+        _shell = shell;
         _session = session;
         _original = History.LoadImage(session.OriginalPath);
         int pw = _original.PixelWidth, ph = _original.PixelHeight;
         _crop = ValidCrop(session.Meta.Crop) ?? new Int32Rect(0, 0, pw, ph);
         _image = CropOf(_crop);
 
-        Title = $"{AppInfo.Name} — captura del {session.Meta.Created:dd/MM/yyyy HH:mm} — {pw}×{ph}";
-        var work = SystemParameters.WorkArea;
-        Width = Math.Min(work.Width * 0.85, Math.Max(760, pw + 80));
-        Height = Math.Min(work.Height * 0.9, Math.Max(480, ph + 170));
-        Width = Math.Max(Width, Math.Min(work.Width * 0.92, 1440)); // que la barra quepa en una fila
-        MinWidth = 640;
-        MinHeight = 420;
-        WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Theme.Attach(this);
         UseLayoutRounding = true;
+        Focusable = true; // sin un control con foco adentro, las teclas no llegarían a PreviewKeyDown
+        FocusVisualStyle = null;
 
         // Guardado automático en el historial, poco después de cada cambio
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(800) };
@@ -184,7 +189,7 @@ sealed partial class EditorWindow : Window
         _host = new Canvas
         {
             LayoutTransform = _zoom,
-            RenderTransform = _panShift, // pan cuando la captura entra entera (ver EditorWindow.Pan.cs)
+            RenderTransform = _panShift, // pan cuando la captura entra entera (ver EditorView.Pan.cs)
             Margin = new Thickness(ViewMargin),
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
@@ -240,7 +245,7 @@ sealed partial class EditorWindow : Window
         var last = AppSettings.Current.UltimaHerramienta;
         SetTool(Enum.IsDefined(last) && last != Tool.Crop ? last : Tool.Pen);
 
-        // PreviewKeyDown: la ventana ve las teclas antes que el InkCanvas,
+        // PreviewKeyDown: el editor ve las teclas antes que el InkCanvas,
         // que de otro modo se queda con Ctrl+C / Ctrl+X / Ctrl+V.
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
@@ -280,24 +285,65 @@ sealed partial class EditorWindow : Window
         };
         _scroll.LostMouseCapture += (s, e) => EndPan();
 
-        Open[session.Meta.Id] = this;
-        Closed += (s, e) => Open.Remove(session.Meta.Id);
+        // La pestaña se crea al elegirla: ya está visible cuando se carga
+        Loaded += (s, e) => FitZoom();
+    }
 
-        Loaded += (s, e) =>
-        {
-            FitZoom();
-            // Traer al frente aunque la app esté en segundo plano
-            Activate();
-            Topmost = true;
-            Topmost = false;
-            Focus();
-        };
-        Closing += (s, e) =>
-        {
-            CommitText();
-            if (_cropMode) ConfirmCrop(); // cerrar con el marco ajustado lo aplica
-            if (_pendingSave) SaveSession();
-        };
+    // ------------------------------------------------------------------ pestaña
+    /// <summary>
+    /// La pestaña pasó al frente. Toma la herramienta, los colores y el grosor de la que se
+    /// estaba usando (<paramref name="previous"/>), y el panel de recientes de toda la ventana.
+    /// </summary>
+    public void OnSelected(EditorView previous)
+    {
+        if (previous != null && previous != this) AdoptStyle(previous);
+        if ((_recents.Visibility == Visibility.Visible) != _recentsShown) ToggleRecents(_recentsShown);
+        else if (_recentsShown) LoadRecents(); // la marca de "esta captura" y las abiertas cambian
+        Dispatcher.InvokeAsync(() => Focus(), DispatcherPriority.Input);
+    }
+
+    /// <param name="byUser">Cambió de pestaña el usuario: ya está trabajando en la ventana.</param>
+    public void OnDeselected(bool byUser)
+    {
+        CommitText();
+        if (_cropMode) ConfirmCrop(); // como cambiar de herramienta: aplica el marco
+        if (byUser) MarkTouched();    // una captura nueva ya no se cierra sola
+    }
+
+    void AdoptStyle(EditorView from)
+    {
+        _penColor = from._penColor;
+        _highlightColor = from._highlightColor;
+        _size = from._size; // sin SetSize: no debe cambiar el grosor de lo que esté seleccionado acá
+        RefreshSizes();
+        if (_tool != from._tool) SetTool(from._tool);
+        RefreshSwatches();
+        UpdateDrawingAttributes();
+        UpdatePointer();
+    }
+
+    /// <summary>Antes de cerrar la pestaña o la ventana: termina el texto, aplica el recorte y guarda lo pendiente.</summary>
+    public void PrepareClose()
+    {
+        CommitText();
+        if (_cropMode) ConfirmCrop(); // cerrar con el marco ajustado lo aplica
+        if (_pendingSave) SaveSession();
+    }
+
+    /// <summary>La pestaña se cerró (después de PrepareClose).</summary>
+    public void NotifyClosed()
+    {
+        if (_closed) return;
+        _closed = true;
+        _saveTimer.Stop();
+        _autoCloseTimer?.Stop();
+        Closed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Salida rápida (copiar y cerrar, Esc, cierre automático): ver EditorShell.Dismiss.</summary>
+    void Dismiss()
+    {
+        if (!_closed) _shell.Dismiss(this);
     }
 
     // ------------------------------------------------------------------ persistencia
@@ -389,7 +435,7 @@ sealed partial class EditorWindow : Window
 
     void MarkChanged()
     {
-        MarkTouched(); // ya no se cierra solo (EditorWindow.AutoClose.cs)
+        MarkTouched(); // ya no se cierra solo (EditorView.AutoClose.cs)
         RefreshNumbers();
         _pendingSave = true;
         _saveTimer.Stop();
@@ -440,6 +486,7 @@ sealed partial class EditorWindow : Window
 
             _pendingSave = false;
             ShowSaved($"Guardado en historial {DateTime.Now:HH:mm:ss}", true);
+            Saved?.Invoke();
         }
         catch (Exception ex)
         {
@@ -494,7 +541,7 @@ sealed partial class EditorWindow : Window
 
         int count = strokes.Count + elements.Count;
         var title = count == 1 ? "¿Quitar la anotación?" : $"¿Quitar las {count} anotaciones?";
-        if (!ConfirmDialog.Ask(this, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar"))
+        if (!ConfirmDialog.Ask(_shell, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar"))
             return;
 
         _suppress = true;
@@ -561,10 +608,10 @@ sealed partial class EditorWindow : Window
                 case Key.Y: Redo(); break;
                 case Key.C: CopyAndMaybeClose(); break;
                 case Key.S: Save(); break;
-                case Key.Enter: if (CopyToClipboard()) Close(); break;
+                case Key.Enter: if (CopyToClipboard()) Dismiss(); break;
                 case Key.H: ToggleRecents(); break;
                 case Key.A: SelectAll(); break;
-                case Key.OemComma: SettingsWindow.Show(this); break;
+                case Key.OemComma: SettingsWindow.Show(_shell); break;
                 case Key.D0: case Key.NumPad0: FitZoom(); break;
                 case Key.OemPlus: case Key.Add: SetZoom(_zoom.ScaleX * 1.15); break;
                 case Key.OemMinus: case Key.Subtract: SetZoom(_zoom.ScaleX / 1.15); break;
@@ -605,7 +652,7 @@ sealed partial class EditorWindow : Window
             case Key.Escape:
                 if (_cropMode) CancelCrop();
                 else if (HasSelection) ClearSelection();
-                else Close();
+                else Dismiss();
                 break;
             default: return;
         }

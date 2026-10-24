@@ -6,7 +6,7 @@
 //  todo, si la captura entra entera en la ventana) va a _panShift, una
 //  traslación del host que no toca el layout. "Ajustar" la vuelve a cero.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     readonly TranslateTransform _panShift = new TranslateTransform();
     Point? _panStart;

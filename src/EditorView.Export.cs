@@ -1,7 +1,7 @@
 // ----------------------------------------------------------------------------
 //  Editor — exportar, copiar al portapapeles y guardar
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     // ------------------------------------------------------------------ exportar
     /// <summary>Espacio extra alrededor de lo que sale de la captura, para que no quede pegado al borde.</summary>
@@ -139,7 +139,7 @@ sealed partial class EditorWindow
         t.Tick += (s, e) =>
         {
             t.Stop();
-            if (Open.ContainsKey(_session.Meta.Id)) Close(); // pudo cerrarse a mano mientras tanto
+            Dismiss(); // si la pestaña se cerró a mano mientras tanto, no hace nada
         };
         t.Start();
     }
@@ -155,7 +155,7 @@ sealed partial class EditorWindow
             FileName = $"Captura {DateTime.Now:yyyy-MM-dd HHmmss}.png",
             InitialDirectory = AppSettings.Current.CarpetaGuardarEfectiva,
         };
-        if (dlg.ShowDialog(this) != true) return;
+        if (dlg.ShowDialog(_shell) != true) return;
 
         var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
         BitmapEncoder enc = ext is ".jpg" or ".jpeg"

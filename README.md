@@ -72,10 +72,21 @@ Si hay un borrador pendiente en Partner Center, el envío lo reemplaza. Enviar a
 
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
 2. Toma una captura con **Impr Pant**, **Win+Shift+S**, la Herramienta Recortes o **Win+Impr Pant**.
-3. Se abre el editor con la captura. Anota lo que necesites.
-4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **clic derecho** sobre la imagen. Si prefieres que el editor se quede abierto, apaga **Cerrar el editor al copiar** en Ajustes: el botón pasa a decir **Copiar**, y `Ctrl+Enter` sigue copiando y cerrando.
+3. Se abre el editor con la captura, en una pestaña (ver «Pestañas»). Anota lo que necesites.
+4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo, así vuelves al programa donde vas a pegar. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **clic derecho** sobre la imagen. Si prefieres que el editor se quede abierto, apaga **Cerrar el editor al copiar** en Ajustes: el botón pasa a decir **Copiar**, y `Ctrl+Enter` sigue copiando y cerrando.
 
 Todo se guarda automáticamente en el historial mientras editas.
+
+### Pestañas
+
+Todas las capturas se abren en una sola ventana, cada una en su pestaña, en la barra de título (como el Bloc de notas de Windows 11). Abrir una captura que ya está abierta va a su pestaña.
+
+- **Arrastra** una pestaña para cambiarla de lugar. La **×**, el **clic central** o `Ctrl+W` la cierran (la captura sigue en el historial). `Ctrl+Tab` / `Ctrl+Shift+Tab` pasan a la siguiente o la anterior, y `Ctrl+1` a `Ctrl+8` a esa pestaña (`Ctrl+9`, a la última).
+- **Clic derecho** en una pestaña: Cerrar, Cerrar las demás, Cerrar las de la derecha, Cerrar todas, Mostrar en el Explorador y Eliminar del historial.
+- Al cambiar de pestaña se mantienen la herramienta, el color y el grosor; el zoom y lo que se puede deshacer son de cada captura.
+- Si cierras la ventana con la **X**, las pestañas vuelven en el mismo orden la próxima vez que se abra, también después de reiniciar. **Cerrar todas** las vacía.
+- Copiar y cerrar, `Esc` y el cierre solo a los 4 s cierran la pestaña. Si la ventana se abrió por esa captura y no tocaste las otras pestañas, se cierra la ventana entera (las demás quedan guardadas para la próxima vez).
+- Desde el espacio libre de la barra de título se arrastra la ventana; doble clic la maximiza y, en Windows 11, pasar sobre el botón de maximizar muestra los diseños de Snap.
 
 Si una captura nueva se abre y te vas a otra ventana sin anotar nada (por ejemplo, porque solo querías pegarla en otro lado), el editor se cierra solo a los 4 segundos. Si vuelves antes, se queda. La captura sigue en el historial. Las capturas que retomas no se cierran solas.
 
@@ -147,7 +158,7 @@ Las asas no salen en lo recién dibujado (para que puedas empezar otro trazo jus
 
 ### Abrir una imagen arrastrándola
 
-Arrastra una imagen (desde el Explorador, el navegador u otra app) sobre un editor o sobre la ventana de historial. Si el editor todavía no tiene anotaciones, la imagen lo reemplaza en la misma ventana; si ya tiene algo, se abre en otra. Sobre el historial, siempre se abre un editor nuevo.
+Arrastra una imagen (desde el Explorador, el navegador u otra app) sobre un editor o sobre la ventana de historial. Si la pestaña todavía no tiene anotaciones, la imagen la reemplaza en el mismo lugar; si ya tiene algo, se abre en otra pestaña. Sobre el historial, siempre se abre en una pestaña nueva.
 
 ### Corregir un texto
 
@@ -177,7 +188,7 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 ### Tema y capturas recientes
 
 - El botón de la luna/sol cambia entre tema **claro** y **oscuro**. Hasta que lo toques por primera vez, sigue al tema de Windows. La elección se guarda en `%LOCALAPPDATA%\Popete\ajustes.json`.
-- El botón del reloj (o `Ctrl+H`) muestra una tira con las capturas recientes para abrir otra sin ir al historial. Siempre arranca oculta. Cada miniatura tiene una **×** para eliminarla, y arriba están **Eliminar todas** y **Conservar las últimas N** (20, 50, 100, 200 o todas; 50 por defecto): las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.
+- El botón del reloj (o `Ctrl+H`) muestra una tira con las capturas recientes para abrir otra sin ir al historial. Arranca oculta; mostrarla u ocultarla vale para todas las pestañas. Cada miniatura tiene una **×** para eliminarla, y arriba están **Eliminar todas** y **Conservar las últimas N** (20, 50, 100, 200 o todas; 50 por defecto): las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.
 
 ### Atajos
 
@@ -201,7 +212,10 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 | `1` a `3` | Grosor: fino, medio, grueso |
 | `Tab` | Alternar entre lápiz y flecha |
 | `Ctrl+H` | Mostrar u ocultar las capturas recientes |
-| `Esc` | Quitar la selección; si no hay, cerrar el editor |
+| `Ctrl+W` / clic central en la pestaña | Cerrar la pestaña |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Pestaña siguiente / anterior |
+| `Ctrl+1` a `Ctrl+8` / `Ctrl+9` | Ir a esa pestaña / a la última |
+| `Esc` | Quitar la selección; si no hay, cerrar la pestaña (o la ventana; ver «Pestañas») |
 
 ### Menú de la bandeja
 

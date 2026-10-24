@@ -11,7 +11,7 @@
 //  Se activan por captura con el botón "123" (o N); el valor inicial viene de
 //  AppSettings.NumerarPorDefecto.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     static readonly Guid OrderProperty = new Guid("5b0e3c1e-8f6a-4d8e-9c1f-2a7d1f0b6c11");
 

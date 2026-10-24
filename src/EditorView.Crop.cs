@@ -16,7 +16,7 @@
 //  La tabla de dibujo está anclada a la captura original, así que recortar no
 //  mueve ninguna coordenada: solo cambian _crop, _image y LayoutForImage.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     [Flags]
     enum CropEdge { None = 0, Left = 1, Top = 2, Right = 4, Bottom = 8, Move = 16 }

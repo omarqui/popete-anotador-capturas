@@ -15,7 +15,7 @@
 //  van en _selectionLayer (no se exportan) y funcionan con cualquier herramienta.
 //  Cada arrastre es un paso de Ctrl+Z.
 // ----------------------------------------------------------------------------
-sealed partial class EditorWindow
+sealed partial class EditorView
 {
     /// <summary>Tipo de forma (propiedad del ISF: el valor de <see cref="Tool"/>).</summary>
     static readonly Guid ShapeProperty = new Guid("e7b5c9a1-3d2f-4c6e-8a0b-5f1d7e9c2a46");
