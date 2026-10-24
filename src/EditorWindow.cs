@@ -264,11 +264,11 @@ sealed partial class EditorWindow : Window
                 e.Handled = true;
             }
         };
-        // Clic derecho en el lienzo: copiar y cerrar, como Ctrl+C
+        // Clic derecho en el lienzo: copiar (y cerrar, según el ajuste), como Ctrl+C
         PreviewMouseRightButtonUp += (s, e) =>
         {
             if (_editing != null || !IsInside(e.OriginalSource, _scroll)) return;
-            if (CopyToClipboard()) CloseAfterFlash();
+            CopyAndMaybeClose();
             e.Handled = true;
         };
         _scroll.PreviewMouseMove += (s, e) => { if (PanMove(e.GetPosition(_scroll))) e.Handled = true; };
@@ -559,7 +559,7 @@ sealed partial class EditorWindow : Window
             {
                 case Key.Z: Undo(); break;
                 case Key.Y: Redo(); break;
-                case Key.C: if (CopyToClipboard()) CloseAfterFlash(); break;
+                case Key.C: CopyAndMaybeClose(); break;
                 case Key.S: Save(); break;
                 case Key.Enter: if (CopyToClipboard()) Close(); break;
                 case Key.H: ToggleRecents(); break;

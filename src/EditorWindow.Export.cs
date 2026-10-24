@@ -104,6 +104,17 @@ sealed partial class EditorWindow
         return false;
     }
 
+    /// <summary>
+    /// Ctrl+C, el clic derecho y el botón: copia y, si el ajuste lo pide, cierra. Si no cierra,
+    /// cuenta como tocada: una captura nueva tampoco se cierra sola al irse a pegarla.
+    /// </summary>
+    void CopyAndMaybeClose()
+    {
+        if (!CopyToClipboard()) return;
+        if (AppSettings.Current.CerrarAlCopiar) CloseAfterFlash();
+        else MarkTouched();
+    }
+
     /// <summary>Doble parpadeo blanco con borde azul sobre la imagen.</summary>
     void FlashCopied()
     {

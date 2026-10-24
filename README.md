@@ -73,7 +73,7 @@ Si hay un borrador pendiente en Partner Center, el envío lo reemplaza. Enviar a
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.
 2. Toma una captura con **Impr Pant**, **Win+Shift+S**, la Herramienta Recortes o **Win+Impr Pant**.
 3. Se abre el editor con la captura. Anota lo que necesites.
-4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **clic derecho** sobre la imagen.
+4. Pulsa **Ctrl+C** para copiar la imagen anotada: la imagen parpadea para confirmarlo y el editor se cierra solo. **Ctrl+S** la guarda como PNG o JPG. También copia y cierra un **clic derecho** sobre la imagen. Si prefieres que el editor se quede abierto, apaga **Cerrar el editor al copiar** en Ajustes: el botón pasa a decir **Copiar**, y `Ctrl+Enter` sigue copiando y cerrando.
 
 Todo se guarda automáticamente en el historial mientras editas.
 
@@ -126,7 +126,7 @@ Después de cada trazo, el color pasa solo al siguiente: rojo → azul → verde
 
 Con **Seleccionar** (`V`), un clic sobre un trazo o un texto lo elige y arrastrarlo lo mueve. Para elegir **varios**, arrastra un recuadro desde una zona vacía: queda seleccionado todo lo que toque. `Shift` + recuadro suma a lo que ya había, `Shift`+clic agrega o quita uno, y `Ctrl+A` elige todo. Arrastrar cualquiera de los elegidos mueve todos juntos; el color, el grosor y `Supr` se aplican a todos.
 
-**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta (arrastrar el número mueve solo el número; ver «Numeración automática»). Con cualquier herramienta, **doble clic sobre un trazo** lo elige (sin cambiar de herramienta). **Clic derecho** sobre la imagen copia y cierra.
+**Clic en el número** de un trazo o texto lo selecciona con cualquier herramienta (arrastrar el número mueve solo el número; ver «Numeración automática»). Con cualquier herramienta, **doble clic sobre un trazo** lo elige (sin cambiar de herramienta). **Clic derecho** sobre la imagen copia y cierra (o solo copia, según el ajuste **Cerrar el editor al copiar**).
 
 Con algo seleccionado, las flechas del teclado lo corren 1 px (con `Shift`, 10 px). Todo se deshace con Ctrl+Z.
 
@@ -159,7 +159,16 @@ Con **Recortar** (`C`) aparece la captura completa con un marco: arrastra sus **
 
 ### Ajustes
 
-Botón de ajustes en la barra de estado, `Ctrl+,` o **Ajustes…** en la bandeja. Tema, numeración por defecto, segundos de selección, grosor inicial, carpeta de «Guardar», cuántas capturas conservar e iniciar con Windows. Los cambios se guardan al tocarlos.
+Botón de ajustes en la barra de estado, `Ctrl+,` o **Ajustes…** en la bandeja. Tema, numeración por defecto, segundos de selección, grosor inicial, cerrar el editor al copiar, carpeta de «Guardar», atajo del historial rápido, cuántas capturas conservar e iniciar con Windows. Los cambios se guardan al tocarlos.
+
+### Historial rápido
+
+Con **`` Alt+` ``** (la tecla bajo `Esc`) aparece, desde cualquier programa y aunque Popete esté solo en la bandeja, una ventana con todas las capturas: a la izquierda la lista con miniatura, hora y tamaño, y a la derecha la elegida en grande. Funciona como `Alt+Tab` o Ditto:
+
+- Al abrirse queda elegida la más reciente. **Mantén `Alt` y vuelve a tocar `` ` ``** para bajar una (con `Shift` sube); **al soltar `Alt`** se abre la elegida en el editor.
+- Si tocas el atajo una sola vez y sueltas, la ventana se queda abierta: elige con las flechas, la rueda o el ratón, y abre con `Enter` o doble clic. `Esc` o un clic fuera la cierran.
+
+El atajo se cambia en **Ajustes › Atajo del historial rápido**: tocas el botón y aprietas la combinación nueva (con `Ctrl` o `Alt`; `Esc` cancela). **Quitar** lo deja sin atajo. Una combinación que ya usa otro programa (Ditto usa `` Ctrl+` ``) no llega a Popete: ese programa se la queda y la grabación se cancela. Si la combinación guardada queda ocupada (por ejemplo, porque el otro programa arrancó antes), Ajustes lo avisa en rojo y, al arrancar, también aparece un globo en la bandeja.
 
 ### Dibujar fuera de la captura
 
@@ -174,8 +183,9 @@ Alrededor de la captura hay un margen (marcado con una línea punteada) donde ta
 
 | Atajo | Acción |
 |---|---|
-| `Ctrl+C` o clic derecho en la imagen | Copiar la imagen anotada y cerrar el editor |
-| `Ctrl+Enter` | Copiar y cerrar (sin esperar el parpadeo) |
+| `Ctrl+C` o clic derecho en la imagen | Copiar la imagen anotada y cerrar el editor (o solo copiar, según Ajustes) |
+| `Ctrl+Enter` | Copiar y cerrar siempre (sin esperar el parpadeo) |
+| `` Alt+` `` (global, configurable) | Historial rápido; ver «Historial rápido» |
 | `Ctrl+S` | Guardar como PNG o JPG |
 | `Ctrl+Z` | Deshacer |
 | `Ctrl+Y` o `Ctrl+Shift+Z` | Rehacer |

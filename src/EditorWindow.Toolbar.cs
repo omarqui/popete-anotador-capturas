@@ -16,6 +16,8 @@ sealed partial class EditorWindow
     FrameworkElement _saveIcon;
     ToggleButton _recentsButton;
     Button _themeButton;
+    Button _copyButton;
+    TextBlock _copyLabel;
 
     // ------------------------------------------------------------------ barra de herramientas
     FrameworkElement BuildToolbar()
@@ -105,8 +107,14 @@ sealed partial class EditorWindow
         right.Children.Add(Ui.Divider());
 
         // Guardar como no tiene botón: queda con Ctrl+S.
-        var copyClose = Ui.Btn("Copiar y cerrar", "Copiar y cerrar (Ctrl+C, Ctrl+Enter o clic derecho en la captura)",
-            () => { if (CopyToClipboard()) Close(); }, Icons.Check, "EstiloPrimario");
+        // "Copiar y cerrar" o "Copiar", según AppSettings.CerrarAlCopiar (UpdateCopyButton)
+        var copyClose = Ui.Btn("", "", CopyAndMaybeClose, Icons.Check, "EstiloPrimario");
+        _copyButton = copyClose;
+        _copyLabel = (TextBlock)((StackPanel)copyClose.Content).Children[1];
+        UpdateCopyButton();
+        Action onSettings = UpdateCopyButton;
+        AppSettings.Changed += onSettings;
+        Closed += (s, e) => AppSettings.Changed -= onSettings;
         var chip = new Border
         {
             Child = new TextBlock { Text = "Ctrl+C", FontSize = 11, FontWeight = FontWeights.Normal },
@@ -270,6 +278,16 @@ sealed partial class EditorWindow
         var tip = Theme.IsDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
         _themeButton.ToolTip = tip;
         System.Windows.Automation.AutomationProperties.SetName(_themeButton, tip);
+    }
+
+    /// <summary>El botón dice lo que hace según "Cerrar el editor al copiar" (cambia en caliente desde Ajustes).</summary>
+    void UpdateCopyButton()
+    {
+        bool close = AppSettings.Current.CerrarAlCopiar;
+        _copyLabel.Text = close ? "Copiar y cerrar" : "Copiar";
+        _copyButton.ToolTip = close
+            ? "Copiar y cerrar (Ctrl+C, Ctrl+Enter o clic derecho en la captura)"
+            : "Copiar (Ctrl+C o clic derecho en la captura; Ctrl+Enter copia y cierra)";
     }
 
     // ------------------------------------------------------------------ barra de estado

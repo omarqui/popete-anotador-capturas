@@ -31,6 +31,12 @@ sealed class AppSettings
     /// <summary>Grosor con el que abre el editor.</summary>
     public double GrosorInicial { get; set; } = 4;
 
+    /// <summary>Ctrl+C, el clic derecho y el botón "Copiar" cierran el editor después de copiar. Ctrl+Enter cierra siempre.</summary>
+    public bool CerrarAlCopiar { get; set; } = true;
+
+    /// <summary>Atajo global del historial rápido (QuickHistoryWindow). null = sin atajo.</summary>
+    public Hotkey AtajoHistorial { get; set; } = Hotkey.Default;
+
     /// <summary>Herramienta con la que abre el editor: la última que se eligió (nunca Recortar).</summary>
     public Tool UltimaHerramienta { get; set; } = Tool.Pen;
 

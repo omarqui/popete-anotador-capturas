@@ -52,9 +52,13 @@ sealed class SettingsWindow : Window
             "Mientras está seleccionado, elegir color o grosor se le aplica.");
         Choice("Grosor inicial", new[] { ("Fino", 2.0), ("Medio", 4.0), ("Grueso", 8.0) },
             s.GrosorInicial, v => Save(() => s.GrosorInicial = v));
+        Choice("Cerrar el editor al copiar", new[] { ("Sí", true), ("No", false) },
+            s.CerrarAlCopiar, v => Save(() => s.CerrarAlCopiar = v),
+            "Con Ctrl+C, el clic derecho o el botón. Ctrl+Enter copia y cierra siempre.");
         FolderRow();
 
         Section("Historial");
+        HotkeyRow();
         Choice("Conservar las últimas", AppSettings.MaxCapturasOpciones.Select(n => (n > 0 ? n.ToString() : "Todas", n)).ToArray(),
             s.MaxCapturas, v => { Save(() => s.MaxCapturas = v); CaptureHost.PruneHistory(); },
             "Las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.");
@@ -150,6 +154,87 @@ sealed class SettingsWindow : Window
             for (int i = 0; i < buttons.Count; i++)
                 buttons[i].IsChecked = EqualityComparer<T>.Default.Equals(options[i].value, value);
         };
+    }
+
+    /// <summary>
+    /// Atajo global del historial rápido: el botón graba la combinación que se apriete (Esc
+    /// cancela) y "Quitar" lo deja sin atajo. Mientras graba, el atajo actual queda en pausa
+    /// para que no abra el historial. Si otro programa ya usa la combinación, lo avisa.
+    /// </summary>
+    void HotkeyRow()
+    {
+        const string Help = "Abre las capturas desde cualquier lugar, aunque Popete esté solo en la bandeja. "
+            + "Mantén los modificadores y repite la tecla para bajar; al soltar se abre la elegida.";
+        var s = AppSettings.Current;
+        bool recording = false;
+
+        var note = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+        var record = new Button { MinWidth = 120, ToolTip = "Cambiar la combinación" };
+        record.SetResourceReference(StyleProperty, "EstiloSecundario");
+        Button clear = null; // Refresh lo usa: tiene que estar asignado antes de la lambda que lo llama
+        clear = Ui.Btn("Quitar", "Dejar el historial rápido sin atajo", () =>
+        {
+            Save(() => s.AtajoHistorial = null);
+            Refresh();
+        }, style: "EstiloPlano");
+        clear.Margin = new Thickness(4, 0, 0, 0);
+
+        void Refresh(string message = null, bool error = false)
+        {
+            record.Content = recording ? "Presiona la combinación…" : s.AtajoHistorial?.Text ?? "Sin atajo";
+            clear.Visibility = !recording && s.AtajoHistorial != null ? Visibility.Visible : Visibility.Collapsed;
+            if (message == null && !recording && CaptureHost.HotkeyFailed)
+            {
+                message = "Otro programa ya usa esta combinación: elige otra.";
+                error = true;
+            }
+            note.Text = message ?? (recording ? "Usa Ctrl o Alt, con Shift si quieres. Esc cancela." : Help);
+            note.SetResourceReference(TextBlock.ForegroundProperty, error ? "Error" : "TextoSecundario");
+        }
+
+        void Finish(Hotkey chosen)
+        {
+            if (!recording) return;
+            recording = false;
+            if (chosen != null) Save(() => s.AtajoHistorial = chosen);
+            CaptureHost.PauseHotkey(false); // registra el de los ajustes (y avisa si está ocupado)
+            Refresh();
+        }
+
+        record.Click += (o, e) =>
+        {
+            recording = true;
+            CaptureHost.PauseHotkey(true);
+            Refresh();
+        };
+        PreviewKeyDown += (o, e) =>
+        {
+            if (!recording) return;
+            e.Handled = true; // tampoco cierra la ventana con Esc
+            var key = e.Key == Key.System ? e.SystemKey : e.Key; // con Alt apretado, WPF manda Key.System
+            if (key == Key.Escape) Finish(null);
+            else if (Hotkey.IsModifier(key)) return; // espera la tecla
+            else if (new Hotkey(Keyboard.Modifiers, key) is { IsValid: true } chosen) Finish(chosen);
+            else Refresh("Esa combinación no sirve: usa Ctrl o Alt (con Shift si quieres) y otra tecla. Esc cancela.", error: true);
+        };
+        // Al alt-tabular o cerrar a mitad de la grabación, se cancela
+        Deactivated += (o, e) => Finish(null);
+        Closed += (o, e) => Finish(null);
+        Refresh();
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        buttons.Children.Add(record);
+        buttons.Children.Add(clear);
+
+        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
+        labels.Children.Add(new TextBlock { Text = "Atajo del historial rápido" });
+        labels.Children.Add(note);
+
+        var row = new DockPanel { Margin = new Thickness(0, 6, 0, 6) };
+        DockPanel.SetDock(buttons, Dock.Right);
+        row.Children.Add(buttons);
+        row.Children.Add(labels);
+        _body.Children.Add(row);
     }
 
     /// <summary>Carpeta que propone "Guardar como".</summary>

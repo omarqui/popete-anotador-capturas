@@ -76,6 +76,7 @@ static class Theme
             r["Acento"] = Solid(0x60, 0xCD, 0xFF);
             r["TextoSobreAcento"] = Solid(0x0B, 0x1A, 0x26);
             r["Exito"] = Solid(0x6C, 0xCB, 0x5F);
+            r["Error"] = Solid(0xFF, 0x99, 0xA4);
             r["Lienzo"] = DotGrid(Color.FromRgb(0x38, 0x3A, 0x40), Color.FromRgb(0x4A, 0x4C, 0x53));
         }
         else
@@ -92,6 +93,7 @@ static class Theme
             r["Acento"] = Solid(0x00, 0x5F, 0xB8);
             r["TextoSobreAcento"] = Solid(0xFF, 0xFF, 0xFF);
             r["Exito"] = Solid(0x0F, 0x7B, 0x0F);
+            r["Error"] = Solid(0xC4, 0x2B, 0x1C);
             r["Lienzo"] = DotGrid(Color.FromRgb(0xE6, 0xE8, 0xEC), Color.FromRgb(0xCD, 0xD1, 0xD8));
         }
         Changed?.Invoke();

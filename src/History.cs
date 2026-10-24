@@ -164,11 +164,13 @@ static class History
     }
 
     /// <summary>Carga una imagen sin bloquear el archivo.</summary>
-    public static BitmapSource LoadImage(string path)
+    /// <param name="decodeWidth">Si es mayor que 0, la decodifica a ese ancho (más rápido y menos memoria).</param>
+    public static BitmapSource LoadImage(string path, int decodeWidth = 0)
     {
         var bi = new BitmapImage();
         bi.BeginInit();
         bi.CacheOption = BitmapCacheOption.OnLoad;
+        if (decodeWidth > 0) bi.DecodePixelWidth = decodeWidth;
         bi.StreamSource = new MemoryStream(File.ReadAllBytes(path));
         bi.EndInit();
         bi.Freeze();

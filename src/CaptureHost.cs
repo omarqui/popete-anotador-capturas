@@ -12,6 +12,18 @@ sealed class CaptureHost : IDisposable
     [DllImport("user32.dll", SetLastError = true)]
     static extern bool RemoveClipboardFormatListener(IntPtr hwnd);
 
+    const int WM_HOTKEY = 0x0312;
+    const int QuickHistoryHotkeyId = 1;
+    const uint MOD_NOREPEAT = 0x4000; // mantener la tecla no repite: cada toque baja una
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint vk);
+
+    [DllImport("user32.dll")]
+    static extern bool UnregisterHotKey(IntPtr hwnd, int id);
+
+    static CaptureHost _current;
+
     readonly Application _app;
     readonly DispatcherTimer _debounce;
     readonly List<System.Drawing.Image> _menuThumbs = new List<System.Drawing.Image>();
@@ -23,6 +35,8 @@ sealed class CaptureHost : IDisposable
     HistoryWindow _historyWindow;
     UpdateChecker _updates;
     bool _paused;
+    Hotkey _hotkey;        // el atajo del historial rápido registrado ahora (null = ninguno)
+    bool _hotkeyPaused;    // Ajustes está grabando una combinación nueva
 
     public CaptureHost(Application app)
     {
@@ -49,6 +63,14 @@ sealed class CaptureHost : IDisposable
         _source.AddHook(WndProc);
         AddClipboardFormatListener(_source.Handle);
         CreateTray();
+
+        _current = this;
+        RegisterQuickHistoryHotkey();
+        AppSettings.Changed += RegisterQuickHistoryHotkey;
+        if (HotkeyFailed)
+            _tray.ShowBalloonTip(4000, AppInfo.Name,
+                $"Otro programa ya usa {AppSettings.Current.AtajoHistorial.Text}, el atajo del historial rápido. Elige otro en Ajustes.",
+                System.Windows.Forms.ToolTipIcon.Warning);
     }
 
     IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -58,7 +80,43 @@ sealed class CaptureHost : IDisposable
             _debounce.Stop();
             _debounce.Start();
         }
+        // El historial rápido funciona también con la detección en pausa
+        else if (msg == WM_HOTKEY && wParam.ToInt32() == QuickHistoryHotkeyId && _hotkey != null)
+        {
+            QuickHistoryWindow.OnHotkey(_hotkey);
+            handled = true;
+        }
         return IntPtr.Zero;
+    }
+
+    // ------------------------------------------------------------------ atajo del historial rápido
+    /// <summary>El atajo de Ajustes no se pudo registrar: otro programa ya usa esa combinación.</summary>
+    public static bool HotkeyFailed { get; private set; }
+
+    /// <summary>Mientras Ajustes graba una combinación, el atajo actual no debe abrir el historial rápido.</summary>
+    public static void PauseHotkey(bool paused)
+    {
+        if (_current == null) return;
+        _current._hotkeyPaused = paused;
+        _current.RegisterQuickHistoryHotkey();
+    }
+
+    /// <summary>Registra el atajo de los ajustes (corre también en cada AppSettings.Changed).</summary>
+    void RegisterQuickHistoryHotkey()
+    {
+        var wanted = _hotkeyPaused ? null : AppSettings.Current.AtajoHistorial;
+        if (wanted != null && !wanted.IsValid) wanted = null; // ajustes.json editado a mano
+        if (wanted == _hotkey && !HotkeyFailed) return; // record: compara modificadores y tecla
+
+        if (_hotkey != null) UnregisterHotKey(_source.Handle, QuickHistoryHotkeyId);
+        _hotkey = null;
+        HotkeyFailed = false;
+        if (wanted == null) return;
+        if (RegisterHotKey(_source.Handle, QuickHistoryHotkeyId, (uint)wanted.Modificadores | MOD_NOREPEAT,
+                (uint)KeyInterop.VirtualKeyFromKey(wanted.Tecla)))
+            _hotkey = wanted;
+        else
+            HotkeyFailed = true;
     }
 
     void TryOpenFromClipboard()
@@ -351,6 +409,9 @@ sealed class CaptureHost : IDisposable
     {
         if (_source != null)
         {
+            AppSettings.Changed -= RegisterQuickHistoryHotkey;
+            if (_hotkey != null) UnregisterHotKey(_source.Handle, QuickHistoryHotkeyId);
+            _hotkey = null;
             RemoveClipboardFormatListener(_source.Handle);
             _source.Dispose();
             _source = null;
