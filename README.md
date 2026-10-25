@@ -70,6 +70,25 @@ Si hay un borrador pendiente en Partner Center, el envío lo reemplaza. Enviar a
 
 **Sin estos valores** (por ejemplo, con una cuenta **Individual** de Partner Center, que no admite apps de Microsoft Entra), un tag igual genera el `.msix` y el Release, y saltea la Store: la ejecución termina bien, con un aviso y una nota en el resumen para subir el paquete a mano desde Partner Center. A mano con **enviar_store** marcado, o con solo algunos de los valores, falla.
 
+### Publicar a mano desde Partner Center
+
+Con una cuenta Individual, cada versión se sube a mano. `tools\preparar-store.ps1` deja todo listo:
+
+```powershell
+powershell -File tools\preparar-store.ps1
+```
+
+Toma como última versión enviada el tag `vX.Y.Z` más alto y propone la siguiente: sube el tercer número, o usa la que se pase con `-Version 1.2.0.0`. Exige que no haya cambios sin commitear y genera el `.msix` para la Store. Guarda en `artifacts\msix\Popete_<versión>_commits.txt` los commits desde la última enviada, para redactar las novedades, y abre el Explorador con el paquete marcado. Después, en Partner Center:
+
+1. **Start update**.
+2. Las novedades en **Store listings › What's new in this version** (hasta 1500 caracteres).
+3. El `.msix` arrastrado a **Packages**.
+4. **Submit for certification**.
+
+Al final va el tag de esa versión, sobre el commit que imprimió el script (`git tag v1.1.4 <commit>` y `git push origin v1.1.4`). Así, la próxima vez el script sabe cuál fue la última, y el push además crea el Release con el paquete.
+
+Con Claude Code, la skill `publicar-store` (`.claude/skills/`) hace este recorrido con Claude in Chrome. El paquete lo arrastras tú, porque la extensión no sube archivos de más de 10 MB.
+
 ## Uso
 
 1. Ejecuta la app. Aparece un ícono en la bandeja del sistema.

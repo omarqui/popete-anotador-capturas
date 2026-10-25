@@ -11,7 +11,8 @@ dotnet run --project src       # compilar y ejecutar
 dotnet build src               # solo compilar (úsalo para verificar cambios)
 dotnet publish src             # generar .exe
 powershell -File tools\empaquetar-msix.ps1   # paquete MSIX (ver README)
-# Store desde CI: .github/workflows/publicar-store.yml (tag vX.Y.Z → X.Y.Z.0, Release y certificación; también a mano)
+# Store desde CI: .github/workflows/publicar-store.yml (tag vX.Y.Z → X.Y.Z.0 y Release; sin credenciales saltea la Store)
+powershell -File tools\preparar-store.ps1    # versión para subir a mano a la Store (skill publicar-store, nota 46)
 ```
 
 Si la app ya está abierta, `dotnet run` sale enseguida por el mutex de instancia única: hay que cerrarla antes desde la bandeja (**Salir**).
@@ -117,6 +118,11 @@ Solo compila y corre en **Windows** (`net10.0-windows10.0.19041.0`, WPF y WinFor
 43. **`ventana.json` va aparte de `ajustes.json`:** la lista de pestañas se guarda en cada cambio (también sobrevive a un cierre inesperado), y `AppSettings.Save` dispara `Changed`, que rehace números, barra y atajo en todos los editores.
 44. **Zoom por niveles y píxeles nítidos (2026-10-24):** el zoom era continuo (×1,15 por paso) con `BitmapScalingMode.HighQuality` siempre, y al acercar la captura se veía borrosa: el suavizado inventa píxeles intermedios y, como casi nunca se caía en 100 % exacto (la etiqueta redondea), hasta el «100 %» pasaba por el filtro. Ahora Ctrl+rueda, Ctrl++/− y los botones usan `StepZoom`, que salta por `ZoomLevels` (en píxeles de pantalla por píxel de la captura: pasan por 100 % y, desde 200 %, por múltiplos enteros); `SetZoom` dibuja con `NearestNeighbor` desde `PixelZoom` (200 %) y suavizado por debajo (con 125–175 % el vecino más cercano dejaría unos píxeles dobles y otros no). Solo es la vista: exportar no depende del zoom (nota 7). "Ajustar" sigue dando un zoom libre; el paso siguiente va al nivel más cercano.
 45. **El historial rápido pega, como Ditto (2026-10-24):** antes, soltar los modificadores abría la captura en el editor; ahora la copia y la pega, y abrir pasó a E o al botón. Copiar va siempre por `ClipboardHelper.SetPng` (también desde el editor), que registra la huella antes de tocar el portapapeles (nota 4): si no, el `CaptureHost` la tomaría por una captura nueva y abriría un editor. `PasteInto` espera, cada 30 ms y hasta 2 s, a que `_target` sea la ventana activa y no quede ningún modificador apretado (Shift, Ctrl, Alt, Win: si no, llegaría Ctrl+Shift+V o Ctrl+Alt+V), y recién entonces manda Ctrl+V con `keybd_event`. No pega en ventanas de Popete (el editor no maneja Ctrl+V y el `InkCanvas` tiene su propio pegar) y Windows descarta las teclas hacia programas elevados (UIPI): en los dos casos la imagen queda copiada.
+46. **La Store se publica a mano (2026-10-25):**
+    - La cuenta de Partner Center es Individual y no admite apps de Microsoft Entra: no hay API (`msstore`) ni secretos para el workflow.
+    - `tools\preparar-store.ps1` arma el paquete y la lista de commits. La skill `.claude/skills/publicar-store` describe el recorrido en Partner Center con Claude in Chrome.
+    - La extensión no puede subir el `.msix`: `file_upload` admite hasta 10 MB, y el clic en «browse your files» no abre el cuadro de Windows. Lo arrastra el usuario.
+    - El tag `vX.Y.Z` marca la última versión enviada. Hasta entonces no había tags, y se armaron la 1.1.1 y la 1.1.2, que nunca se subieron.
 
 ## Convenciones
 
