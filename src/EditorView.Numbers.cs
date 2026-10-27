@@ -168,6 +168,7 @@ sealed partial class EditorView
         if (_numbersLayer == null) return;
         _numbersLayer.Children.Clear();
         if (_numbersButton != null) _numbersButton.IsChecked = NumbersOn;
+        _ideaMarks?.Children.Clear();
 
         double r = NumberRadius;
         foreach (var (target, number) in Numbering())
@@ -175,7 +176,12 @@ sealed partial class EditorView
             var center = AutoNumberCenter(target);
             var badge = NumberBadge(number, NumberColorOf(target), r);
             badge.Cursor = Cursors.SizeAll;
-            badge.ToolTip = "Arrastra para mover el número · clic para seleccionar · doble clic: volver a su lugar";
+            // Con idea: el tooltip la muestra y una marca (fuera de la imagen) lo distingue
+            var idea = IdeaOf(target);
+            if (Ideas.HasText(idea)) AddIdeaMark(center, r);
+            badge.ToolTip = Ideas.HasText(idea)
+                ? idea
+                : "Clic para escribir su idea · arrastra para mover el número · doble clic: volver a su lugar";
             badge.MouseLeftButtonDown += (s, e) => NumberDown(badge, target, e);
             badge.MouseMove += (s, e) => NumberMove(e);
             badge.MouseLeftButtonUp += (s, e) => NumberUp(e);
@@ -193,6 +199,12 @@ sealed partial class EditorView
         e.Handled = true; // tampoco llega al doble clic del lienzo (elegir un trazo)
         CommitText();
         if (target is Stroke st && !_ink.Strokes.Contains(st)) return;
+        if (!_numbersLayer.Children.Contains(badge))
+        {
+            // Cerrar el campo de otra idea redibujó los números: este círculo ya no está
+            if (e.ClickCount == 1) OpenIdea(target);
+            return;
+        }
         if (e.ClickCount == 2)
         {
             MoveNumber(target, NumberOffsetOf(target), new Vector());
@@ -223,6 +235,7 @@ sealed partial class EditorView
         if (_numberMoved) MoveNumber(d.target, d.from, d.from + (e.GetPosition(_numbersLayer) - d.start));
         else PickAndDrag(d.target, e.GetPosition(_ink)); // fue un clic: selecciona su trazo o texto
         DragEnd(); // el clic no arrastra nada: suelta lo que PickAndDrag dejó empezado
+        if (!_numberMoved) OpenIdea(d.target); // y abre el campo de su idea
     }
 
     /// <summary>Cambia el desplazamiento del número (con deshacer) y lo redibuja.</summary>

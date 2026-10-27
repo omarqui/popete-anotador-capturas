@@ -161,6 +161,7 @@ sealed partial class EditorView : UserControl
         _board.Children.Add(limit);
         _board.Children.Add(_framed);
         _board.Children.Add(_surface);
+        _board.Children.Add(BuildIdeaLayer()); // campo y marcas de las ideas: fuera de _surface, no se exportan
         _board.Children.Add(BuildSelectionLayer());
 
         // Lo recién dibujado con lápiz o resaltador queda seleccionado
@@ -182,6 +183,7 @@ sealed partial class EditorView : UserControl
             PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
             SelectStrokes(new StrokeCollection { stroke }, auto: true);
             AdvanceColor();
+            OfferIdea(stroke);
         };
 
         // El host mide lo que la captura: el margen queda por fuera del layout
@@ -272,7 +274,8 @@ sealed partial class EditorView : UserControl
         // Clic derecho en el lienzo: copiar (y cerrar, según el ajuste), como Ctrl+C
         PreviewMouseRightButtonUp += (s, e) =>
         {
-            if (_editing != null || !IsInside(e.OriginalSource, _scroll)) return;
+            // Con un texto o una idea a medio escribir, no (como cualquier cuadro de texto)
+            if (_editing != null || _ideaBox is { Text.Length: > 0 } || !IsInside(e.OriginalSource, _scroll)) return;
             CopyAndMaybeClose();
             e.Handled = true;
         };
@@ -366,7 +369,7 @@ sealed partial class EditorView : UserControl
         _imageCtl.Width = _frame.Width = v.Width;
         _imageCtl.Height = _frame.Height = v.Height;
         _framed.Margin = new Thickness(v.X, v.Y, 0, 0);
-        foreach (var e in new FrameworkElement[] { _board, _surface, _ink, _textLayer, _numbersLayer, _selectionLayer })
+        foreach (var e in new FrameworkElement[] { _board, _surface, _ink, _textLayer, _numbersLayer, _ideaLayer, _selectionLayer })
         {
             e.Width = bw;
             e.Height = bh;
@@ -618,6 +621,7 @@ sealed partial class EditorView : UserControl
 
     void OnKeyDown(object sender, KeyEventArgs e)
     {
+        if (_ideaBox != null && IdeaKey(e)) return; // escribiendo una idea
         if (_editing != null) return; // escribiendo texto
 
         if (e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt)

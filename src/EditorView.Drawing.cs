@@ -8,6 +8,7 @@ sealed partial class EditorView
     // ------------------------------------------------------------------ formas (línea, flecha, rectángulo) y texto
     void Ink_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        CommitIdea(); // un clic en el lienzo cierra el campo de la idea
         if (HandleDown(e.GetPosition(_ink))) // asa de un trazo seleccionado, con cualquier herramienta
         {
             e.Handled = true;
@@ -120,6 +121,7 @@ sealed partial class EditorView
             PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
             SelectStrokes(new StrokeCollection { stroke }, auto: true); // unos segundos, para cambiarle color o grosor
             AdvanceColor();
+            OfferIdea(stroke);
         }
         e.Handled = true;
     }
@@ -333,8 +335,10 @@ sealed partial class EditorView
         BeginText(new Point(Canvas.GetLeft(block), Canvas.GetTop(block)), block);
     }
 
+    /// <summary>Termina el texto en edición; también cierra el campo de la idea (todos los caminos que terminan un texto lo cierran).</summary>
     void CommitText()
     {
+        CommitIdea();
         if (_editing == null) return;
         var tb = _editing;
         _editing = null;                 // primero, para que LostKeyboardFocus no reentre
