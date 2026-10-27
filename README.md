@@ -87,7 +87,7 @@ Toma como última versión enviada el tag `vX.Y.Z` más alto y propone la siguie
 
 Al final va el tag de esa versión, sobre el commit que imprimió el script (`git tag v1.1.4 <commit>` y `git push origin v1.1.4`). Así, la próxima vez el script sabe cuál fue la última, y el push además crea el Release con el paquete.
 
-Con Claude Code, la skill `publicar-store` (`.claude/skills/`) hace este recorrido con Claude in Chrome. El paquete lo arrastras tú, porque la extensión no sube archivos de más de 10 MB.
+Con Claude Code, la skill `publicar-store` (`.claude/skills/`) hace este recorrido con Claude in Chrome, paquete incluido. La extensión no sube archivos de más de 10 MB, así que `tools/servir-paquete.mjs` (Node) sirve el `.msix` y `novedades.txt` en `127.0.0.1` y la página de Partner Center los descarga. La primera vez, Chrome pregunta si `partner.microsoft.com` puede acceder a la red local: hay que permitirlo.
 
 ## Uso
 

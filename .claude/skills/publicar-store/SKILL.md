@@ -34,26 +34,61 @@ Muéstrale el texto al usuario antes de commitearlo. Guardarlo en el borrador no
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\preparar-store.ps1
 ```
 
-Calcula la versión (sube el tercer número del último tag; con `-Version 1.2.0.0`, otra), exige el árbol limpio y que `novedades.txt` sea de esa versión. Genera `artifacts\msix\Popete_<versión>_x64.msix` sin firmar y guarda los commits desde el último tag en `Popete_<versión>_commits.txt`, en la misma carpeta. Al final imprime las novedades, las deja en el portapapeles y abre el Explorador con el paquete marcado (`-NoAbrir` para que no). Tarda un par de minutos (`dotnet publish` self-contained). Imprime el commit del paquete: anótalo para el tag (paso 7).
+Calcula la versión (sube el tercer número del último tag; con `-Version 1.2.0.0`, otra), exige el árbol limpio y que `novedades.txt` sea de esa versión. Genera `artifacts\msix\Popete_<versión>_x64.msix` sin firmar y guarda los commits desde el último tag en `Popete_<versión>_commits.txt`, en la misma carpeta. Al final imprime las novedades y las deja en el portapapeles. Pásale `-NoAbrir`: el Explorador con el paquete marcado solo hacía falta cuando lo arrastraba el usuario. Tarda un par de minutos (`dotnet publish` self-contained). Imprime el commit del paquete: anótalo para el tag (paso 7).
 
-## 4. Borrador en Partner Center
+Si falla con «no es mayor que la ultima enviada», esa versión ya tiene tag: ya se mandó.
+
+## 4. Servidor local
+
+La extensión no puede subir el paquete: `file_upload` admite hasta 10 MB y el paquete pesa unos 78 MB, y un clic en «browse your files» no abre el cuadro «Abrir» de Windows. Lo que sí funciona (2026-10-27): la **página** de Partner Center lo descarga de un servidor local con `fetch` y lo pone en su `<input type=file>`. Lo mismo con las novedades. En segundo plano (`run_in_background`):
+
+```powershell
+node tools/servir-paquete.mjs artifacts/msix/Popete_<versión>_x64.msix
+```
+
+Sirve `/paquete.msix`, `/novedades.txt` y `/info` (`{ nombre, bytes, version }`) en `http://127.0.0.1:8765`, con CORS solo para `partner.microsoft.com`. Se cierra solo cuando sirvió el paquete y las novedades, o a los 30 minutos. Si hay que repetir algo, vuelve a lanzarlo.
+
+**Permiso de red local de Chrome:** la primera vez que la página pide algo a `127.0.0.1`, Chrome pregunta si `partner.microsoft.com` puede acceder a la red local, y mientras el aviso está abierto la pestaña no responde (`javascript_tool` y las capturas se cortan por tiempo). El usuario lo permitió el 2026-10-27 y queda guardado para el sitio. Si vuelve a pasar, pregúntale con `AskUserQuestion` si ve el aviso y que lo permita él: no lo aceptes tú.
+
+## 5. Borrador en Partner Center
 
 1. Overview → **Start update**: crea «Submission N» como copia de la anterior. Espera unos segundos a que carguen los estados.
-2. **Store listings** → **Spanish (Spain)** → cuadro **What's new in this version**: `form_input` con el texto de `novedades.txt`, tal cual → **Save** (al pie; vuelve al overview).
+2. **Store listings** (la flecha de la fila) → **Spanish (Spain)**. Con `javascript_tool`:
 
-## 5. Subir el paquete (lo arrastra el usuario)
+   ```js
+   const text = await (await fetch('http://127.0.0.1:8765/novedades.txt')).text();
+   const ta = document.getElementById('releaseNotes'); // «What's new in this version»
+   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(ta, text);
+   ta.dispatchEvent(new Event('input', { bubbles: true }));
+   ta.dispatchEvent(new Event('change', { bubbles: true }));
+   `${ta.value.length} caracteres: ${ta.value.slice(0, 40)}`
+   ```
 
-La extensión de Chrome **no puede** subirlo. `file_upload` acepta como mucho 10 MB, y solo archivos compartidos con la sesión; el paquete pesa unos 78 MB. Un clic en «browse your files» no abre el cuadro «Abrir» de Windows: la extensión intercepta el selector, y un script de UIAutomation que esperaba la ventana `#32770` no encontró nada. No lo vuelvas a intentar.
+   Comprueba que empiece con «Novedades de la versión X.Y.Z:» → **Save** (al pie; vuelve al overview).
+3. **Packages** (la fila del overview). Con `javascript_tool`:
 
-Deja la pestaña en **Packages** del borrador (menú izquierdo). Comprueba que el Explorador quedó abierto con el paquete marcado; si no, ábrelo con `explorer.exe /select,"<ruta>"`. Pídele al usuario que lo arrastre al recuadro «Drag your packages here» de la pestaña del grupo de Claude y que te avise.
+   ```js
+   const info = await (await fetch('http://127.0.0.1:8765/info')).json();
+   const blob = await (await fetch('http://127.0.0.1:8765/paquete.msix')).blob();
+   const input = document.querySelector('input.fileuploader[type=file]');
+   const dt = new DataTransfer();
+   dt.items.add(new File([blob], info.nombre, { type: 'application/octet-stream', lastModified: Date.now() }));
+   input.files = dt.files;
+   input.dispatchEvent(new Event('change', { bubbles: true }));
+   `${info.nombre}: ${blob.size} de ${info.bytes} bytes`
+   ```
 
-Cuando avise, `get_page_text`:
+   El cargador toma el archivo y vacía el `input` (leer `input.files` después da 0). Aparece «Uploading», luego «Analyzing package» y «Validating…»: tarda unos 30 s.
+
+Después, `get_page_text`:
 
 - Tiene que figurar el paquete nuevo con su versión.
 - El aviso «restricted capabilities… runFullTrust» es normal: lo tienen todas las versiones.
 - El paquete anterior figura con «This package will be removed after you save this page»: **Save** (al pie).
 
 En el overview, Packages debe decir **Validated** y Store listings **Updated**.
+
+**Cuidado:** lo que se sube queda en el borrador al instante, sin «Save», y recargar la página no lo quita. En la prueba del 2026-10-27 se subió dos veces el mismo 1.2.0.0. El error «Multiple uploaded files contain the same package» deshabilita **Save** y deja la barra trabada en «Analyzing package 99». Para destrabarlo, en la copia sobrante: «Don't remove this package» → **Remove** → **Save**. Nunca subas una versión que ya está en el borrador.
 
 ## 6. Mandar a certificación (con confirmación)
 
