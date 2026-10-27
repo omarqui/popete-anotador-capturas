@@ -3,7 +3,7 @@
 //
 //  El campo de la idea (_ideaBox, EditorView.Ideas.cs) va dentro de una tarjeta
 //  que flota sobre el lienzo, fuera del zoom: mide siempre lo mismo en pantalla.
-//  Aparece junto a su número (a la derecha, o a la izquierda si no entra), nunca
+//  Aparece al lado de lo marcado sin taparlo (IdeaCardPlacement), nunca
 //  se sale de la vista y una línea fina la une al número. Se arrastra desde la
 //  cabecera; lo movido solo dura mientras está abierta. Cabecera con el número
 //  y × para quitar la idea; texto guía y atajos al pie; crece hasta ~8 líneas.
@@ -17,6 +17,7 @@ sealed partial class EditorView
     Border _ideaCard;                       // la tarjeta abierta, o null
     System.Windows.Shapes.Line _ideaLink;   // del número a la tarjeta
     Vector _ideaCardShift;                  // lo que el usuario la arrastró desde su lugar
+    int _ideaCardSide = -1;                 // IdeaCardPlacement: el lado elegido al abrirla
     Point? _ideaDragFrom;
     Vector _ideaShiftAtDrag;
 
@@ -105,10 +106,11 @@ sealed partial class EditorView
         };
         _ideaCard.SetResourceReference(Border.BackgroundProperty, "Superficie");
         _ideaCard.SetResourceReference(Border.BorderBrushProperty, "Borde");
-        _ideaCard.SizeChanged += (s, e) => PlaceIdeaCard(); // crece con el texto
+        _ideaCard.SizeChanged += (s, e) => PlaceIdeaCard(rechoose: false); // crece con el texto, sin saltar de lado
 
         _ideaLink.Stroke = new SolidColorBrush(color);
         _ideaCardShift = new Vector();
+        _ideaCardSide = -1;
         _ideaOverlay.Children.Add(_ideaCard);
         PlaceIdeaCard();
     }
@@ -131,24 +133,30 @@ sealed partial class EditorView
     }
 
     /// <summary>
-    /// Junto al número (a la derecha; a la izquierda si no entra), más lo que la arrastró el usuario,
+    /// Al lado de lo marcado sin taparlo (IdeaCardPlacement), más lo que la arrastró el usuario,
     /// siempre dentro de la vista. Corre al abrirla, al crecer y al desplazar, hacer zoom o arrastrar.
     /// </summary>
-    void PlaceIdeaCard()
+    /// <param name="rechoose">
+    /// Vuelve a elegir el lado (al abrir, desplazar o hacer zoom). Al crecer con el texto o al
+    /// arrastrarla no: la tarjeta no salta de lado mientras se escribe.
+    /// </param>
+    void PlaceIdeaCard(bool rechoose = true)
     {
         if (_ideaCard == null || _ideaTarget == null || !IsAlive(_ideaTarget)) return;
-        const double gap = 14, margin = 8;
+        const double margin = IdeaCardPlacement.Margin;
         double r = NumberRadius * _zoom.ScaleX;
         var anchor = _board.TranslatePoint(AutoNumberCenter(_ideaTarget), _ideaOverlay);
         _ideaCard.Measure(new Size(IdeaCardWidth, double.PositiveInfinity));
         double w = IdeaCardWidth, h = _ideaCard.DesiredSize.Height;
-        double viewW = _ideaOverlay.ActualWidth, viewH = _ideaOverlay.ActualHeight;
+        var view = new Rect(0, 0, _ideaOverlay.ActualWidth, _ideaOverlay.ActualHeight);
+        var size = new Size(w, h);
+        var marked = MarkedOnScreen(_ideaTarget, anchor, r);
 
-        double x = anchor.X + r + gap;
-        if (x + w > viewW - margin && anchor.X - r - gap - w >= margin) x = anchor.X - r - gap - w;
-        double y = anchor.Y - 18;
-        x = Math.Clamp(x + _ideaCardShift.X, margin, Math.Max(margin, viewW - w - margin));
-        y = Math.Clamp(y + _ideaCardShift.Y, margin, Math.Max(margin, viewH - h - margin));
+        if (_ideaCardSide < 0 || (rechoose && _ideaCardShift.Length == 0))
+            _ideaCardSide = IdeaCardPlacement.Choose(marked, anchor, size, view);
+        var p = IdeaCardPlacement.Position(_ideaCardSide, marked, anchor, size, view);
+        double x = Math.Clamp(p.X + _ideaCardShift.X, margin, Math.Max(margin, view.Width - w - margin));
+        double y = Math.Clamp(p.Y + _ideaCardShift.Y, margin, Math.Max(margin, view.Height - h - margin));
         Canvas.SetLeft(_ideaCard, x);
         Canvas.SetTop(_ideaCard, y);
 
@@ -168,6 +176,17 @@ sealed partial class EditorView
         _ideaLink.Visibility = Visibility.Visible;
     }
 
+    /// <summary>Lo marcado (el trazo o el texto, con su número) en coordenadas de la vista.</summary>
+    Rect MarkedOnScreen(object target, Point number, double r)
+    {
+        var bounds = target is Stroke s
+            ? s.GetBounds()
+            : new Rect(Canvas.GetLeft((TextBlock)target), Canvas.GetTop((TextBlock)target), ((TextBlock)target).ActualWidth, ((TextBlock)target).ActualHeight);
+        var marked = new Rect(_board.TranslatePoint(bounds.TopLeft, _ideaOverlay), _board.TranslatePoint(bounds.BottomRight, _ideaOverlay));
+        marked.Union(new Rect(number.X - r, number.Y - r, 2 * r, 2 * r));
+        return marked;
+    }
+
     void HookIdeaCardDrag(FrameworkElement header)
     {
         header.MouseLeftButtonDown += (s, e) =>
@@ -181,7 +200,7 @@ sealed partial class EditorView
         {
             if (_ideaDragFrom is not Point from) return;
             _ideaCardShift = _ideaShiftAtDrag + (e.GetPosition(_ideaOverlay) - from);
-            PlaceIdeaCard();
+            PlaceIdeaCard(rechoose: false);
         };
         header.MouseLeftButtonUp += (s, e) =>
         {
