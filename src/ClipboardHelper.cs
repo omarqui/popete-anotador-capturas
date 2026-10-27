@@ -3,7 +3,24 @@
 // ----------------------------------------------------------------------------
 static class ClipboardHelper
 {
-    public static BitmapSource TryGetImage()
+    // Formatos que delatan que la imagen se copió de un documento o una página y no es una
+    // captura: Recortes e Impr Pant publican solo la imagen. Excel, Word o PowerPoint suman
+    // texto, RTF, HTML, Csv, Biff u objetos OLE; los navegadores, el HTML con el <img> y la URL.
+    static readonly HashSet<string> CopyFormats = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Text", "UnicodeText", "OEMText", "Rich Text Format", "HTML Format", "text/html", "Csv",
+        "XML Spreadsheet", "Object Descriptor", "Link Source", "Link Source Descriptor", "Embed Source",
+        "Link", "Art::GVML ClipFormat", "Office Drawing Shape Format",
+        "UniformResourceLocator", "UniformResourceLocatorW", "text/x-moz-url",
+        "FileGroupDescriptor", "FileGroupDescriptorW", "FileDrop",
+    };
+
+    /// <summary>¿Lo que hay en el portapapeles se copió de un documento o el navegador, en vez de ser una captura?</summary>
+    static bool IsCopiedContent(System.Windows.Forms.IDataObject data) =>
+        data.GetFormats(false).Any(f => CopyFormats.Contains(f) || f.StartsWith("Biff", StringComparison.OrdinalIgnoreCase));
+
+    /// <param name="onlyScreenshots">Ignorar las imágenes copiadas de Excel, el navegador, etc. (detección automática).</param>
+    public static BitmapSource TryGetImage(bool onlyScreenshots = false)
     {
         // El portapapeles puede estar bloqueado por otra app: se reintenta.
         for (int intento = 0; intento < 5; intento++)
@@ -12,6 +29,7 @@ static class ClipboardHelper
             {
                 var data = System.Windows.Forms.Clipboard.GetDataObject();
                 if (data == null) return null;
+                if (onlyScreenshots && IsCopiedContent(data)) return null;
 
                 // 1) Formato PNG (Herramienta Recortes lo publica; conserva transparencia).
                 //    Hay programas que publican "PNG" con datos que no son un PNG válido:

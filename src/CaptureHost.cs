@@ -121,7 +121,9 @@ sealed class CaptureHost : IDisposable
 
     void TryOpenFromClipboard()
     {
-        var img = ClipboardHelper.TryGetImage();
+        // Las imágenes copiadas de Excel, el navegador, etc. no son capturas: no abren el editor
+        // (sí desde la bandeja, con "Abrir imagen del portapapeles").
+        var img = ClipboardHelper.TryGetImage(onlyScreenshots: true);
         if (img == null) return;
 
         // Solo se abren imágenes nunca vistas. Algunos programas (Escritorio
