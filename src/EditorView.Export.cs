@@ -71,6 +71,23 @@ sealed partial class EditorView
     {
         CommitText();
         if (_cropMode) ConfirmCrop(); // copiar con el marco ajustado: se aplica primero
+
+        // Con ideas: la ruta de anotada.png y el texto, solo texto (imagen y texto juntos no
+        // sirven: los destinos pegan solo la imagen). Antes se guarda, para que la imagen esté al día.
+        var ideas = IdeasList();
+        if (ideas.Length > 0)
+        {
+            SaveSession();
+            if (!ClipboardHelper.SetText(Ideas.ForAi(_session.PreviewPath, AppSettings.Current.EncabezadoIdeas, ideas)))
+            {
+                _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
+                return false;
+            }
+            _status.Text = "✓ Ruta de la imagen y sus ideas copiadas (pégalas en Claude Code)";
+            FlashCopied();
+            return true;
+        }
+
         var png = new MemoryStream();
         var enc = new PngBitmapEncoder();
         enc.Frames.Add(BitmapFrame.Create(Render()));

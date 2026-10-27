@@ -384,7 +384,16 @@ sealed class QuickHistoryWindow : Window
         _releaseWatch.Stop();
         var s = _sessions[_index];
         bool copied;
-        try { copied = ClipboardHelper.SetPng(File.ReadAllBytes(File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath), s); }
+        try
+        {
+            // Con ideas, como al copiar en el editor: la ruta de la imagen y el texto (Ideas.ForAi)
+            var forAi = File.Exists(s.IdeasPath) && File.Exists(s.PreviewPath)
+                ? Ideas.ForAi(s.PreviewPath, AppSettings.Current.EncabezadoIdeas, File.ReadAllText(s.IdeasPath).Trim())
+                : null;
+            copied = forAi != null
+                ? ClipboardHelper.SetText(forAi)
+                : ClipboardHelper.SetPng(File.ReadAllBytes(File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath), s);
+        }
         catch (Exception) { copied = false; } // archivo borrado o dañado
         Close();
         if (copied) PasteInto(_target);

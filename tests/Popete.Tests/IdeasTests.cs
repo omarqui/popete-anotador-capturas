@@ -49,6 +49,19 @@ public class IdeasTests
         => Assert.Equal(2, Ideas.GhostNumber(new[] { new NumberCandidate(1, true), new NumberCandidate(2, true) }, 1));
 
     [Fact]
+    public void ForAi_ruta_y_texto()
+        => Assert.Equal("C:\\h\\anotada.png\r\n\r\nEn la imagen, cada número marca un punto:\r\n\r\n1. a",
+            Ideas.ForAi(@"C:\h\anotada.png", Ideas.DefaultHeader, "1. a"));
+
+    [Fact]
+    public void ForAi_ruta_con_espacios_va_entre_comillas()
+        => Assert.Equal("\"C:\\Mis capturas\\anotada.png\"\r\n\r\n1. a", Ideas.ForAi(@"C:\Mis capturas\anotada.png", "", "1. a"));
+
+    [Fact]
+    public void ForAi_sin_ideas_es_null()
+        => Assert.Null(Ideas.ForAi(@"C:\h\anotada.png", Ideas.DefaultHeader, ""));
+
+    [Fact]
     public void WithHeader_casos()
     {
         Assert.Null(Ideas.WithHeader(Ideas.DefaultHeader, ""));

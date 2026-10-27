@@ -77,7 +77,8 @@ El usuario pega y cuenta qué llega (imagen, texto o las dos).
 
 ### Copiar
 
-- Si la captura tiene al menos una idea, todo lo que copia la captura pone en el portapapeles el PNG **y además** el texto: «Copiar y cerrar», «Copiar», Ctrl+C, Ctrl+Enter, el clic derecho y el historial rápido (Alt+`). Si no tiene ideas, el portapapeles queda **exactamente** como hoy.
+- **Cambio tras el paso 0 (2026-10-26, decisión del usuario):** con PNG y texto juntos en el portapapeles, los destinos solo pegaron la imagen. Por eso, si la captura tiene al menos una idea, todo lo que copia la captura («Copiar y cerrar», «Copiar», Ctrl+C, Ctrl+Enter, el clic derecho y el historial rápido Alt+`) pone **solo texto**: la ruta de `anotada.png`, una línea en blanco y el texto de abajo. Se pega una vez en Claude Code, que abre la imagen por su ruta. El usuario aceptó la consecuencia: en esas capturas, Paint, Word o un chat web reciben texto y no la imagen (para un chat web: abrir la imagen o usar «Copiar texto» aparte). Si no tiene ideas, el portapapeles queda **exactamente** como hoy (solo la imagen). Antes de copiar la ruta se guarda la sesión, así `anotada.png` está al día. La ruta va entre comillas si tiene espacios. *(Esto último es decisión del agente.)*
+- *(Lo de abajo sigue valiendo para el texto que va después de la ruta.)*
 - **Texto:** encabezado, línea en blanco y la lista con el número real de cada idea (puede saltear números con la numeración prendida), solo los números con idea, en orden. Si una idea tiene varias líneas, las siguientes van con sangría. Ejemplo:
 
   ```
@@ -91,11 +92,11 @@ El usuario pega y cuenta qué llega (imagen, texto o las dos).
 - **Encabezado configurable** en Ajustes (cuadro de texto). De fábrica: «En la imagen, cada número marca un punto:». Vacío = solo la lista, sin línea en blanco. *(El texto de fábrica es decisión del agente.)*
 - Copiar con el campo abierto lo guarda antes de exportar.
 - Con la numeración apagada, los números de las ideas **sí** salen en la imagen exportada (sin ellos la lista no se entiende). La marca y el fantasma, no. «Guardar como» (Ctrl+S) guarda solo la imagen, como hoy. *(Decisiones del agente.)*
-- La huella se sigue registrando antes de tocar el portapapeles (nota 4). La copia con texto, además, cae en el filtro de la nota 47 (`CopyFormats`), así que la detección tampoco la tomaría por una captura nueva.
+- Sin ideas, la huella se sigue registrando antes de tocar el portapapeles (nota 4). Con ideas no va ninguna imagen al portapapeles, así que la detección no tiene nada que abrir.
 
 ### Historial rápido (Alt+`)
 
-Pega imagen y texto con la misma regla, sin abrir el editor. Para eso, cada guardado de la sesión escribe la lista (sin el encabezado, que se agrega al copiar con el valor actual del ajuste) en un archivo de texto de la carpeta de la captura, por ejemplo `ideas.txt`, con escritura atómica como el resto. Sin ideas, el archivo no existe (o se borra). *(Decisión del agente: también deja las ideas legibles para Claude Code u otra herramienta que lea la carpeta.)*
+Pega con la misma regla (ruta + texto si hay ideas; si no, la imagen), sin abrir el editor. Para eso, cada guardado de la sesión escribe la lista (sin el encabezado, que se agrega al copiar con el valor actual del ajuste) en un archivo de texto de la carpeta de la captura, por ejemplo `ideas.txt`, con escritura atómica como el resto. Sin ideas, el archivo no existe (o se borra). *(Decisión del agente: también deja las ideas legibles para Claude Code u otra herramienta que lea la carpeta.)*
 
 ## Persistencia y deshacer
 

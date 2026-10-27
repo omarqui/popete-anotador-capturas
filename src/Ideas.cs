@@ -58,6 +58,20 @@ static class Ideas
         return string.Join(NewLine, lines);
     }
 
+    /// <summary>
+    /// Lo que copia una captura con ideas: la ruta de su imagen anotada (entre comillas si tiene
+    /// espacios), una línea en blanco y el texto. Imagen y texto juntos en el portapapeles no
+    /// sirven (los destinos solo pegan la imagen); Claude Code abre la imagen por su ruta.
+    /// null si no hay ideas.
+    /// </summary>
+    public static string ForAi(string imagePath, string header, string list)
+    {
+        var text = WithHeader(header, list);
+        if (text == null) return null;
+        var path = imagePath.Contains(' ') ? $"\"{imagePath}\"" : imagePath;
+        return path + NewLine + NewLine + text;
+    }
+
     /// <summary>El texto que se copia: encabezado, línea en blanco y la lista. null si no hay ideas.</summary>
     public static string WithHeader(string header, string list)
     {

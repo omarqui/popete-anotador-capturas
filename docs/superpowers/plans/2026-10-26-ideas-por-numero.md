@@ -232,30 +232,27 @@ Solo condiciona la tarea 6. Las tareas 1–5 pueden avanzar mientras tanto.
 
 ---
 
-### Task 6: Pegado conjunto en Copiar y en Alt+` (solo si la tarea 0 salió bien)
+### Task 6: Con ideas, copiar la ruta de la imagen y el texto (rehecha tras la tarea 0)
+
+La tarea original (PNG + texto juntos) se descartó: en la tarea 0 solo llegó la imagen. Decisión del usuario: con ideas, copiar **solo texto** con la ruta de `anotada.png` y las ideas (ver «Copiar» en el spec).
 
 **Files:**
-- Modify: `src/ClipboardHelper.cs` (`SetPng`), `src/EditorView.Export.cs` (`CopyToClipboard`), `src/QuickHistoryWindow.cs` (`PasteSelected`)
+- Modify: `src/Ideas.cs`, `tests/Popete.Tests/IdeasTests.cs`, `src/EditorView.Export.cs` (`CopyToClipboard`), `src/QuickHistoryWindow.cs` (`PasteSelected`), `AGENTS.md`
 
 **Interfaces:**
-- Consumes: `IdeasText()` (tarea 5), `Session.IdeasPath` (tarea 2), `Ideas.WithHeader`, `TrySet` (tarea 5).
-- Produces: `static bool ClipboardHelper.SetPng(byte[] png, Session session, string text = null)`. Con `text` null, arma el mismo `DataObject` que hoy; si no, además `data.SetData(DataFormats.UnicodeText, text)`.
+- Consumes: `IdeasList()` (tarea 2), `Session.IdeasPath`/`PreviewPath`, `Ideas.WithHeader`, `ClipboardHelper.SetText` (tarea 5).
+- Produces: `static string Ideas.ForAi(string imagePath, string header, string list)`: null si `list` está vacía; si no, la ruta (entre comillas si tiene espacios), `"\r\n\r\n"` y `WithHeader(header, list)`.
 
-- [ ] **Step 1: `SetPng` con texto,** como arriba. La huella se sigue registrando primero.
-- [ ] **Step 2: Editor.** `CopyToClipboard` pasa `IdeasText()`, que es null sin ideas. Así lo usan Ctrl+C, Ctrl+Enter, el clic derecho y el botón.
-- [ ] **Step 3: Historial rápido.** `PasteSelected` lee `s.IdeasPath` si existe (`try`, como la imagen) y pasa `Ideas.WithHeader(AppSettings.Current.EncabezadoIdeas, contenido)`.
-- [ ] **Step 4: Verificar.** `dotnet build src`. A mano:
-  - Una captura con ideas → Ctrl+C → pegar en claude.ai: llegan la imagen y el texto.
-  - Una sin ideas → Ctrl+C → pegar en Word y en Paint: la imagen, como hoy.
-  - Alt+` sobre la de las ideas, soltar en claude.ai → las dos cosas.
-  - Después de copiar, Popete no abre un editor nuevo.
-- [ ] **Step 5: Commit y documentación.** Mensaje: `Ideas: copiar y Alt+\` llevan el texto junto a la imagen`. En AGENTS.md:
-  - una nota en «Decisiones»: texto en el portapapeles solo si hay ideas, y por qué;
-  - la prueba manual **21** (o la que siga) con el recorrido completo de las tareas 2 a 6;
-  - en «Estado actual», las ideas como pendiente de probar a mano.
+- [ ] **Step 1: Tests que fallan:** `ForAi_ruta_y_texto` (`ForAi(@"C:\h\anotada.png", DefaultHeader, "1. a")` == `"C:\h\anotada.png\r\n\r\nEn la imagen, cada número marca un punto:\r\n\r\n1. a"`), `ForAi_ruta_con_espacios_va_entre_comillas`, `ForAi_sin_ideas_es_null`.
+- [ ] **Step 2: Correr `dotnet test tests/Popete.Tests`.** Esperado: falla de compilación, `ForAi` no existe.
+- [ ] **Step 3: Implementar `Ideas.ForAi`.** Correr los tests: pasan.
+- [ ] **Step 4: Editor.** `CopyToClipboard`: si `IdeasList()` no está vacía, `SaveSession()` primero (que `anotada.png` esté al día) y después `ClipboardHelper.SetText(Ideas.ForAi(_session.PreviewPath, AppSettings.Current.EncabezadoIdeas, lista))`, con aviso propio en `_status`; si no, el camino de hoy sin cambios.
+- [ ] **Step 5: Historial rápido.** `PasteSelected`: si existen `s.IdeasPath` y `s.PreviewPath`, `SetText(Ideas.ForAi(...))` con el contenido de `ideas.txt`; si no, `SetPng` como hoy.
+- [ ] **Step 6: Verificar.** `dotnet build src`. A mano: con ideas, Ctrl+C → pegar en Claude Code → la ruta y el texto, y Claude abre la imagen. Sin ideas, Ctrl+C → Paint → la imagen, como hoy. Alt+` sobre una con ideas → pega ruta + texto.
+- [ ] **Step 7: Commit y documentación.** Mensaje: `Ideas: con ideas, copiar la ruta de la imagen y el texto`. En AGENTS.md: nota 49 (por qué ruta + texto y no imagen + texto), prueba manual 21 con el recorrido de las tareas 2 a 6, y las ideas en «Estado actual» como pendiente de probar a mano.
 
 ---
 
 ## Resultado de la tarea 0
 
-(Lo completa la tarea 0: destino → qué llegó.)
+2026-10-26: con PNG + texto en el portapapeles, el usuario reporta que «solo se pega la imagen». Propuso copiar la ruta de la imagen y su texto; eligió hacerlo en cada Ctrl+C de una captura con ideas (tarea 6 rehecha).
