@@ -9,6 +9,7 @@ App de bandeja para Windows. Detecta capturas de pantalla mediante el portapapel
 ```powershell
 dotnet run --project src       # compilar y ejecutar
 dotnet build src               # solo compilar (úsalo para verificar cambios)
+dotnet test tests/Popete.Tests # tests de la lógica pura (Ideas.cs)
 dotnet publish src             # generar .exe
 powershell -File tools\empaquetar-msix.ps1   # paquete MSIX (ver README)
 # Store desde CI: .github/workflows/publicar-store.yml (tag vX.Y.Z → X.Y.Z.0 y Release; sin credenciales saltea la Store)
@@ -62,6 +63,7 @@ Solo compila y corre en **Windows** (`net10.0-windows10.0.19041.0`, WPF y WinFor
 | `EditorView.Export.cs` | `EditorView` | `ExportBounds` (captura + lo que salga al margen) y `Render` (fondo blanco si crece, captura original sin redondear, anotaciones encima); copiar al portapapeles con parpadeo, guardar como. `CopyAndMaybeClose` (Ctrl+C, clic derecho y el botón) sale tras el parpadeo (`Dismiss`) si `AppSettings.CerrarAlCopiar`; si no, `MarkTouched`. Ctrl+Enter copia y sale siempre. |
 | `Theme.cs` | `Theme` | Tema claro/oscuro: pinceles en `Application.Resources` con claves fijas (`Fondo`, `Superficie`, `Borde`, `Texto`, `Acento`, `Lienzo`...) y estilos de botón en XAML (`XamlReader.Parse`). `Toggle()` alterna claro/oscuro; mientras el ajuste sea `Sistema` (nunca tocado) sigue al tema de Windows (`AppsUseLightTheme` + `SystemEvents.UserPreferenceChanged`). Barra de título oscura con `DwmSetWindowAttribute`. `BarraTitulo` es el fondo de la barra propia de `EditorShell` (la pestaña elegida usa `Fondo`); `CerrarVentana`/`TextoSobreCerrar`, el rojo de cerrar. |
 | `AppSettings.cs` | `AppSettings`, `ModoTema` | `%LOCALAPPDATA%\Popete\ajustes.json`: tema, `MaxCapturas` (50 por defecto, 0 = sin límite), `UltimaHerramienta`, `BarraHerramientas` (null = de fábrica), `CerrarAlCopiar` (true), `AtajoHistorial` (`Hotkey`; null = sin atajo; si falta en el archivo, Alt+`) y demás preferencias. |
+| `Ideas.cs` | `Ideas`, `NumberCandidate` | Ideas por número, la parte sin WPF (con tests en `tests\Popete.Tests`): `Assign` (qué número lleva cada elemento: todos por orden o, con la numeración apagada, solo los que tienen idea, seguidos), `GhostNumber`, `List` («1. idea» con sangría en las líneas siguientes) y `WithHeader` (encabezado de Ajustes + lista; null sin ideas). |
 | `Undo.cs` | `IUndo` y sus implementaciones | Pila de deshacer: `StrokeChange`, `AttributeChange`, `ElementAdd`, `ElementRemove`, `TextEdit`, `ActionChange`, `CompositeChange` (varios en un paso), `ClearAllChange`. |
 | `UpdateChecker.cs` | `UpdateChecker` | Aviso de versión nueva, solo en el MSIX: `StoreContext.GetAppAndOptionalStorePackageUpdatesAsync` a los 30 s y cada 6 h. Si hay, globo en la bandeja (una vez por sesión) y "Actualizar Popete" arriba en el menú (`Available`). Instalar: cierra la ventana del editor (`EditorShell.CloseWindow`: guarda, y las pestañas vuelven después), `RegisterApplicationRestart` y `TrySilentDownloadAndInstallStorePackageUpdatesAsync`; si no se puede en silencio o falla, abre `ms-windows-store://pdp/?PFN=…`. Los errores al consultar se ignoran (sin red o paquete de prueba). Lo crea `CaptureHost.CreateTray`. |
 | `StartupHelper.cs` | `StartupHelper` | Inicio con Windows: clave `HKCU\...\Run` como .exe; en el MSIX, la API `StartupTask` (TaskId `PopeteInicio`, declarado en el manifiesto). `Set` devuelve el estado real (el usuario puede bloquearlo en Configuración). |
@@ -132,7 +134,7 @@ Solo compila y corre en **Windows** (`net10.0-windows10.0.19041.0`, WPF y WinFor
 - Diseño: estilo Windows 11 (propuesta A del canvas https://claude.ai/artifact/HmK39unoWaSLtBNUotKNYs). Íconos de trazo, sin emoji.
 - Hilo único: todo corre en el dispatcher de WPF, incluidos los eventos del `NotifyIcon`. No hay concurrencia.
 
-## Prueba manual (no hay tests automatizados)
+## Prueba manual (los tests automatizados solo cubren `Ideas.cs`)
 
 1. `dotnet run --project src` → aparece el ícono y el aviso en la bandeja.
 2. Win+Shift+S → se abre el editor. Impr Pant → se abre el editor.
