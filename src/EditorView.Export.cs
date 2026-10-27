@@ -72,17 +72,17 @@ sealed partial class EditorView
         CommitText();
         if (_cropMode) ConfirmCrop(); // copiar con el marco ajustado: se aplica primero
 
-        // Con ideas: las rutas de anotada.png y de ideas.txt, solo texto (Ideas.ForAi). Antes se
-        // guarda, para que la imagen y las ideas estén al día.
-        if (IdeasList().Length > 0)
+        // Con ideas, según el ajuste: la imagen y el texto, o solo las rutas (Ideas.ForCopy)
+        var (image, text) = Ideas.ForCopy(AppSettings.Current.CopiarIdeas, _session.PreviewPath, _session.IdeasPath, IdeasText());
+        if (!image)
         {
-            SaveSession();
-            if (!ClipboardHelper.SetText(Ideas.ForAi(_session.PreviewPath, _session.IdeasPath)))
+            SaveSession(); // las rutas apuntan a anotada.png e ideas.txt: que estén al día
+            if (!ClipboardHelper.SetText(text))
             {
                 _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
                 return false;
             }
-            _status.Text = "✓ Ruta de la imagen y sus ideas copiadas (pégalas en Claude Code)";
+            _status.Text = "✓ Rutas de la imagen y de sus ideas copiadas (pégalas en Claude Code)";
             FlashCopied();
             return true;
         }
@@ -92,12 +92,14 @@ sealed partial class EditorView
         enc.Frames.Add(BitmapFrame.Create(Render()));
         enc.Save(png);
 
-        if (!ClipboardHelper.SetPng(png.ToArray(), _session))
+        if (!ClipboardHelper.SetPng(png.ToArray(), _session, text))
         {
             _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
             return false;
         }
-        _status.Text = "✓ Imagen anotada copiada al portapapeles";
+        _status.Text = text != null
+            ? "✓ Imagen e ideas copiadas (en Claude Code: Ctrl+V pega las ideas y Alt+V la imagen)"
+            : "✓ Imagen anotada copiada al portapapeles";
         FlashCopied();
         if (_pendingSave) SaveSession();
         return true;

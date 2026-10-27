@@ -43,6 +43,9 @@ sealed class SettingsWindow : Window
             s.NumerarPorDefecto, v => Save(() => s.NumerarPorDefecto = v),
             "Apagado, solo se numera lo que tiene idea. Cada captura puede cambiarlo con el botón «123» de la barra.");
         IdeasHeaderRow();
+        Choice("Copiar una captura con ideas", new[] { ("Imagen y texto", CopiaIdeas.ImagenYTexto), ("Rutas", CopiaIdeas.Rutas) },
+            s.CopiarIdeas, v => Save(() => s.CopiarIdeas = v),
+            "Imagen y texto: en Claude Code, Ctrl+V pega las ideas y Alt+V la imagen. Rutas: la de la imagen y la de sus ideas en una línea; Claude Code adjunta la imagen con un solo Ctrl+V.");
         Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
             s.RotarColores, v => Save(() => s.RotarColores = v),
             "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");

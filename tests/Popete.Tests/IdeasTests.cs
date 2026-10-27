@@ -58,6 +58,21 @@ public class IdeasTests
             Ideas.ForAi(@"C:\Mis capturas\anotada.png", @"C:\Mis capturas\ideas.txt"));
 
     [Fact]
+    public void ForCopy_imagen_y_texto_lleva_la_imagen_y_las_ideas()
+        => Assert.Equal((true, "1. a"), Ideas.ForCopy(CopiaIdeas.ImagenYTexto, @"C:\h\anotada.png", @"C:\h\ideas.txt", "1. a"));
+
+    [Fact]
+    public void ForCopy_rutas_lleva_solo_las_dos_rutas()
+        => Assert.Equal((false, @"C:\h\anotada.png C:\h\ideas.txt"), Ideas.ForCopy(CopiaIdeas.Rutas, @"C:\h\anotada.png", @"C:\h\ideas.txt", "1. a"));
+
+    [Fact]
+    public void ForCopy_sin_ideas_es_solo_la_imagen_en_los_dos_modos()
+    {
+        Assert.Equal((true, (string)null), Ideas.ForCopy(CopiaIdeas.ImagenYTexto, @"C:\h\anotada.png", @"C:\h\ideas.txt", null));
+        Assert.Equal((true, (string)null), Ideas.ForCopy(CopiaIdeas.Rutas, @"C:\h\anotada.png", @"C:\h\ideas.txt", null));
+    }
+
+    [Fact]
     public void WithHeader_casos()
     {
         Assert.Null(Ideas.WithHeader(Ideas.DefaultHeader, ""));

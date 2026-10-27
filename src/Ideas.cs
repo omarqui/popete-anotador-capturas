@@ -59,11 +59,22 @@ static class Ideas
     }
 
     /// <summary>
-    /// Lo que copia una captura con ideas: la ruta de su imagen anotada y la de ideas.txt (encabezado
-    /// y lista), en una sola línea y entre comillas si tienen espacios. Claude Code adjunta como imagen
-    /// una ruta pegada solo si cada tramo de la línea es una ruta: con texto al lado la deja como texto,
-    /// y la terminal pega los saltos de línea como CR, así que la ruta tampoco puede ir en su propia
-    /// línea. Imagen y texto juntos en el portapapeles tampoco sirven (los destinos pegan solo la imagen).
+    /// Qué pone en el portapapeles una captura: si va la imagen y qué texto la acompaña (null = ninguno).
+    /// Sin ideas (<paramref name="ideasText"/> null), solo la imagen. Con ideas, según el ajuste: la
+    /// imagen y el texto juntos (en Claude Code, Ctrl+V pega el texto y Alt+V adjunta la imagen; los
+    /// demás destinos pegan uno de los dos) o solo las dos rutas (<see cref="ForAi"/>).
+    /// </summary>
+    public static (bool image, string text) ForCopy(CopiaIdeas mode, string imagePath, string ideasPath, string ideasText)
+    {
+        if (ideasText == null) return (true, null);
+        return mode == CopiaIdeas.Rutas ? (false, ForAi(imagePath, ideasPath)) : (true, ideasText);
+    }
+
+    /// <summary>
+    /// La copia en modo Rutas: la ruta de la imagen anotada y la de ideas.txt (encabezado y lista), en
+    /// una sola línea y entre comillas si tienen espacios. Claude Code adjunta como imagen una ruta
+    /// pegada solo si cada tramo de la línea es una ruta: con texto al lado la deja como texto, y la
+    /// terminal pega los saltos de línea como CR, así que la ruta tampoco puede ir en su propia línea.
     /// </summary>
     public static string ForAi(string imagePath, string ideasPath)
     {

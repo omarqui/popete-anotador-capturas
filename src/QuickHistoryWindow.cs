@@ -386,13 +386,12 @@ sealed class QuickHistoryWindow : Window
         bool copied;
         try
         {
-            // Con ideas, como al copiar en el editor: las rutas de la imagen y de ideas.txt (Ideas.ForAi)
-            var forAi = File.Exists(s.IdeasPath) && File.Exists(s.PreviewPath)
-                ? Ideas.ForAi(s.PreviewPath, s.IdeasPath)
-                : null;
-            copied = forAi != null
-                ? ClipboardHelper.SetText(forAi)
-                : ClipboardHelper.SetPng(File.ReadAllBytes(File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath), s);
+            // Con ideas, como al copiar en el editor (Ideas.ForCopy): las de ideas.txt, del último guardado
+            var ideas = File.Exists(s.IdeasPath) && File.Exists(s.PreviewPath) ? File.ReadAllText(s.IdeasPath).Trim() : "";
+            var (image, text) = Ideas.ForCopy(AppSettings.Current.CopiarIdeas, s.PreviewPath, s.IdeasPath, ideas.Length > 0 ? ideas : null);
+            copied = image
+                ? ClipboardHelper.SetPng(File.ReadAllBytes(File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath), s, text)
+                : ClipboardHelper.SetText(text);
         }
         catch (Exception) { copied = false; } // archivo borrado o dañado
         Close();

@@ -3,6 +3,15 @@
 // ----------------------------------------------------------------------------
 enum ModoTema { Sistema, Claro, Oscuro }
 
+/// <summary>Qué copia una captura con ideas (nota 49).</summary>
+enum CopiaIdeas
+{
+    /// <summary>La imagen y el texto de las ideas juntos: en Claude Code, Ctrl+V pega el texto y Alt+V adjunta la imagen.</summary>
+    ImagenYTexto,
+    /// <summary>Una línea con las rutas de anotada.png y de ideas.txt: Claude Code adjunta la imagen con un solo Ctrl+V.</summary>
+    Rutas,
+}
+
 sealed class AppSettings
 {
     /// <summary>Tema de la interfaz. "Sistema" sigue al de Windows.</summary>
@@ -21,6 +30,9 @@ sealed class AppSettings
 
     /// <summary>Va antes de la lista de ideas al copiar (Ideas.WithHeader). Vacío: solo la lista.</summary>
     public string EncabezadoIdeas { get; set; } = Ideas.DefaultHeader;
+
+    /// <summary>Qué copia una captura con ideas (Ideas.ForCopy). Sin ideas se copia siempre la imagen.</summary>
+    public CopiaIdeas CopiarIdeas { get; set; } = CopiaIdeas.ImagenYTexto;
 
     /// <summary>Si los textos nuevos salen como etiqueta (fondo de color). Lo cambia el botón de la barra.</summary>
     public bool TextoConFondo { get; set; } = true;
