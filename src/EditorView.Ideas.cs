@@ -53,6 +53,7 @@ sealed partial class EditorView
     Canvas _ideaMarks;   // marcas de "este número tiene idea"; no reciben clics
     TextBox _ideaBox;    // el campo abierto, o null
     object _ideaTarget;  // su trazo o texto
+    bool _ideaPristine;  // se abrió vacío y no se escribió nada: los atajos siguen al editor (IdeaKeys)
 
     Canvas BuildIdeaLayer()
     {
@@ -102,6 +103,8 @@ sealed partial class EditorView
         _ideaBox.SetResourceReference(ForegroundProperty, "Texto");
         _ideaBox.SetResourceReference(BorderBrushProperty, "Acento");
         _ideaBox.CaretIndex = _ideaBox.Text.Length;
+        _ideaPristine = _ideaBox.Text.Length == 0;
+        _ideaBox.TextChanged += (s, e) => _ideaPristine = false;
 
         // A la derecha del número, sin taparlo
         var c = AutoNumberCenter(target);
@@ -141,29 +144,28 @@ sealed partial class EditorView
         PushUndo(new ActionChange(() => SetIdeaRaw(target, before), () => SetIdeaRaw(target, after)));
     }
 
-    /// <summary>
-    /// Teclas con el campo abierto (OnKeyDown la consulta primero): true = son del campo.
-    /// Enter guarda, Esc cierra guardando. Con el campo vacío, los atajos sin letra (Tab, Supr,
-    /// flechas, Ctrl+…, Alt) lo cierran y siguen al editor; las letras y los dígitos escriben.
-    /// </summary>
+    /// <summary>Teclas con el campo abierto (OnKeyDown la consulta primero): true = son del campo. Ver IdeaKeys.</summary>
     bool IdeaKey(KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        var mods = Keyboard.Modifiers;
-        if ((key == Key.Enter && mods == ModifierKeys.None) || key == Key.Escape)
+        switch (IdeaKeys.Decide(key, Keyboard.Modifiers, _ideaPristine))
         {
-            CommitIdea();
-            e.Handled = true;
-            return true;
+            case IdeaKeyResult.Save:
+                CommitIdea();
+                e.Handled = true;
+                return true;
+            case IdeaKeyResult.Escape:
+                // Como el Esc del editor después de un trazo: suelta lo seleccionado, sin cerrar la pestaña
+                CommitIdea();
+                ClearSelection();
+                e.Handled = true;
+                return true;
+            case IdeaKeyResult.PassToEditor:
+                CommitIdea();
+                return false;
+            default:
+                return true;
         }
-        bool shortcut = key is Key.Tab or Key.Delete or Key.Back or Key.Left or Key.Right or Key.Up or Key.Down
-            || mods.HasFlag(ModifierKeys.Control) || mods.HasFlag(ModifierKeys.Alt);
-        if (_ideaBox.Text.Length == 0 && shortcut)
-        {
-            CommitIdea();
-            return false;
-        }
-        return true;
     }
 
     // ------------------------------------------------------------------ lista en la barra de estado

@@ -40,6 +40,9 @@ sealed partial class EditorView
     /// </summary>
     BitmapSource Render()
     {
+        // Los números se rehacen en cada cambio (RefreshNumbers): si recién se guardó una idea o
+        // un texto, sus círculos nuevos todavía no tienen layout y el VisualBrush no los dibujaría
+        _surface.UpdateLayout();
         var b = ExportBounds();
         int w = (int)b.Width, h = (int)b.Height;
         bool expanded = w != _image.PixelWidth || h != _image.PixelHeight;
