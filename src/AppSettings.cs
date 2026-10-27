@@ -37,6 +37,12 @@ sealed class AppSettings
     /// <summary>Preguntarle a la Store por una versión nueva al rato de arrancar y cada 6 horas (solo en el MSIX).</summary>
     public bool BuscarActualizaciones { get; set; } = true;
 
+    /// <summary>
+    /// La última versión («1.2.0») cuyas novedades se mostraron, o la instalada si no hacía falta
+    /// mostrarlas (WhatsNewWindow). null = Popete 1.1.3 o anterior, o una instalación nueva.
+    /// </summary>
+    public string UltimaVersionVista { get; set; }
+
     /// <summary>Atajo global del historial rápido (QuickHistoryWindow). null = sin atajo.</summary>
     public Hotkey AtajoHistorial { get; set; } = Hotkey.Default;
 
@@ -69,11 +75,15 @@ sealed class AppSettings
     static AppSettings _current;
     public static AppSettings Current => _current ??= Load();
 
+    /// <summary>Si al arrancar ya había ajustes.json: quien ya usaba Popete, no una instalación nueva.</summary>
+    public static bool HadFile { get; private set; }
+
     static AppSettings Load()
     {
         try
         {
-            if (File.Exists(FilePath))
+            HadFile = File.Exists(FilePath);
+            if (HadFile)
                 return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(FilePath), Options) ?? new AppSettings();
         }
         catch { /* archivo dañado: se usan los valores por defecto */ }

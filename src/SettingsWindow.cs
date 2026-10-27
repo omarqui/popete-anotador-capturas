@@ -300,7 +300,7 @@ sealed class SettingsWindow : Window
             Process.Start("explorer.exe", $"\"{AppInfo.DataRoot}\"");
         }, Icons.Folder));
 
-        // Acciones: copiar los datos para reportar un problema y, en el MSIX, la página de la Store
+        // Acciones: copiar los datos para reportar un problema y ver las novedades (WhatsNewWindow)
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
         Button copy = null;
         copy = Ui.Btn("Copiar información", "Versión y sistema, para reportar un problema", () =>
@@ -309,6 +309,7 @@ sealed class SettingsWindow : Window
             copy.Content = Ui.Label(ClipboardHelper.SetText(text) ? "Copiada" : "No se pudo copiar", Icons.Check);
         }, Icons.Copy);
         actions.Children.Add(copy);
+        actions.Children.Add(Ui.Btn("Novedades", "Lo nuevo de esta versión", () => WhatsNewWindow.Show(this), Icons.Info));
         _body.Children.Add(actions);
 
         var copyright = new TextBlock { Text = $"© {DateTime.Now.Year} {AppInfo.Author}", FontSize = 12, Margin = new Thickness(0, 20, 0, 0) };

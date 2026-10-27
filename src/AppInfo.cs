@@ -23,15 +23,22 @@ static class AppInfo
     {
         get
         {
-            if (IsPackaged)
-            {
-                var v = Windows.ApplicationModel.Package.Current.Id.Version;
-                return $"{v.Major}.{v.Minor}.{v.Build}";
-            }
+            if (IsPackaged) return PackageVersion;
             var info = System.Reflection.CustomAttributeExtensions
                 .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(AppInfo).Assembly)?.InformationalVersion ?? "";
             int plus = info.IndexOf('+');
             return plus >= 0 && info.Length > plus + 7 ? $"desarrollo (commit {info.Substring(plus + 1, 7)})" : "desarrollo";
+        }
+    }
+
+    /// <summary>«1.1.3»: la versión del paquete sin el último número (siempre 0); null sin paquete.</summary>
+    public static string PackageVersion
+    {
+        get
+        {
+            if (!IsPackaged) return null;
+            var v = Windows.ApplicationModel.Package.Current.Id.Version;
+            return $"{v.Major}.{v.Minor}.{v.Build}";
         }
     }
 

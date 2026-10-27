@@ -18,28 +18,28 @@ Abre el overview en una pestaña nueva (`tabs_context_mcp` primero).
 
 **View product details** → Packages muestra la versión en vivo. Compárala con el último tag `vX.Y.Z` (`git tag --list "v*"`). Si no coinciden, aclara con el usuario cuál fue la última enviada antes de seguir.
 
-## 2. Paquete
+## 2. Novedades (antes del paquete)
+
+Van en `novedades.txt`, en la raíz del repo: Popete las muestra después de actualizar (las pide a la Store y, si no responde, usa esa copia, embebida en el `.exe`), así que se escriben y se **commitean antes** de armar el paquete. Redáctalas a partir de los commits desde el último tag (`git log vX.Y.Z..HEAD`, o el README si hace falta más detalle): para usuarios, en español con tuteo, viñetas «•», sin nombres de clases ni detalles internos.
+
+- La versión nueva, completa: «Novedades de la versión X.Y.Z:» y sus viñetas. Esa primera línea es obligatoria: el script falla si no dice la versión que arma, y Popete la usa para saber si las de la Store son de la versión instalada.
+- Las anteriores, **compactadas en una línea cada una** («Versión 1.1: …»), como pidió el usuario (2026-10-25).
+- Máximo **1500 caracteres** (el script lo comprueba). Si no entra, compacta más o quita las más viejas.
+
+Muéstrale el texto al usuario antes de commitearlo. Guardarlo en el borrador no publica nada; lo vuelve a ver en la confirmación del paso 6.
+
+## 3. Paquete
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\preparar-store.ps1
 ```
 
-Calcula la versión (sube el tercer número del último tag; con `-Version 1.2.0.0`, otra) y exige el árbol limpio. Genera `artifacts\msix\Popete_<versión>_x64.msix` sin firmar y guarda los commits desde el último tag en `Popete_<versión>_commits.txt`, en la misma carpeta. Al final abre el Explorador con el paquete marcado (`-NoAbrir` para que no). Tarda un par de minutos (`dotnet publish` self-contained). Imprime el commit del paquete: anótalo para el tag (paso 7).
-
-## 3. Novedades
-
-Redáctalas a partir de los commits (con `git log` o el README si hace falta más detalle): para usuarios, en español con tuteo, viñetas «•», sin nombres de clases ni detalles internos.
-
-- La versión nueva, completa: «Novedades de la versión X.Y.Z:» y sus viñetas.
-- Las anteriores, **compactadas en una línea cada una** («Versión 1.1: …»), como pidió el usuario (2026-10-25). Salen del texto que ya trae el borrador.
-- Máximo **1500 caracteres**. El número a la derecha del cuadro son los que quedan. Si no entra, compacta más o quita las más viejas.
-
-El usuario ve el texto en la confirmación del paso 6: guardarlo en el borrador no publica nada.
+Calcula la versión (sube el tercer número del último tag; con `-Version 1.2.0.0`, otra), exige el árbol limpio y que `novedades.txt` sea de esa versión. Genera `artifacts\msix\Popete_<versión>_x64.msix` sin firmar y guarda los commits desde el último tag en `Popete_<versión>_commits.txt`, en la misma carpeta. Al final imprime las novedades, las deja en el portapapeles y abre el Explorador con el paquete marcado (`-NoAbrir` para que no). Tarda un par de minutos (`dotnet publish` self-contained). Imprime el commit del paquete: anótalo para el tag (paso 7).
 
 ## 4. Borrador en Partner Center
 
 1. Overview → **Start update**: crea «Submission N» como copia de la anterior. Espera unos segundos a que carguen los estados.
-2. **Store listings** → **Spanish (Spain)** → cuadro **What's new in this version**: `form_input` con el texto completo → **Save** (al pie; vuelve al overview).
+2. **Store listings** → **Spanish (Spain)** → cuadro **What's new in this version**: `form_input` con el texto de `novedades.txt`, tal cual → **Save** (al pie; vuelve al overview).
 
 ## 5. Subir el paquete (lo arrastra el usuario)
 

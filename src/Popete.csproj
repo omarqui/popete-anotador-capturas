@@ -24,6 +24,8 @@
   <ItemGroup>
     <!-- El mismo ícono, embebido para la bandeja y las ventanas -->
     <EmbeddedResource Include="..\assets\popete.ico" LogicalName="popete.ico" />
+    <!-- Las novedades de esta versión, por si la Store no responde (WhatsNewWindow) -->
+    <EmbeddedResource Include="..\novedades.txt" LogicalName="novedades.txt" />
   </ItemGroup>
 
   <ItemGroup>

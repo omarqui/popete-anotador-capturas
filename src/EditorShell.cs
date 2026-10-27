@@ -79,6 +79,7 @@ sealed partial class EditorShell : Window
         }
         if (created) shell.Show();
         shell.BringToFront();
+        WhatsNewWindow.OnEditorShown(shell); // la primera vez después de actualizar
         shell.SaveState();
     }
 

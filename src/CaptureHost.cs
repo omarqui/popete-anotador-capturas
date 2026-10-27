@@ -292,8 +292,10 @@ sealed class CaptureHost : IDisposable
             if (last != null) OpenEditor(last);
             else ShowHistory();
         };
-        _tray.ShowBalloonTip(2500, AppInfo.FullName,
-            "Activo. Toma una captura con Impr Pant o Win+Shift+S.", System.Windows.Forms.ToolTipIcon.Info);
+        // Después de actualizar, el globo de las novedades reemplaza al de «Activo»
+        if (!WhatsNewWindow.OfferAfterUpdate(_tray))
+            _tray.ShowBalloonTip(2500, AppInfo.FullName,
+                "Activo. Toma una captura con Impr Pant o Win+Shift+S.", System.Windows.Forms.ToolTipIcon.Info);
 
         _updates = new UpdateChecker(_tray, menu); // aviso de versión nueva (solo desde la Store)
     }

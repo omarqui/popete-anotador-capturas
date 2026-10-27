@@ -6,7 +6,9 @@
 #
 # La ultima version enviada es el tag vX.Y.Z mas alto: se crea despues de mandar a
 # certificacion (README > Publicar a mano desde Partner Center). Sin -Version, sube el tercer
-# numero. Exige el arbol limpio, para que el paquete salga de un commit; genera el .msix sin
+# numero. Exige el arbol limpio, para que el paquete salga de un commit, y que la primera linea
+# de novedades.txt sea de esa version (va embebido en el .exe y se pega en Partner Center, que
+# lo deja en el portapapeles al terminar); genera el .msix sin
 # firmar con empaquetar-msix.ps1 -Store, guarda los commits desde el ultimo tag (materia prima
 # de las novedades) y abre el Explorador con el paquete marcado, listo para arrastrarlo.
 param(
@@ -41,6 +43,18 @@ if ($ultimo -and [version]$Version -le [version]"$($ultimo.Substring(1)).0") {
     throw "La version $Version no es mayor que la ultima enviada ($ultimo)"
 }
 
+# Las novedades viajan en el .exe (por si la Store no responde) y son las mismas de Partner Center:
+# la primera linea dice la version que se arma
+$corta = $Version -replace '\.0$', ''
+$novedadesPath = Join-Path $root 'novedades.txt'
+$novedades = [IO.File]::ReadAllText($novedadesPath, [Text.Encoding]::UTF8).Trim()
+$primera = ($novedades -split "`n")[0]
+if ($primera -notmatch '\d+\.\d+\.\d+' -or $Matches[0] -ne $corta) {
+    throw "novedades.txt no es de la version $($corta): su primera linea es '$($primera.Trim())'. Escribe las novedades y commitealas"
+}
+# Partner Center admite hasta 1500 caracteres en What's new in this version
+if ($novedades.Length -gt 1500) { throw "novedades.txt tiene $($novedades.Length) caracteres: la Store admite hasta 1500" }
+
 # Commits desde la ultima enviada (sin tags, los ultimos 30)
 $rango = @(if ($ultimo) { "$ultimo..HEAD" } else { '-n', '30' }) # @(): si no, un solo elemento queda como texto y @rango lo reparte letra por letra
 $commits = @(GitOut log --no-merges --format=%s @rango)
@@ -57,12 +71,16 @@ $lineas = @("Popete $Version (commit $commit). Commits desde $desde, para redact
 $notas = Join-Path $root "artifacts\msix\Popete_$($Version)_commits.txt"
 [IO.File]::WriteAllLines($notas, [string[]]$lineas, (New-Object Text.UTF8Encoding $true))
 
-$tag = 'v' + ($Version -replace '\.0$', '')
+$tag = "v$corta"
+Set-Clipboard -Value $novedades
 ''
 "Paquete:  $msix ($([math]::Round((Get-Item $msix).Length / 1MB, 1)) MB)"
 "Commits:  $notas"
 $lineas | ForEach-Object { "  $_" }
 ''
-'Siguiente: Partner Center > Popete > Start update, novedades en Store listings y el .msix arrastrado a Packages.'
+"Novedades (novedades.txt, ya copiadas al portapapeles):"
+$novedades -split "`r?`n" | ForEach-Object { "  $_" }
+''
+'Siguiente: Partner Center > Popete > Start update, las novedades pegadas en Store listings y el .msix arrastrado a Packages.'
 "Despues de mandar a certificacion:  git tag $tag $commit  y  git push origin $tag"
 if (-not $NoAbrir) { Start-Process explorer.exe -ArgumentList "/select,`"$msix`"" }

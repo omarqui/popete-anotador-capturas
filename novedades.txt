@@ -1,0 +1,10 @@
+Novedades de la versión 1.2.0:
+
+• Ideas por número: escribe una idea junto a lo que marcaste. La marca lleva un número, la idea no sale en la imagen y, al copiar, viaja como texto junto a ella (por ejemplo, para pasarle tus observaciones a una IA). Solo se numera lo que tiene idea.
+• Copiar celdas en Excel o «Copiar imagen» en el navegador ya no abre el editor, y tampoco los recortes de menos de 50 px por lado, como un clic sin querer con Win+Shift+S.
+• Ajustes renovados, con menú lateral y las páginas Acerca de y Actualizaciones.
+• Después de actualizar, Popete te cuenta las novedades. Siempre están en Ajustes › Acerca de.
+
+Versión 1.1.3: el historial rápido pega directo en el programa donde estabas y se abre más grande, en el monitor del ratón; zoom más nítido.
+
+Versión 1.1: pestañas en una sola ventana (se reordenan arrastrando y tienen menú con clic derecho) que se recuerdan al reabrir; historial rápido con Alt+`; ajuste «Cerrar el editor al copiar».

@@ -78,10 +78,10 @@ Con una cuenta Individual, cada versión se sube a mano. `tools\preparar-store.p
 powershell -File tools\preparar-store.ps1
 ```
 
-Toma como última versión enviada el tag `vX.Y.Z` más alto y propone la siguiente: sube el tercer número, o usa la que se pase con `-Version 1.2.0.0`. Exige que no haya cambios sin commitear y genera el `.msix` para la Store. Guarda en `artifacts\msix\Popete_<versión>_commits.txt` los commits desde la última enviada, para redactar las novedades, y abre el Explorador con el paquete marcado. Después, en Partner Center:
+Toma como última versión enviada el tag `vX.Y.Z` más alto y propone la siguiente: sube el tercer número, o usa la que se pase con `-Version 1.2.0.0`. Exige que no haya cambios sin commitear y que la primera línea de `novedades.txt` sea «Novedades de la versión X.Y.Z:» con esa versión, y genera el `.msix` para la Store. Las novedades se escriben y se commitean antes: van embebidas en el `.exe`, y Popete las muestra después de actualizar si la Store no responde. Guarda en `artifacts\msix\Popete_<versión>_commits.txt` los commits desde la última enviada, deja las novedades en el portapapeles y abre el Explorador con el paquete marcado. Después, en Partner Center:
 
 1. **Start update**.
-2. Las novedades en **Store listings › What's new in this version** (hasta 1500 caracteres).
+2. Las novedades (el texto de `novedades.txt`) en **Store listings › What's new in this version** (hasta 1500 caracteres).
 3. El `.msix` arrastrado a **Packages**.
 4. **Submit for certification**.
 
