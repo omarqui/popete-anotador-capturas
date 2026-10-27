@@ -235,6 +235,7 @@ sealed partial class EditorView : UserControl
         var canvasArea = new Grid();
         canvasArea.Children.Add(_scroll);
         canvasArea.Children.Add(BuildPointerLayer());
+        canvasArea.Children.Add(BuildIdeaOverlay()); // la tarjeta de la idea, fuera del zoom (EditorView.IdeaCard.cs)
         root.Children.Add(canvasArea);
         Content = root;
 
@@ -264,7 +265,7 @@ sealed partial class EditorView : UserControl
             // lo devuelve a su lugar (NumberDown), y con un cuadro de texto abierto selecciona palabras.
             else if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && _editing == null && !_cropMode
                      && IsInside(e.OriginalSource, _scroll) && !IsInside(e.OriginalSource, _textLayer)
-                     && !IsInside(e.OriginalSource, _numbersLayer) && !IsInside(e.OriginalSource, _ideaLayer) // el campo: selecciona palabras
+                     && !IsInside(e.OriginalSource, _numbersLayer) && !IsInside(e.OriginalSource, _ideaLayer) // el número fantasma
                      && HandleAt(e.GetPosition(_ink)) == null
                      && StrokeUnder(e.GetPosition(_ink)) is Stroke hit)
             {
@@ -275,7 +276,7 @@ sealed partial class EditorView : UserControl
         // Clic derecho en el lienzo: copiar (y cerrar, según el ajuste), como Ctrl+C
         PreviewMouseRightButtonUp += (s, e) =>
         {
-            // Con un texto o una idea a medio escribir, no (como cualquier cuadro de texto); sobre el campo tampoco
+            // Con un texto o una idea a medio escribir, no (como cualquier cuadro de texto); sobre el fantasma tampoco
             if (_editing != null || _ideaBox is { Text.Length: > 0 } || IsInside(e.OriginalSource, _ideaLayer)
                 || !IsInside(e.OriginalSource, _scroll)) return;
             CopyAndMaybeClose();
@@ -592,6 +593,7 @@ sealed partial class EditorView : UserControl
         UpdateFrameClip();
         UpdateSelectionVisual();
         UpdatePointer();
+        PlaceIdeaCard();
     }
 
     void FitZoom()

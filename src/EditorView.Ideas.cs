@@ -46,9 +46,9 @@ sealed partial class EditorView
     string IdeasList() => Ideas.List(Numbering().Select(n => (n.number, IdeaOf(n.target))));
 
     // ------------------------------------------------------------------ capa y campo
-    // _ideaLayer está en la tabla pero fuera de _surface: nada de lo que tiene (el campo, las
-    // marcas, el número fantasma) sale en la imagen exportada. Sin fondo: los clics en vacío
-    // pasan a la tinta.
+    // _ideaLayer está en la tabla pero fuera de _surface: nada de lo que tiene (las marcas, el
+    // número fantasma) sale en la imagen exportada. Sin fondo: los clics en vacío pasan a la
+    // tinta. El campo va en una tarjeta fuera del zoom (EditorView.IdeaCard.cs).
     Canvas _ideaLayer;
     Canvas _ideaMarks;   // marcas de "este número tiene idea"; no reciben clics
     TextBox _ideaBox;    // el campo abierto, o null
@@ -86,36 +86,20 @@ sealed partial class EditorView
         _ideaOffered = offered;
         MarkTouched(); // escribiendo: aunque cambie de ventana, no se cierra solo
 
-        // Mide lo mismo en pantalla a cualquier zoom (el campo está dentro del zoom)
-        double z = _zoom.ScaleX;
         _ideaTarget = target;
         _ideaBox = new TextBox
         {
-            MinWidth = 200,
-            MaxWidth = 360,
             TextWrapping = TextWrapping.Wrap,
             AcceptsReturn = true,
-            FontSize = 13,
-            Padding = new Thickness(4, 2, 4, 2),
-            BorderThickness = new Thickness(1.5),
-            LayoutTransform = new ScaleTransform(1 / z, 1 / z),
             Text = IdeaOf(target) ?? "",
-            ToolTip = "Idea de este número: no sale en la imagen, se copia junto a ella · Enter guarda · Shift+Enter, otra línea",
+            ToolTip = "No sale en la imagen: se copia junto a ella",
         };
-        _ideaBox.SetResourceReference(BackgroundProperty, "Superficie");
         _ideaBox.SetResourceReference(ForegroundProperty, "Texto");
-        _ideaBox.SetResourceReference(BorderBrushProperty, "Acento");
         _ideaBox.CaretIndex = _ideaBox.Text.Length;
         _ideaPristine = _ideaBox.Text.Length == 0;
         _ideaBox.TextChanged += (s, e) => _ideaPristine = false;
-
-        // A la derecha del número, sin taparlo
-        var c = AutoNumberCenter(target);
-        double r = NumberRadius;
-        Canvas.SetLeft(_ideaBox, c.X + r + 6 / z);
-        Canvas.SetTop(_ideaBox, c.Y - r);
         _ideaBox.LostKeyboardFocus += (s, e) => { if (s == _ideaBox) CommitIdea(); }; // no uno nuevo por un aviso tardío del viejo
-        _ideaLayer.Children.Add(_ideaBox);
+        ShowIdeaCard(_ideaBox, target); // la tarjeta flotante (EditorView.IdeaCard.cs)
 
         var box = _ideaBox;
         Dispatcher.InvokeAsync(() => { if (_ideaBox == box) box.Focus(); }, DispatcherPriority.Input);
@@ -131,7 +115,7 @@ sealed partial class EditorView
         _ideaBox = null; // primero, para que LostKeyboardFocus no reentre
         _ideaTarget = null;
         bool hadFocus = box.IsKeyboardFocusWithin;
-        _ideaLayer.Children.Remove(box);
+        HideIdeaCard();
         if (hadFocus) Focus(); // las teclas vuelven al editor
         if (IsAlive(target)) ChangeIdea(target, box.Text);
         RefreshGhost();

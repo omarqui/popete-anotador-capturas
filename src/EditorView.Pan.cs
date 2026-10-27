@@ -33,6 +33,7 @@ sealed partial class EditorView
         _scroll.ScrollToVerticalOffset(sy);
         _panShift.X = tx;
         _panShift.Y = ty;
+        PlaceIdeaCard(); // la tarjeta de la idea sigue a su número
         return true;
     }
 
