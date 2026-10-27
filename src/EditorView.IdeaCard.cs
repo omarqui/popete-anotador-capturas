@@ -161,7 +161,8 @@ sealed partial class EditorView
     void ShowIdeaHalo(object target)
     {
         HideIdeaHalo();
-        _ideaHalo = new System.Windows.Shapes.Ellipse { IsHitTestVisible = false, Opacity = 0.85 };
+        // Sin redondeo propio: se ubica en el centro ya redondeado del número (BadgeLayout)
+        _ideaHalo = new System.Windows.Shapes.Ellipse { IsHitTestVisible = false, Opacity = 0.85, UseLayoutRounding = false };
         _ideaHalo.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Acento");
         _ideaLayer.Children.Add(_ideaHalo);
         PlaceIdeaHalo(target);
@@ -172,7 +173,7 @@ sealed partial class EditorView
     {
         if (_ideaHalo == null || target == null || !IsAlive(target)) return;
         double z = _zoom.ScaleX, radius = NumberRadius + 4 / z;
-        var c = AutoNumberCenter(target);
+        var c = BadgeLayout.Center(AutoNumberCenter(target), NumberRadius, DpiScale()); // el centro real del círculo
         _ideaHalo.StrokeThickness = 2.5 / z;
         _ideaHalo.Width = _ideaHalo.Height = 2 * radius;
         Canvas.SetLeft(_ideaHalo, c.X - radius);
@@ -191,7 +192,7 @@ sealed partial class EditorView
     {
         if (!SystemParameters.ClientAreaAnimation || !IsAlive(target)) return;
         double z = _zoom.ScaleX, r = NumberRadius;
-        var c = AutoNumberCenter(target);
+        var c = BadgeLayout.Center(AutoNumberCenter(target), NumberRadius, DpiScale()); // el centro real del círculo
         var ring = new System.Windows.Shapes.Ellipse
         {
             Width = 2 * r,
@@ -199,6 +200,7 @@ sealed partial class EditorView
             StrokeThickness = 3 / z,
             IsHitTestVisible = false,
             RenderTransformOrigin = new Point(0.5, 0.5),
+            UseLayoutRounding = false, // como el anillo: centrado en el número ya redondeado
         };
         ring.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Acento");
         Canvas.SetLeft(ring, c.X - r);
