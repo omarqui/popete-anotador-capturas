@@ -293,7 +293,7 @@ sealed partial class EditorView
         if (target == null || !IsAlive(target) || target is Stroke s && IsTiedArrow(s)) return;
         var (targets, candidates) = NumberCandidates();
         int index = targets.IndexOf(target);
-        if (index < 0 || Ideas.Assign(candidates)[index] > 0) return; // ya tiene número
+        if (index < 0 || AssignNumbers(candidates)[index] > 0) return; // ya tiene número (o se numera todo)
 
         double r = NumberRadius;
         var ghost = NumberBadge(Ideas.GhostNumber(candidates, index), NumberColorOf(target), r);

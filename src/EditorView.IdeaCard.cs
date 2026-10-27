@@ -34,7 +34,7 @@ sealed partial class EditorView
         var (targets, candidates) = NumberCandidates();
         int i = targets.IndexOf(target);
         if (i < 0) return 0;
-        int n = Ideas.Assign(candidates)[i];
+        int n = AssignNumbers(candidates)[i];
         return n > 0 ? n : Ideas.GhostNumber(candidates, i);
     }
 

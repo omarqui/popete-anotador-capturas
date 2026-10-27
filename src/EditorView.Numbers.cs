@@ -3,9 +3,9 @@
 //
 //  Cada trazo (lápiz, resaltador, formas y flechas libres; no las flechas que salen de otro
 //  trazo) y cada texto que tiene idea lleva un círculo con su número pegado a su punto más
-//  arriba a la izquierda; sin idea, no lleva número. Van seguidos (1, 2, 3) por orden de
-//  creación (Ideas.Assign) y se recalculan en cada cambio (MarkChanged): si se borra el 2,
-//  el 3 pasa a ser el 2.
+//  arriba a la izquierda; sin idea, no lleva número, salvo con el ajuste NumerarSiempre, que
+//  numera todo. Van seguidos (1, 2, 3) por orden de creación (Ideas.Assign) y se recalculan
+//  en cada cambio (MarkChanged) y al cambiar los ajustes: si se borra el 2, el 3 pasa a ser el 2.
 //
 //  El orden de creación se guarda en el propio trazo (propiedad del ISF) y en
 //  TextNote.Orden, así sobrevive a cerrar y retomar la captura. Los círculos
@@ -105,13 +105,17 @@ sealed partial class EditorView
         return (targets, candidates);
     }
 
+    /// <summary>Ideas.Assign según el ajuste: solo lo que tiene idea, o todo.</summary>
+    static int[] AssignNumbers(IReadOnlyList<NumberCandidate> candidates) =>
+        Ideas.Assign(candidates, AppSettings.Current.NumerarSiempre);
+
     /// <summary>
-    /// Los que llevan número, en orden: los que tienen idea (seguidos: 1, 2, 3).
+    /// Los que llevan número, en orden: los que tienen idea, o todos con NumerarSiempre (seguidos: 1, 2, 3).
     /// </summary>
     List<(object target, int number)> Numbering()
     {
         var (targets, candidates) = NumberCandidates();
-        var numbers = Ideas.Assign(candidates);
+        var numbers = AssignNumbers(candidates);
         return Enumerable.Range(0, targets.Count).Where(i => numbers[i] > 0).OrderBy(i => numbers[i])
             .Select(i => (targets[i], numbers[i])).ToList();
     }

@@ -66,9 +66,11 @@ sealed class SettingsWindow : Window
 
         Page("Ideas", Icons.Idea, "Las notas de cada número: no salen en la imagen y se copian junto a ella.");
         IdeasHeaderRow();
+        Choice("Llevan número", new[] { ("Los que tienen idea", false), ("Todos", true) },
+            s.NumerarSiempre, v => Save(() => s.NumerarSiempre = v),
+            "Todos: cada trazo y texto, con idea o sin ella. Las flechas que salen de un trazo nunca llevan número.");
         Choice("Tamaño de los números", new[] { ("Normal", 1.0), ("Grande", 1.5), ("Muy grande", 2.0), ("Enorme", 2.6) },
-            s.TamanoNumeros, v => Save(() => s.TamanoNumeros = v),
-            "Solo llevan número los trazos y textos con idea.");
+            s.TamanoNumeros, v => Save(() => s.TamanoNumeros = v));
 
         Page("Copiar y guardar", Icons.Copy, "Qué pasa al terminar con una captura.");
         Choice("Cerrar el editor al copiar", new[] { ("Sí", true), ("No", false) },

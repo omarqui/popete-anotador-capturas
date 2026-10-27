@@ -19,6 +19,12 @@ sealed class AppSettings
     /// <summary>Va antes de la lista de ideas al copiar (Ideas.WithHeader). Vacío: solo la lista.</summary>
     public string EncabezadoIdeas { get; set; } = Ideas.DefaultHeader;
 
+    /// <summary>
+    /// Numerar todos los trazos y textos, con idea o sin ella (menos las flechas que salen de un
+    /// trazo). false: solo lo que tiene idea. No es el viejo "NumerarPorDefecto", que se ignora.
+    /// </summary>
+    public bool NumerarSiempre { get; set; }
+
     /// <summary>Si los textos nuevos salen como etiqueta (fondo de color). Lo cambia el botón de la barra.</summary>
     public bool TextoConFondo { get; set; } = true;
 

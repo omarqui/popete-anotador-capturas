@@ -19,24 +19,25 @@ static class Ideas
     public static bool HasText(string idea) => !string.IsNullOrWhiteSpace(idea);
 
     /// <summary>
-    /// El número de cada candidato, en el mismo índice (0 = sin número): solo los que tienen idea,
-    /// seguidos (1, 2, 3) por orden de creación.
+    /// El número de cada candidato, en el mismo índice (0 = sin número): solo los que tienen idea
+    /// o, con <paramref name="all"/> (ajuste <c>NumerarSiempre</c>), todos; seguidos (1, 2, 3) por
+    /// orden de creación.
     /// </summary>
-    public static int[] Assign(IReadOnlyList<NumberCandidate> items)
+    public static int[] Assign(IReadOnlyList<NumberCandidate> items, bool all = false)
     {
         var numbers = new int[items.Count];
         int n = 1;
         foreach (int i in Enumerable.Range(0, items.Count).OrderBy(i => items[i].Order)) // OrderBy es estable: empates por índice
-            if (items[i].HasIdea) numbers[i] = n++;
+            if (all || items[i].HasIdea) numbers[i] = n++;
         return numbers;
     }
 
     /// <summary>El número que tomaría <paramref name="items"/>[<paramref name="index"/>] si tuviera idea.</summary>
-    public static int GhostNumber(IReadOnlyList<NumberCandidate> items, int index)
+    public static int GhostNumber(IReadOnlyList<NumberCandidate> items, int index, bool all = false)
     {
         var withIdea = items.ToArray();
         withIdea[index] = withIdea[index] with { HasIdea = true };
-        return Assign(withIdea)[index];
+        return Assign(withIdea, all)[index];
     }
 
     /// <summary>

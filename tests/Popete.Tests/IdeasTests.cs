@@ -16,6 +16,22 @@ public class IdeasTests
         => Assert.Equal(2, Ideas.GhostNumber(new[] { new NumberCandidate(1, true), new NumberCandidate(2, false), new NumberCandidate(3, true) }, 1));
 
     [Fact]
+    public void Assign_con_todo_numera_tambien_lo_que_no_tiene_idea()
+        => Assert.Equal(new[] { 1, 2, 3, 4 }, Ideas.Assign(new[] { new NumberCandidate(1, false), new NumberCandidate(2, true), new NumberCandidate(3, false), new NumberCandidate(4, true) }, all: true));
+
+    [Fact]
+    public void Assign_con_todo_sigue_el_orden_de_creacion()
+        => Assert.Equal(new[] { 2, 1, 3 }, Ideas.Assign(new[] { new NumberCandidate(5, true), new NumberCandidate(2, false), new NumberCandidate(9, false) }, all: true));
+
+    [Fact]
+    public void GhostNumber_con_todo_es_el_que_ya_lleva()
+        => Assert.Equal(2, Ideas.GhostNumber(new[] { new NumberCandidate(1, false), new NumberCandidate(2, false), new NumberCandidate(3, true) }, 1, all: true));
+
+    [Fact]
+    public void List_con_todo_conserva_los_numeros_de_la_imagen()
+        => Assert.Equal("2. Dos\r\n4. Cuatro", Ideas.List(new[] { (1, (string)null), (2, "Dos"), (3, ""), (4, "Cuatro") }));
+
+    [Fact]
     public void HasText_blanco_no_es_idea()
     {
         Assert.False(Ideas.HasText(null));
