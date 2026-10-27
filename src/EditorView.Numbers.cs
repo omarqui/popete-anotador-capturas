@@ -190,6 +190,7 @@ sealed partial class EditorView
             _numbersLayer.Children.Add(badge);
         }
         RefreshGhost();
+        RefreshIdeasButton();
     }
 
     // ------------------------------------------------------------------ mover un número

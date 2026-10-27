@@ -95,6 +95,19 @@ static class ClipboardHelper
         var data = new DataObject();
         data.SetImage(bmp);
         data.SetData("PNG", new MemoryStream(png), false);
+        return TrySet(data);
+    }
+
+    /// <summary>Pone solo texto en el portapapeles (las ideas de una captura). false si otra app no lo suelta.</summary>
+    public static bool SetText(string text)
+    {
+        var data = new DataObject();
+        data.SetData(DataFormats.UnicodeText, text);
+        return TrySet(data);
+    }
+
+    static bool TrySet(DataObject data)
+    {
         for (int intento = 0; intento < 5; intento++)
         {
             try

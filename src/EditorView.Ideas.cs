@@ -166,6 +166,72 @@ sealed partial class EditorView
         return true;
     }
 
+    // ------------------------------------------------------------------ lista en la barra de estado
+    Button _ideasButton;
+
+    FrameworkElement BuildIdeasButton()
+    {
+        _ideasButton = Ui.Btn("", "Las ideas de esta captura: ir a una o copiar el texto", ShowIdeasMenu, style: "EstiloPlano");
+        _ideasButton.Margin = new Thickness(0, 0, 8, 0);
+        _ideasButton.Visibility = Visibility.Collapsed;
+        return _ideasButton;
+    }
+
+    /// <summary>«N ideas», oculto sin ninguna. Lo llama RefreshNumbers (en cada cambio).</summary>
+    void RefreshIdeasButton()
+    {
+        if (_ideasButton == null) return;
+        int n = Numbering().Count(i => Ideas.HasText(IdeaOf(i.target)));
+        _ideasButton.Content = n == 1 ? "1 idea" : $"{n} ideas";
+        _ideasButton.Visibility = n > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>Lo que se copia: el encabezado de Ajustes y la lista. null si no hay ideas.</summary>
+    string IdeasText() => Ideas.WithHeader(AppSettings.Current.EncabezadoIdeas, IdeasList());
+
+    void ShowIdeasMenu()
+    {
+        var menu = new ContextMenu { PlacementTarget = _ideasButton, Placement = PlacementMode.Top };
+        foreach (var (target, number) in Numbering())
+        {
+            var idea = IdeaOf(target);
+            if (!Ideas.HasText(idea)) continue;
+            var line = idea.Trim().Replace("\r\n", "\n").Split('\n')[0];
+            if (line.Length > 60) line = line[..59] + "…";
+            // TextBlock y no string: en un string, "_" marcaría una tecla de acceso
+            var item = new MenuItem { Header = new TextBlock { Text = $"{number}. {line}" } };
+            item.Click += (s, e) => GoToIdea(target);
+            menu.Items.Add(item);
+        }
+        menu.Items.Add(new Separator());
+        var copy = new MenuItem { Header = "Copiar texto", ToolTip = "Solo el texto de las ideas, con el encabezado de Ajustes" };
+        copy.Click += (s, e) => CopyIdeasText();
+        menu.Items.Add(copy);
+        menu.IsOpen = true;
+    }
+
+    /// <summary>Trae el número a la vista y abre su campo.</summary>
+    void GoToIdea(object target)
+    {
+        if (!IsAlive(target)) return;
+        var c = AutoNumberCenter(target);
+        double r = NumberRadius;
+        _board.BringIntoView(new Rect(c.X - r, c.Y - r, 2 * r, 2 * r));
+        // Después de que el menú se cierre y devuelva el foco: si no, el campo lo perdería y se cerraría
+        Dispatcher.InvokeAsync(() => OpenIdea(target), DispatcherPriority.Background);
+    }
+
+    void CopyIdeasText()
+    {
+        CommitIdea();
+        var text = IdeasText();
+        if (text == null) return;
+        _status.Text = ClipboardHelper.SetText(text)
+            ? "✓ Ideas copiadas al portapapeles"
+            : "No se pudo acceder al portapapeles. Intenta de nuevo.";
+        MarkTouched(); // como copiar sin cerrar: una captura nueva no se cierra sola al irse a pegarlo
+    }
+
     // ------------------------------------------------------------------ número fantasma
     // Lo que no muestra número (con «numerar todo» apagado y sin idea) no tendría dónde hacer
     // clic para anotarlo: al elegirlo aparece un número tenue donde iría, con el que tomaría.

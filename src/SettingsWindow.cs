@@ -42,6 +42,7 @@ sealed class SettingsWindow : Window
         Choice("Numerar todo en capturas nuevas", new[] { ("Sí", true), ("No", false) },
             s.NumerarPorDefecto, v => Save(() => s.NumerarPorDefecto = v),
             "Apagado, solo se numera lo que tiene idea. Cada captura puede cambiarlo con el botón «123» de la barra.");
+        IdeasHeaderRow();
         Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
             s.RotarColores, v => Save(() => s.RotarColores = v),
             "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");
@@ -234,6 +235,38 @@ sealed class SettingsWindow : Window
         DockPanel.SetDock(buttons, Dock.Right);
         row.Children.Add(buttons);
         row.Children.Add(labels);
+        _body.Children.Add(row);
+    }
+
+    /// <summary>Encabezado que va antes de la lista de ideas al copiar. Se guarda al salir del cuadro o al cerrar.</summary>
+    void IdeasHeaderRow()
+    {
+        var s = AppSettings.Current;
+        var box = new TextBox
+        {
+            Text = s.EncabezadoIdeas ?? "",
+            Margin = new Thickness(0, 6, 0, 0),
+            Padding = new Thickness(6, 4, 6, 4),
+            BorderThickness = new Thickness(1),
+        };
+        box.SetResourceReference(BackgroundProperty, "Superficie");
+        box.SetResourceReference(ForegroundProperty, "Texto");
+        box.SetResourceReference(TextBoxBase.CaretBrushProperty, "Texto");
+        box.SetResourceReference(BorderBrushProperty, "Borde");
+        void Apply()
+        {
+            if (box.Text != s.EncabezadoIdeas) Save(() => s.EncabezadoIdeas = box.Text);
+        }
+        box.LostKeyboardFocus += (o, e) => Apply();
+        Closed += (o, e) => Apply();
+
+        var note = new TextBlock { Text = "Va antes de la lista al copiar. Vacío: solo la lista.", FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+        note.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+
+        var row = new StackPanel { Margin = new Thickness(0, 6, 0, 6) };
+        row.Children.Add(new TextBlock { Text = "Encabezado de las ideas" });
+        row.Children.Add(note);
+        row.Children.Add(box);
         _body.Children.Add(row);
     }
 

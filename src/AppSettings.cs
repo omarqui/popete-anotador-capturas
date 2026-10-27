@@ -19,6 +19,9 @@ sealed class AppSettings
     /// <summary>Si las capturas nuevas numeran sus trazos y textos (cada captura puede cambiarlo con su botón).</summary>
     public bool NumerarPorDefecto { get; set; } = true;
 
+    /// <summary>Va antes de la lista de ideas al copiar (Ideas.WithHeader). Vacío: solo la lista.</summary>
+    public string EncabezadoIdeas { get; set; } = Ideas.DefaultHeader;
+
     /// <summary>Si los textos nuevos salen como etiqueta (fondo de color). Lo cambia el botón de la barra.</summary>
     public bool TextoConFondo { get; set; } = true;
 

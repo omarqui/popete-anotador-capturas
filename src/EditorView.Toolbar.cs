@@ -328,6 +328,7 @@ sealed partial class EditorView
         _uncropButton.Margin = new Thickness(0, 0, 8, 0);
         _uncropButton.Visibility = IsCropped ? Visibility.Visible : Visibility.Collapsed;
         zoom.Children.Insert(0, _uncropButton);
+        zoom.Children.Insert(0, BuildIdeasButton()); // «N ideas» (EditorView.Ideas.cs)
 
         var bar = new DockPanel { Margin = new Thickness(12, 0, 8, 0), Height = 32, LastChildFill = true };
         DockPanel.SetDock(left, Dock.Left);
