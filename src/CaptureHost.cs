@@ -22,6 +22,10 @@ sealed class CaptureHost : IDisposable
     [DllImport("user32.dll")]
     static extern bool UnregisterHotKey(IntPtr hwnd, int id);
 
+    // Con los dos lados por debajo (en píxeles de la captura), la captura no abre el editor: un clic
+    // o un arrastre corto sin querer en Win+Shift+S, o un ícono suelto (nota 50).
+    const int MinCaptureSide = 50;
+
     static CaptureHost _current;
 
     readonly Application _app;
@@ -125,6 +129,9 @@ sealed class CaptureHost : IDisposable
         // (sí desde la bandeja, con "Abrir imagen del portapapeles").
         var img = ClipboardHelper.TryGetImage(onlyScreenshots: true);
         if (img == null) return;
+
+        // Las muy pequeñas tampoco, ni pasan al historial (sí desde la bandeja).
+        if (img.PixelWidth < MinCaptureSide && img.PixelHeight < MinCaptureSide) return;
 
         // Solo se abren imágenes nunca vistas. Algunos programas (Escritorio
         // remoto, historial del portapapeles, gestores de portapapeles...)
