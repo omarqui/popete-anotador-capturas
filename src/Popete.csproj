@@ -26,4 +26,9 @@
     <EmbeddedResource Include="..\assets\popete.ico" LogicalName="popete.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- La lógica pura de Ideas.cs se prueba desde tests\Popete.Tests -->
+    <InternalsVisibleTo Include="Popete.Tests" />
+  </ItemGroup>
+
 </Project>
