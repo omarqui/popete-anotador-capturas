@@ -113,6 +113,7 @@ sealed partial class EditorView
 
         var box = _ideaBox;
         Dispatcher.InvokeAsync(() => { if (_ideaBox == box) box.Focus(); }, DispatcherPriority.Input);
+        RefreshGhost();
     }
 
     /// <summary>Cierra el campo y guarda lo escrito (con deshacer). Vacío y sin idea antes: no deja rastro.</summary>
@@ -127,6 +128,7 @@ sealed partial class EditorView
         _ideaLayer.Children.Remove(box);
         if (hadFocus) Focus(); // las teclas vuelven al editor
         if (IsAlive(target)) ChangeIdea(target, box.Text);
+        RefreshGhost();
     }
 
     /// <summary>Cambia la idea de <paramref name="target"/>, con deshacer.</summary>
@@ -162,6 +164,47 @@ sealed partial class EditorView
             return false;
         }
         return true;
+    }
+
+    // ------------------------------------------------------------------ número fantasma
+    // Lo que no muestra número (con «numerar todo» apagado y sin idea) no tendría dónde hacer
+    // clic para anotarlo: al elegirlo aparece un número tenue donde iría, con el que tomaría.
+    // Solo en el editor; no cuenta para la lista.
+    FrameworkElement _ghost;
+
+    void RefreshGhost()
+    {
+        if (_ideaLayer == null) return;
+        if (_ghost != null)
+        {
+            _ideaLayer.Children.Remove(_ghost);
+            _ghost = null;
+        }
+
+        // Un solo elemento elegido; si no, el del campo abierto
+        object target = _selection.Count + _selectedTexts.Count == 1
+            ? (object)_selection.FirstOrDefault() ?? _selectedTexts[0]
+            : _ideaTarget;
+        if (target == null || !IsAlive(target) || target is Stroke s && IsTiedArrow(s)) return;
+        var (targets, candidates) = NumberCandidates();
+        int index = targets.IndexOf(target);
+        if (index < 0 || Ideas.Assign(candidates, NumbersOn)[index] > 0) return; // ya tiene número
+
+        double r = NumberRadius;
+        var ghost = NumberBadge(Ideas.GhostNumber(candidates, index), NumberColorOf(target), r);
+        ghost.Opacity = 0.45;
+        ghost.Cursor = Cursors.Hand;
+        ghost.ToolTip = "Clic para escribir su idea · sin idea no lleva número";
+        var c = AutoNumberCenter(target);
+        Canvas.SetLeft(ghost, c.X - r);
+        Canvas.SetTop(ghost, c.Y - r);
+        ghost.MouseLeftButtonDown += (sender, e) =>
+        {
+            e.Handled = true;
+            OpenIdea(target);
+        };
+        _ideaLayer.Children.Add(ghost);
+        _ghost = ghost;
     }
 
     /// <summary>La marca del número de un elemento con idea (solo en el editor), sobre su borde superior derecho.</summary>

@@ -189,6 +189,7 @@ sealed partial class EditorView
             Canvas.SetTop(badge, center.Y - r);
             _numbersLayer.Children.Add(badge);
         }
+        RefreshGhost();
     }
 
     // ------------------------------------------------------------------ mover un número

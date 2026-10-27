@@ -74,6 +74,7 @@ sealed partial class EditorView
         UpdateSelectionVisual();
         RestartSelectionTimer();
         if (HasSelection && !auto) ReflectSelectionInToolbar();
+        RefreshGhost(); // lo elegido sin número muestra dónde iría (EditorView.Ideas.cs)
     }
 
     void SelectOnly(object item)
