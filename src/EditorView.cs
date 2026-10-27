@@ -484,9 +484,9 @@ sealed partial class EditorView : UserControl
             var json = JsonSerializer.SerializeToUtf8Bytes(notes, History.JsonOptions);
             History.WriteAtomic(_session.TextsPath, fs => fs.Write(json, 0, json.Length));
 
-            // La lista de ideas, para el historial rápido (y para quien lea la carpeta)
-            var ideas = IdeasList();
-            if (ideas.Length > 0)
+            // Las ideas con su encabezado: copiar con ideas pega la ruta de este archivo (Ideas.ForAi)
+            var ideas = IdeasText();
+            if (ideas != null)
             {
                 var bytes = System.Text.Encoding.UTF8.GetBytes(ideas);
                 History.WriteAtomic(_session.IdeasPath, fs => fs.Write(bytes, 0, bytes.Length));

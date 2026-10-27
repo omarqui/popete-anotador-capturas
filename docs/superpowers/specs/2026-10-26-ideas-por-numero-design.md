@@ -78,7 +78,8 @@ El usuario pega y cuenta qué llega (imagen, texto o las dos).
 ### Copiar
 
 - **Cambio tras el paso 0 (2026-10-26, decisión del usuario):** con PNG y texto juntos en el portapapeles, los destinos solo pegaron la imagen. Por eso, si la captura tiene al menos una idea, todo lo que copia la captura («Copiar y cerrar», «Copiar», Ctrl+C, Ctrl+Enter, el clic derecho y el historial rápido Alt+`) pone **solo texto**: la ruta de `anotada.png`, una línea en blanco y el texto de abajo. Se pega una vez en Claude Code, que abre la imagen por su ruta. El usuario aceptó la consecuencia: en esas capturas, Paint, Word o un chat web reciben texto y no la imagen (para un chat web: abrir la imagen o usar «Copiar texto» aparte). Si no tiene ideas, el portapapeles queda **exactamente** como hoy (solo la imagen). Antes de copiar la ruta se guarda la sesión, así `anotada.png` está al día. La ruta va entre comillas si tiene espacios. *(Esto último es decisión del agente.)*
-- *(Lo de abajo sigue valiendo para el texto que va después de la ruta.)*
+- **Segundo cambio (2026-10-27, probado por el usuario):** con la ruta y el texto, Claude Code pegaba todo como texto: solo adjunta la imagen si cada tramo de la línea es una ruta, y la terminal le entrega los saltos de línea como CR, así que la ruta en su propia línea tampoco se reconoce (con LF solo, igual). Ahora se copia **una línea con dos rutas**: `anotada.png` y `ideas.txt`, que guarda el encabezado y la lista. Claude Code adjunta la imagen (`[Image #1]`) y deja la ruta del `.txt`, que Claude abre. Para un chat web, «Copiar texto».
+- *(Lo de abajo vale para el texto de `ideas.txt` y de «Copiar texto».)*
 - **Texto:** encabezado, línea en blanco y la lista con el número real de cada idea (puede saltear números con la numeración prendida), solo los números con idea, en orden. Si una idea tiene varias líneas, las siguientes van con sangría. Ejemplo:
 
   ```

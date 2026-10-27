@@ -4,8 +4,8 @@
 //  Cada número puede llevar una idea: un texto que no sale en la imagen y que
 //  viaja con ella al copiar, para pasársela a una IA. La idea vive en el propio
 //  elemento (propiedad del ISF en el trazo, NoteText.Idea en el texto), así se
-//  mueve, se borra y se deshace con él. Cada guardado escribe la lista en
-//  ideas.txt (Session.IdeasPath), que es lo que lee el historial rápido.
+//  mueve, se borra y se deshace con él. Cada guardado escribe el encabezado y la
+//  lista en ideas.txt (Session.IdeasPath): copiar pega su ruta junto a la de la imagen.
 //  Qué número lleva cada cosa y el formato del texto están en Ideas.cs.
 // ----------------------------------------------------------------------------
 sealed partial class EditorView

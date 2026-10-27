@@ -386,9 +386,9 @@ sealed class QuickHistoryWindow : Window
         bool copied;
         try
         {
-            // Con ideas, como al copiar en el editor: la ruta de la imagen y el texto (Ideas.ForAi)
+            // Con ideas, como al copiar en el editor: las rutas de la imagen y de ideas.txt (Ideas.ForAi)
             var forAi = File.Exists(s.IdeasPath) && File.Exists(s.PreviewPath)
-                ? Ideas.ForAi(s.PreviewPath, AppSettings.Current.EncabezadoIdeas, File.ReadAllText(s.IdeasPath).Trim())
+                ? Ideas.ForAi(s.PreviewPath, s.IdeasPath)
                 : null;
             copied = forAi != null
                 ? ClipboardHelper.SetText(forAi)

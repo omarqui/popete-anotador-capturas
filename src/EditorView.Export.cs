@@ -72,13 +72,12 @@ sealed partial class EditorView
         CommitText();
         if (_cropMode) ConfirmCrop(); // copiar con el marco ajustado: se aplica primero
 
-        // Con ideas: la ruta de anotada.png y el texto, solo texto (imagen y texto juntos no
-        // sirven: los destinos pegan solo la imagen). Antes se guarda, para que la imagen esté al día.
-        var ideas = IdeasList();
-        if (ideas.Length > 0)
+        // Con ideas: las rutas de anotada.png y de ideas.txt, solo texto (Ideas.ForAi). Antes se
+        // guarda, para que la imagen y las ideas estén al día.
+        if (IdeasList().Length > 0)
         {
             SaveSession();
-            if (!ClipboardHelper.SetText(Ideas.ForAi(_session.PreviewPath, AppSettings.Current.EncabezadoIdeas, ideas)))
+            if (!ClipboardHelper.SetText(Ideas.ForAi(_session.PreviewPath, _session.IdeasPath)))
             {
                 _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
                 return false;
