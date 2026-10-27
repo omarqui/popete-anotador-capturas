@@ -39,9 +39,9 @@ sealed class SettingsWindow : Window
             s.Tema, v => Theme.SetMode(v));
 
         Section("Editor");
-        Choice("Numerar trazos y textos en capturas nuevas", new[] { ("Sí", true), ("No", false) },
+        Choice("Numerar todo en capturas nuevas", new[] { ("Sí", true), ("No", false) },
             s.NumerarPorDefecto, v => Save(() => s.NumerarPorDefecto = v),
-            "Cada captura puede cambiarlo con el botón «123» de la barra.");
+            "Apagado, solo se numera lo que tiene idea. Cada captura puede cambiarlo con el botón «123» de la barra.");
         Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
             s.RotarColores, v => Save(() => s.RotarColores = v),
             "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");

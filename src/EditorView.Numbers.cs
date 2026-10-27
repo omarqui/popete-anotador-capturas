@@ -1,21 +1,23 @@
 // ----------------------------------------------------------------------------
 //  Editor — numeración automática
 //
-//  Cada trazo (lápiz, resaltador, formas; no las flechas) y cada texto lleva un círculo con su
-//  número de orden pegado a su punto más arriba a la izquierda. Los números se recalculan en cada
-//  cambio (MarkChanged): si se borra el 2, el 3 pasa a ser el 2.
+//  Cada trazo (lápiz, resaltador, formas y flechas libres; no las flechas que salen de otro
+//  trazo) y cada texto lleva un círculo con su número de orden pegado a su punto más arriba a
+//  la izquierda. Los números se recalculan en cada cambio (MarkChanged): si se borra el 2, el 3
+//  pasa a ser el 2.
 //
 //  El orden de creación se guarda en el propio trazo (propiedad del ISF) y en
 //  TextNote.Orden, así sobrevive a cerrar y retomar la captura. Los círculos
 //  están dentro de _surface: salen en la imagen exportada.
-//  Se activan por captura con el botón "123" (o N); el valor inicial viene de
-//  AppSettings.NumerarPorDefecto.
+//  El botón "123" (o N) es «numerar todo», por captura; el valor inicial viene de
+//  AppSettings.NumerarPorDefecto. Apagado, solo se numera lo que tiene idea, seguido
+//  (1, 2, 3; ver EditorView.Ideas.cs e Ideas.Assign).
 // ----------------------------------------------------------------------------
 sealed partial class EditorView
 {
     static readonly Guid OrderProperty = new Guid("5b0e3c1e-8f6a-4d8e-9c1f-2a7d1f0b6c11");
 
-    /// <summary>Marca de flecha (propiedad del ISF): las flechas no llevan número.</summary>
+    /// <summary>Marca de flecha (propiedad del ISF). Sin FreeArrowProperty, no lleva número (IsTiedArrow).</summary>
     static readonly Guid ArrowProperty = new Guid("c3a1f6d2-7e4b-4b8a-a5d9-0f2e8b6c4a17");
 
     static bool IsArrow(Stroke s) => s.ContainsPropertyData(ArrowProperty);
@@ -92,42 +94,86 @@ sealed partial class EditorView
         MarkChanged();
     }
 
+    /// <summary>
+    /// Lo que puede llevar número, en el orden de los trazos y textos: todos los trazos (menos las
+    /// flechas unidas) y todos los textos, con su orden y si tienen idea.
+    /// </summary>
+    (List<object> targets, List<NumberCandidate> candidates) NumberCandidates()
+    {
+        AssignMissingOrders();
+        var targets = new List<object>();
+        var candidates = new List<NumberCandidate>();
+        foreach (var s in _ink.Strokes)
+        {
+            if (s == _preview || s.StylusPoints.Count == 0 || IsTiedArrow(s)) continue;
+            targets.Add(s);
+            candidates.Add(new NumberCandidate(OrderOf(s), Ideas.HasText(IdeaOf(s))));
+        }
+        foreach (var tb in TextBlocks)
+        {
+            targets.Add(tb);
+            candidates.Add(new NumberCandidate(tb.Tag is long o ? o : long.MaxValue, Ideas.HasText(IdeaOf(tb))));
+        }
+        return (targets, candidates);
+    }
+
+    /// <summary>
+    /// Los que llevan número, en orden: todos con la numeración prendida; si no, solo los que
+    /// tienen idea (seguidos: 1, 2, 3).
+    /// </summary>
+    List<(object target, int number)> Numbering()
+    {
+        var (targets, candidates) = NumberCandidates();
+        var numbers = Ideas.Assign(candidates, NumbersOn);
+        return Enumerable.Range(0, targets.Count).Where(i => numbers[i] > 0).OrderBy(i => numbers[i])
+            .Select(i => (targets[i], numbers[i])).ToList();
+    }
+
+    /// <summary>
+    /// Centro del círculo del número de un trazo o texto, lo lleve o no. Va pegado al punto del
+    /// trazo más arriba a la izquierda, hacia arriba a la izquierda: así queda en esa zona del
+    /// trazo pero siempre junto a él (en un círculo, sobre el arco superior izquierdo, no en la
+    /// esquina vacía de su recuadro). Los textos, en su esquina. Más lo que lo movió el usuario.
+    /// </summary>
+    Point AutoNumberCenter(object target)
+    {
+        Point at;
+        double halfWidth = 0;
+        if (target is Stroke s)
+        {
+            if (s.StylusPoints.Count == 0) return new Point();
+            at = s.StylusPoints.Select(p => p.ToPoint()).MinBy(p => p.X + p.Y);
+            halfWidth = Math.Max(s.DrawingAttributes.Width, s.DrawingAttributes.Height) / 2;
+        }
+        else
+        {
+            var tb = (TextBlock)target;
+            at = new Point(Canvas.GetLeft(tb), Canvas.GetTop(tb));
+        }
+        var upLeft = new Vector(-1, -1);
+        upLeft.Normalize();
+        // Borde del círculo a 2 px del borde del trazo
+        return at + upLeft * (NumberRadius + halfWidth + 2) + NumberOffsetOf(target);
+    }
+
+    static Color NumberColorOf(object target) => target switch
+    {
+        Stroke s => s.DrawingAttributes.Color,
+        TextBlock tb => (tb.Foreground as SolidColorBrush)?.Color ?? Palette[0].color,
+        _ => Palette[0].color,
+    };
+
     void RefreshNumbers()
     {
         if (_numbersLayer == null) return;
         _numbersLayer.Children.Clear();
         if (_numbersButton != null) _numbersButton.IsChecked = NumbersOn;
-        if (!NumbersOn) return;
-        AssignMissingOrders();
-
-        // (orden, punto del trazo más arriba a la izquierda, medio grosor, color).
-        // El número va pegado a ese punto, hacia arriba a la izquierda: así queda
-        // en esa zona del trazo pero siempre junto a él (en un círculo, sobre el
-        // arco superior izquierdo, no en la esquina vacía de su recuadro).
-        var items = new List<(long order, Point at, double halfWidth, Color color, object target)>();
-        foreach (var s in _ink.Strokes)
-        {
-            if (s == _preview || s.StylusPoints.Count == 0 || IsArrow(s)) continue;
-            var corner = s.StylusPoints.Select(p => p.ToPoint()).MinBy(p => p.X + p.Y);
-            var da = s.DrawingAttributes;
-            items.Add((OrderOf(s), corner, Math.Max(da.Width, da.Height) / 2, da.Color, s));
-        }
-        foreach (var tb in TextBlocks)
-        {
-            var color = (tb.Foreground as SolidColorBrush)?.Color ?? Palette[0].color;
-            items.Add((tb.Tag is long o ? o : long.MaxValue, new Point(Canvas.GetLeft(tb), Canvas.GetTop(tb)), 0, color, tb));
-        }
 
         double r = NumberRadius;
-        var upLeft = new Vector(-1, -1);
-        upLeft.Normalize();
-        int n = 1;
-        foreach (var item in items.OrderBy(i => i.order))
+        foreach (var (target, number) in Numbering())
         {
-            // Borde del círculo a 2 px del borde del trazo, más lo que lo haya movido el usuario
-            var center = item.at + upLeft * (r + item.halfWidth + 2) + NumberOffsetOf(item.target);
-            var badge = NumberBadge(n++, item.color, r);
-            var target = item.target;
+            var center = AutoNumberCenter(target);
+            var badge = NumberBadge(number, NumberColorOf(target), r);
             badge.Cursor = Cursors.SizeAll;
             badge.ToolTip = "Arrastra para mover el número · clic para seleccionar · doble clic: volver a su lugar";
             badge.MouseLeftButtonDown += (s, e) => NumberDown(badge, target, e);

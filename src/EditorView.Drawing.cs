@@ -39,10 +39,16 @@ sealed partial class EditorView
         _start = e.GetPosition(_ink);
         _arrowPath = _tool == Tool.Arrow ? new List<Point> { _start } : null;
         var attributes = MakeAttributes();
-        // Una flecha que sale de un trazo toma su color (el color actual no cambia)
-        if (_tool == Tool.Arrow && StrokeAt(_start) is Stroke origin) attributes.Color = origin.DrawingAttributes.Color;
+        // Una flecha que sale de un trazo toma su color (el color actual no cambia) y no lleva
+        // número: su idea va en ese trazo. La que empieza en el vacío se numera como cualquiera.
+        var origin = _tool == Tool.Arrow ? StrokeAt(_start) : null;
+        if (origin != null) attributes.Color = origin.DrawingAttributes.Color;
         _preview = new NoteStroke(BuildPoints(_start, _start), attributes);
-        if (_tool == Tool.Arrow) _preview.AddPropertyData(ArrowProperty, true); // las flechas no se numeran
+        if (_tool == Tool.Arrow)
+        {
+            _preview.AddPropertyData(ArrowProperty, true);
+            if (origin == null) _preview.AddPropertyData(FreeArrowProperty, true);
+        }
         _suppress = true;
         _ink.Strokes.Add(_preview);
         _suppress = false;
@@ -383,6 +389,7 @@ sealed partial class EditorView
         Canvas.SetTop(block, n.Y);
         if (n.Orden > 0) block.Tag = n.Orden; // orden para la numeración (si no, se asigna al refrescar)
         block.NumberOffset = new Vector(n.NumeroDx, n.NumeroDy);
+        block.Idea = n.Idea;
         // Doble clic para corregirlo. Con Seleccionar, un clic lo elige y arrastrar lo mueve;
         // con las demás herramientas un clic simple no hace nada (no empieza un trazo encima).
         block.Cursor = Cursors.IBeam;

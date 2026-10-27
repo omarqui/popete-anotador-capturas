@@ -32,6 +32,8 @@ sealed class TextNote
     public double NumeroDy { get; set; }
     /// <summary>Estilo etiqueta: fondo del color del texto (ver NoteText).</summary>
     public bool Fondo { get; set; }
+    /// <summary>Idea de su número (no sale en la imagen); null si no tiene.</summary>
+    public string Idea { get; set; }
 }
 
 sealed class Session
@@ -44,6 +46,8 @@ sealed class Session
     public string PreviewPath => Path.Combine(Folder, "anotada.png");
     public string ThumbPath => Path.Combine(Folder, "miniatura.png");
     public string MetaPath => Path.Combine(Folder, "meta.json");
+    /// <summary>La lista de ideas («1. …»), sin encabezado; no existe si no hay ideas.</summary>
+    public string IdeasPath => Path.Combine(Folder, "ideas.txt");
 }
 
 static class History

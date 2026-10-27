@@ -79,9 +79,9 @@ sealed partial class EditorView
         _numbersButton = new ToggleButton
         {
             Content = new TextBlock { Text = "123", FontSize = 12, FontWeight = FontWeights.Bold },
-            ToolTip = "Numerar trazos y textos (N)",
+            ToolTip = "Numerar todo (N) · apagado: solo lo que tiene idea",
         };
-        System.Windows.Automation.AutomationProperties.SetName(_numbersButton, "Numerar trazos y textos");
+        System.Windows.Automation.AutomationProperties.SetName(_numbersButton, "Numerar todo");
         _numbersButton.SetResourceReference(StyleProperty, "EstiloHerramienta");
         _numbersButton.Click += (s, e) => ToggleNumbers();
         edit.Children.Add(_numbersButton);

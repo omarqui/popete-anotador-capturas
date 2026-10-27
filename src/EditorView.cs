@@ -471,11 +471,22 @@ sealed partial class EditorView : UserControl
                 Fondo = tb is NoteText nt && nt.Fondo,
                 NumeroDx = NumberOffsetOf(tb).X,
                 NumeroDy = NumberOffsetOf(tb).Y,
+                Idea = IdeaOf(tb),
                 FontSize = tb.FontSize,
                 Color = (tb.Foreground as SolidColorBrush)?.Color.ToString() ?? Palette[0].color.ToString(),
             }).ToList();
             var json = JsonSerializer.SerializeToUtf8Bytes(notes, History.JsonOptions);
             History.WriteAtomic(_session.TextsPath, fs => fs.Write(json, 0, json.Length));
+
+            // La lista de ideas, para el historial rápido (y para quien lea la carpeta)
+            var ideas = IdeasList();
+            if (ideas.Length > 0)
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(ideas);
+                History.WriteAtomic(_session.IdeasPath, fs => fs.Write(bytes, 0, bytes.Length));
+            }
+            else if (File.Exists(_session.IdeasPath))
+                File.Delete(_session.IdeasPath);
 
             var rendered = Render();
             History.SavePng(rendered, _session.PreviewPath);

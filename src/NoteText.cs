@@ -20,6 +20,9 @@ sealed class NoteText : TextBlock
     /// <summary>Cuánto movió el usuario el número del texto desde su lugar automático.</summary>
     public Vector NumberOffset { get; set; }
 
+    /// <summary>Idea de su número: no sale en la imagen, viaja al copiar (EditorView.Ideas.cs).</summary>
+    public string Idea { get; set; }
+
     public bool Fondo
     {
         get => _fondo;
