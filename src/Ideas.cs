@@ -19,24 +19,24 @@ static class Ideas
     public static bool HasText(string idea) => !string.IsNullOrWhiteSpace(idea);
 
     /// <summary>
-    /// El número de cada candidato, en el mismo índice (0 = sin número). Con
-    /// <paramref name="numberAll"/>, todos 1..n por orden; si no, solo los que tienen idea, seguidos.
+    /// El número de cada candidato, en el mismo índice (0 = sin número): solo los que tienen idea,
+    /// seguidos (1, 2, 3) por orden de creación.
     /// </summary>
-    public static int[] Assign(IReadOnlyList<NumberCandidate> items, bool numberAll)
+    public static int[] Assign(IReadOnlyList<NumberCandidate> items)
     {
         var numbers = new int[items.Count];
         int n = 1;
         foreach (int i in Enumerable.Range(0, items.Count).OrderBy(i => items[i].Order)) // OrderBy es estable: empates por índice
-            if (numberAll || items[i].HasIdea) numbers[i] = n++;
+            if (items[i].HasIdea) numbers[i] = n++;
         return numbers;
     }
 
-    /// <summary>El número que tomaría <paramref name="items"/>[<paramref name="index"/>] si tuviera idea (numeración apagada).</summary>
+    /// <summary>El número que tomaría <paramref name="items"/>[<paramref name="index"/>] si tuviera idea.</summary>
     public static int GhostNumber(IReadOnlyList<NumberCandidate> items, int index)
     {
         var withIdea = items.ToArray();
         withIdea[index] = withIdea[index] with { HasIdea = true };
-        return Assign(withIdea, numberAll: false)[index];
+        return Assign(withIdea)[index];
     }
 
     /// <summary>
@@ -59,30 +59,9 @@ static class Ideas
     }
 
     /// <summary>
-    /// Qué pone en el portapapeles una captura: si va la imagen y qué texto la acompaña (null = ninguno).
-    /// Sin ideas (<paramref name="ideasText"/> null), solo la imagen. Con ideas, según el ajuste: la
-    /// imagen y el texto juntos (en Claude Code, Ctrl+V pega el texto y Alt+V adjunta la imagen; los
-    /// demás destinos pegan uno de los dos) o solo las dos rutas (<see cref="ForAi"/>).
+    /// El texto que se copia junto a la imagen (en Claude Code, Ctrl+V lo pega y Alt+V adjunta la
+    /// imagen): encabezado, línea en blanco y la lista. null si no hay ideas.
     /// </summary>
-    public static (bool image, string text) ForCopy(CopiaIdeas mode, string imagePath, string ideasPath, string ideasText)
-    {
-        if (ideasText == null) return (true, null);
-        return mode == CopiaIdeas.Rutas ? (false, ForAi(imagePath, ideasPath)) : (true, ideasText);
-    }
-
-    /// <summary>
-    /// La copia en modo Rutas: la ruta de la imagen anotada y la de ideas.txt (encabezado y lista), en
-    /// una sola línea y entre comillas si tienen espacios. Claude Code adjunta como imagen una ruta
-    /// pegada solo si cada tramo de la línea es una ruta: con texto al lado la deja como texto, y la
-    /// terminal pega los saltos de línea como CR, así que la ruta tampoco puede ir en su propia línea.
-    /// </summary>
-    public static string ForAi(string imagePath, string ideasPath)
-    {
-        static string Quote(string path) => path.Contains(' ') ? $"\"{path}\"" : path;
-        return Quote(imagePath) + " " + Quote(ideasPath);
-    }
-
-    /// <summary>El texto que se copia: encabezado, línea en blanco y la lista. null si no hay ideas.</summary>
     public static string WithHeader(string header, string list)
     {
         if (string.IsNullOrEmpty(list)) return null;

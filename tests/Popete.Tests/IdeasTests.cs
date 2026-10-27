@@ -4,12 +4,12 @@ using Xunit;
 public class IdeasTests
 {
     [Fact]
-    public void Assign_todo_numera_por_orden()
-        => Assert.Equal(new[] { 2, 1, 3 }, Ideas.Assign(new[] { new NumberCandidate(5, false), new NumberCandidate(2, true), new NumberCandidate(9, false) }, numberAll: true));
+    public void Assign_numera_seguido_solo_las_ideas()
+        => Assert.Equal(new[] { 0, 1, 0, 2 }, Ideas.Assign(new[] { new NumberCandidate(1, false), new NumberCandidate(2, true), new NumberCandidate(3, false), new NumberCandidate(4, true) }));
 
     [Fact]
-    public void Assign_sin_todo_numera_seguido_solo_las_ideas()
-        => Assert.Equal(new[] { 0, 1, 0, 2 }, Ideas.Assign(new[] { new NumberCandidate(1, false), new NumberCandidate(2, true), new NumberCandidate(3, false), new NumberCandidate(4, true) }, numberAll: false));
+    public void Assign_sigue_el_orden_de_creacion()
+        => Assert.Equal(new[] { 2, 1, 0 }, Ideas.Assign(new[] { new NumberCandidate(5, true), new NumberCandidate(2, true), new NumberCandidate(9, false) }));
 
     [Fact]
     public void GhostNumber_es_el_lugar_entre_las_ideas()
@@ -42,35 +42,11 @@ public class IdeasTests
 
     [Fact]
     public void Assign_sin_candidatos()
-        => Assert.Empty(Ideas.Assign(new NumberCandidate[0], numberAll: true));
+        => Assert.Empty(Ideas.Assign(new NumberCandidate[0]));
 
     [Fact]
     public void GhostNumber_de_uno_que_ya_tiene_idea_es_su_numero()
         => Assert.Equal(2, Ideas.GhostNumber(new[] { new NumberCandidate(1, true), new NumberCandidate(2, true) }, 1));
-
-    [Fact]
-    public void ForAi_las_dos_rutas_en_una_linea()
-        => Assert.Equal(@"C:\h\anotada.png C:\h\ideas.txt", Ideas.ForAi(@"C:\h\anotada.png", @"C:\h\ideas.txt"));
-
-    [Fact]
-    public void ForAi_ruta_con_espacios_va_entre_comillas()
-        => Assert.Equal("\"C:\\Mis capturas\\anotada.png\" \"C:\\Mis capturas\\ideas.txt\"",
-            Ideas.ForAi(@"C:\Mis capturas\anotada.png", @"C:\Mis capturas\ideas.txt"));
-
-    [Fact]
-    public void ForCopy_imagen_y_texto_lleva_la_imagen_y_las_ideas()
-        => Assert.Equal((true, "1. a"), Ideas.ForCopy(CopiaIdeas.ImagenYTexto, @"C:\h\anotada.png", @"C:\h\ideas.txt", "1. a"));
-
-    [Fact]
-    public void ForCopy_rutas_lleva_solo_las_dos_rutas()
-        => Assert.Equal((false, @"C:\h\anotada.png C:\h\ideas.txt"), Ideas.ForCopy(CopiaIdeas.Rutas, @"C:\h\anotada.png", @"C:\h\ideas.txt", "1. a"));
-
-    [Fact]
-    public void ForCopy_sin_ideas_es_solo_la_imagen_en_los_dos_modos()
-    {
-        Assert.Equal((true, (string)null), Ideas.ForCopy(CopiaIdeas.ImagenYTexto, @"C:\h\anotada.png", @"C:\h\ideas.txt", null));
-        Assert.Equal((true, (string)null), Ideas.ForCopy(CopiaIdeas.Rutas, @"C:\h\anotada.png", @"C:\h\ideas.txt", null));
-    }
 
     [Fact]
     public void WithHeader_casos()

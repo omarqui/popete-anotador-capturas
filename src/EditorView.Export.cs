@@ -72,21 +72,8 @@ sealed partial class EditorView
         CommitText();
         if (_cropMode) ConfirmCrop(); // copiar con el marco ajustado: se aplica primero
 
-        // Con ideas, según el ajuste: la imagen y el texto, o solo las rutas (Ideas.ForCopy)
-        var (image, text) = Ideas.ForCopy(AppSettings.Current.CopiarIdeas, _session.PreviewPath, _session.IdeasPath, IdeasText());
-        if (!image)
-        {
-            SaveSession(); // las rutas apuntan a anotada.png e ideas.txt: que estén al día
-            if (!ClipboardHelper.SetText(text))
-            {
-                _status.Text = "No se pudo acceder al portapapeles. Intenta de nuevo.";
-                return false;
-            }
-            _status.Text = "✓ Rutas de la imagen y de sus ideas copiadas (pégalas en Claude Code)";
-            FlashCopied();
-            return true;
-        }
-
+        // Con ideas, su texto va junto a la imagen (nota 49)
+        var text = IdeasText();
         var png = new MemoryStream();
         var enc = new PngBitmapEncoder();
         enc.Frames.Add(BitmapFrame.Create(Render()));

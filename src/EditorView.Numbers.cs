@@ -2,16 +2,14 @@
 //  Editor — numeración automática
 //
 //  Cada trazo (lápiz, resaltador, formas y flechas libres; no las flechas que salen de otro
-//  trazo) y cada texto lleva un círculo con su número de orden pegado a su punto más arriba a
-//  la izquierda. Los números se recalculan en cada cambio (MarkChanged): si se borra el 2, el 3
-//  pasa a ser el 2.
+//  trazo) y cada texto que tiene idea lleva un círculo con su número pegado a su punto más
+//  arriba a la izquierda; sin idea, no lleva número. Van seguidos (1, 2, 3) por orden de
+//  creación (Ideas.Assign) y se recalculan en cada cambio (MarkChanged): si se borra el 2,
+//  el 3 pasa a ser el 2.
 //
 //  El orden de creación se guarda en el propio trazo (propiedad del ISF) y en
 //  TextNote.Orden, así sobrevive a cerrar y retomar la captura. Los círculos
 //  están dentro de _surface: salen en la imagen exportada.
-//  El botón "123" (o N) es «numerar todo», por captura; el valor inicial viene de
-//  AppSettings.NumerarPorDefecto. Apagado, solo se numera lo que tiene idea, seguido
-//  (1, 2, 3; ver EditorView.Ideas.cs e Ideas.Assign).
 // ----------------------------------------------------------------------------
 sealed partial class EditorView
 {
@@ -48,10 +46,7 @@ sealed partial class EditorView
     bool _numberMoved;
 
     Canvas _numbersLayer;
-    ToggleButton _numbersButton;
     long _nextOrder = 1;
-
-    bool NumbersOn => _session.Meta.Numerar ?? AppSettings.Current.NumerarPorDefecto;
 
     Canvas BuildNumbersLayer()
     {
@@ -87,13 +82,6 @@ sealed partial class EditorView
             if (tb.Tag is not long) tb.Tag = _nextOrder++;
     }
 
-    void ToggleNumbers()
-    {
-        _session.Meta.Numerar = !NumbersOn;
-        _numbersButton.IsChecked = NumbersOn;
-        MarkChanged();
-    }
-
     /// <summary>
     /// Lo que puede llevar número, en el orden de los trazos y textos: todos los trazos (menos las
     /// flechas unidas) y todos los textos, con su orden y si tienen idea.
@@ -118,13 +106,12 @@ sealed partial class EditorView
     }
 
     /// <summary>
-    /// Los que llevan número, en orden: todos con la numeración prendida; si no, solo los que
-    /// tienen idea (seguidos: 1, 2, 3).
+    /// Los que llevan número, en orden: los que tienen idea (seguidos: 1, 2, 3).
     /// </summary>
     List<(object target, int number)> Numbering()
     {
         var (targets, candidates) = NumberCandidates();
-        var numbers = Ideas.Assign(candidates, NumbersOn);
+        var numbers = Ideas.Assign(candidates);
         return Enumerable.Range(0, targets.Count).Where(i => numbers[i] > 0).OrderBy(i => numbers[i])
             .Select(i => (targets[i], numbers[i])).ToList();
     }
@@ -167,7 +154,6 @@ sealed partial class EditorView
     {
         if (_numbersLayer == null) return;
         _numbersLayer.Children.Clear();
-        if (_numbersButton != null) _numbersButton.IsChecked = NumbersOn;
         _ideaMarks?.Children.Clear();
 
         double r = NumberRadius;

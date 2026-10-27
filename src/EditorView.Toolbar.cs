@@ -75,16 +75,6 @@ sealed partial class EditorView
         edit.Children.Add(Ui.IconBtn(Icons.Undo, "Deshacer (Ctrl+Z)", Undo));
         edit.Children.Add(Ui.IconBtn(Icons.Redo, "Rehacer (Ctrl+Y)", Redo));
         edit.Children.Add(Ui.IconBtn(Icons.Trash, "Quitar todas las anotaciones", ClearAll));
-
-        _numbersButton = new ToggleButton
-        {
-            Content = new TextBlock { Text = "123", FontSize = 12, FontWeight = FontWeights.Bold },
-            ToolTip = "Numerar todo (N) · apagado: solo lo que tiene idea",
-        };
-        System.Windows.Automation.AutomationProperties.SetName(_numbersButton, "Numerar todo");
-        _numbersButton.SetResourceReference(StyleProperty, "EstiloHerramienta");
-        _numbersButton.Click += (s, e) => ToggleNumbers();
-        edit.Children.Add(_numbersButton);
         left.Children.Add(edit);
 
         // Derecha: vista y acciones finales.

@@ -394,6 +394,36 @@ static class Theme
             </Setter>
           </Style>
 
+          <!-- Sección del menú lateral de Ajustes: fondo e indicador de acento a la izquierda cuando está elegida -->
+          <Style x:Key="EstiloNavegacion" TargetType="RadioButton">
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Texto}"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                  <Grid>
+                    <Border x:Name="bd" CornerRadius="6" Background="{TemplateBinding Background}"/>
+                    <Border x:Name="ind" Width="3" Height="16" CornerRadius="1.5" HorizontalAlignment="Left"
+                            Background="{DynamicResource Acento}" Visibility="Collapsed"/>
+                    <ContentPresenter Margin="12,0" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                  </Grid>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource Hover}"/>
+                    </Trigger>
+                    <Trigger Property="IsChecked" Value="True">
+                      <Setter TargetName="bd" Property="Background" Value="{DynamicResource Seleccion}"/>
+                      <Setter TargetName="ind" Property="Visibility" Value="Visible"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+
           <!-- Miniatura del panel de capturas recientes -->
           <Style x:Key="EstiloMiniatura" TargetType="Button">
             <Setter Property="Padding" Value="6"/>

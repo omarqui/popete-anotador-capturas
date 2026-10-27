@@ -131,5 +131,8 @@ static class Icons
     public const string Recents = "M3 12 A9 9 0 1 0 6 5.3 M3 4 V8 H7 M12 7 V12 L15 14";
     public const string Close = "M6 6 L18 18 M18 6 L6 18";
     public const string Refresh = "M20 11 A8 8 0 1 0 18 17 M20 5 V11 H14";
-    public const string Folder = "M3 7 A2 2 0 0 1 5 5 H9 L11 7 H19 A2 2 0 0 1 21 9 V17 A2 2 0 0 1 19 19 H5 A2 2 0 0 1 3 17 Z";
+    public const string Info = "M21 12 A9 9 0 1 1 3 12 A9 9 0 1 1 21 12 Z M12 11 V16.5 M12 7.6 V7.8";
+    public const string Idea = "M9 18 H15 M10 21 H14 M9 15.5 A6 6 0 1 1 15 15.5 V16 H9 Z";
+    public const string Link = "M14 4 H20 V10 M20 4 L11 13 M18 14 V18 A2 2 0 0 1 16 20 H6 A2 2 0 0 1 4 18 V8 A2 2 0 0 1 6 6 H10";
+    public const string Folder ="M3 7 A2 2 0 0 1 5 5 H9 L11 7 H19 A2 2 0 0 1 21 9 V17 A2 2 0 0 1 19 19 H5 A2 2 0 0 1 3 17 Z";
 }

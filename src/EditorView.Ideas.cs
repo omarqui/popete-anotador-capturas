@@ -133,6 +133,52 @@ sealed partial class EditorView
         return true;
     }
 
+    // ------------------------------------------------------------------ escribir sobre lo elegido
+    // Con un solo trazo o texto elegido a mano, escribir abre su idea con lo tecleado: las letras
+    // dejan de cambiar de herramienta hasta soltarlo (Esc). 1–3 siguen siendo el grosor. Lo
+    // recién dibujado no cuenta: su campo ya se ofrece solo.
+
+    /// <summary>A qué elemento iría lo que se escriba, o null.</summary>
+    object TypingIdeaTarget()
+    {
+        if (_selectionAuto || _cropMode || _selection.Count + _selectedTexts.Count != 1) return null;
+        object target = (object)_selection.FirstOrDefault() ?? _selectedTexts[0];
+        return target is Stroke s && IsTiedArrow(s) ? null : target; // la flecha unida no lleva número
+    }
+
+    /// <summary>¿La tecla (sin modificadores) escribe en la idea de lo elegido en vez de ser un atajo?</summary>
+    bool TypesIdea(Key key) =>
+        (key is >= Key.A and <= Key.Z or >= Key.D0 and <= Key.D9 or >= Key.NumPad0 and <= Key.NumPad9
+            or Key.Space or >= Key.Oem1 and <= Key.Oem102 or Key.Multiply or Key.Add or Key.Subtract
+            or Key.Decimal or Key.Divide)
+        && key is not (Key.D1 or Key.D2 or Key.D3 or Key.NumPad1 or Key.NumPad2 or Key.NumPad3)
+        && TypingIdeaTarget() != null;
+
+    void OnTextInput(object sender, TextCompositionEventArgs e)
+    {
+        if (_editing != null || e.Text.Length == 0 || char.IsControl(e.Text[0])) return;
+        if (_ideaBox != null)
+        {
+            // Recién abierto, el foco llega al campo un momento después: lo tecleado entretanto, ahí
+            if (_ideaBox.IsKeyboardFocusWithin) return;
+            AppendToIdea(e.Text);
+            e.Handled = true;
+            return;
+        }
+        var target = TypingIdeaTarget();
+        if (target == null) return;
+        OpenIdea(target);
+        if (_ideaBox == null) return;
+        AppendToIdea(e.Text);
+        e.Handled = true;
+    }
+
+    void AppendToIdea(string text)
+    {
+        _ideaBox.AppendText(text);
+        _ideaBox.CaretIndex = _ideaBox.Text.Length;
+    }
+
     /// <summary>Teclas con el campo abierto (OnKeyDown la consulta primero): true = son del campo. Ver IdeaKeys.</summary>
     bool IdeaKey(KeyEventArgs e)
     {
@@ -225,7 +271,7 @@ sealed partial class EditorView
     }
 
     // ------------------------------------------------------------------ número fantasma
-    // Lo que no muestra número (con «numerar todo» apagado y sin idea) no tendría dónde hacer
+    // Lo que no muestra número (no tiene idea) no tendría dónde hacer
     // clic para anotarlo: al elegirlo aparece un número tenue donde iría, con el que tomaría.
     // Solo en el editor; no cuenta para la lista.
     FrameworkElement _ghost;
@@ -247,7 +293,7 @@ sealed partial class EditorView
         if (target == null || !IsAlive(target) || target is Stroke s && IsTiedArrow(s)) return;
         var (targets, candidates) = NumberCandidates();
         int index = targets.IndexOf(target);
-        if (index < 0 || Ideas.Assign(candidates, NumbersOn)[index] > 0) return; // ya tiene número
+        if (index < 0 || Ideas.Assign(candidates)[index] > 0) return; // ya tiene número
 
         double r = NumberRadius;
         var ghost = NumberBadge(Ideas.GhostNumber(candidates, index), NumberColorOf(target), r);

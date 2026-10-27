@@ -74,6 +74,7 @@ sealed partial class EditorView
         UpdateSelectionVisual();
         RestartSelectionTimer();
         if (HasSelection && !auto) ReflectSelectionInToolbar();
+        else RestoreDrawStyle(); // al soltarla (o al empezar un trazo) vuelve el color con el que se dibujaba
         RefreshGhost(); // lo elegido sin número muestra dónde iría (EditorView.Ideas.cs)
     }
 
@@ -235,9 +236,14 @@ sealed partial class EditorView
         PushUndo(Combine(parts)); // todo junto: un Ctrl+Z lo devuelve todo
     }
 
+    // Color y grosor con los que se dibujaba antes de elegir algo a mano: la barra muestra los de lo
+    // elegido mientras dura la selección (para cambiarlos), pero el próximo trazo sale con estos.
+    (Color pen, Color highlight, double size)? _drawStyle;
+
     /// <summary>Muestra en la barra el color y el grosor de lo elegido, sin modificarlo.</summary>
     void ReflectSelectionInToolbar()
     {
+        _drawStyle ??= (_penColor, _highlightColor, _size);
         if (_selection.Count > 0)
         {
             var da = _selection[_selection.Count - 1].DrawingAttributes;
@@ -252,7 +258,22 @@ sealed partial class EditorView
         }
         RefreshSwatches();
         RefreshSizes();
-        UpdateDrawingAttributes(); // se puede elegir sin soltar el lápiz (doble clic): el próximo trazo sale así
+        UpdateDrawingAttributes();
+        UpdatePointer();
+    }
+
+    /// <summary>Vuelve al color y al grosor de antes de elegir algo a mano (<see cref="_drawStyle"/>).</summary>
+    void RestoreDrawStyle()
+    {
+        if (_drawStyle is not { } style) return;
+        _drawStyle = null;
+        var (pen, highlight, size) = style;
+        _penColor = pen;
+        _highlightColor = highlight;
+        _size = size;
+        RefreshSwatches();
+        RefreshSizes();
+        UpdateDrawingAttributes();
         UpdatePointer();
     }
 

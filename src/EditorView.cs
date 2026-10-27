@@ -252,6 +252,7 @@ sealed partial class EditorView : UserControl
         // que de otro modo se queda con Ctrl+C / Ctrl+X / Ctrl+V.
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
+        PreviewTextInput += OnTextInput; // escribir con un elemento elegido: su idea (EditorView.Ideas.cs)
         EnableDrop();
         PreviewMouseDown += (s, e) =>
         {
@@ -484,7 +485,7 @@ sealed partial class EditorView : UserControl
             var json = JsonSerializer.SerializeToUtf8Bytes(notes, History.JsonOptions);
             History.WriteAtomic(_session.TextsPath, fs => fs.Write(json, 0, json.Length));
 
-            // Las ideas con su encabezado: copiar con ideas pega la ruta de este archivo (Ideas.ForAi)
+            // Las ideas con su encabezado: el historial rápido las copia de aquí junto a la imagen
             var ideas = IdeasText();
             if (ideas != null)
             {
@@ -672,6 +673,7 @@ sealed partial class EditorView : UserControl
         }
 
         if (Keyboard.Modifiers != ModifierKeys.None) return;
+        if (TypesIdea(e.Key)) return; // sin manejar: llega como texto a OnTextInput
         switch (e.Key)
         {
             case Key.Tab: SetTool(_tool == Tool.Pen ? Tool.Arrow : Tool.Pen); break; // alterna lápiz ↔ flecha
@@ -685,7 +687,6 @@ sealed partial class EditorView : UserControl
             case Key.T: SetTool(Tool.Text); break;
             case Key.E: SetTool(Tool.Eraser); break;
             case Key.C: SetTool(Tool.Crop); break;
-            case Key.N: ToggleNumbers(); break;
             case Key.D1: case Key.NumPad1: SetSize(SizePresets[0]); break;
             case Key.D2: case Key.NumPad2: SetSize(SizePresets[1]); break;
             case Key.D3: case Key.NumPad3: SetSize(SizePresets[2]); break;

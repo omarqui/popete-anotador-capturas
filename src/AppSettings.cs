@@ -3,15 +3,6 @@
 // ----------------------------------------------------------------------------
 enum ModoTema { Sistema, Claro, Oscuro }
 
-/// <summary>Qué copia una captura con ideas (nota 49).</summary>
-enum CopiaIdeas
-{
-    /// <summary>La imagen y el texto de las ideas juntos: en Claude Code, Ctrl+V pega el texto y Alt+V adjunta la imagen.</summary>
-    ImagenYTexto,
-    /// <summary>Una línea con las rutas de anotada.png y de ideas.txt: Claude Code adjunta la imagen con un solo Ctrl+V.</summary>
-    Rutas,
-}
-
 sealed class AppSettings
 {
     /// <summary>Tema de la interfaz. "Sistema" sigue al de Windows.</summary>
@@ -25,14 +16,8 @@ sealed class AppSettings
     /// <summary>Segundos que el trazo recién dibujado queda seleccionado. 0 = no se selecciona.</summary>
     public int SegundosSeleccion { get; set; } = 3;
 
-    /// <summary>Si las capturas nuevas numeran sus trazos y textos (cada captura puede cambiarlo con su botón).</summary>
-    public bool NumerarPorDefecto { get; set; } = true;
-
     /// <summary>Va antes de la lista de ideas al copiar (Ideas.WithHeader). Vacío: solo la lista.</summary>
     public string EncabezadoIdeas { get; set; } = Ideas.DefaultHeader;
-
-    /// <summary>Qué copia una captura con ideas (Ideas.ForCopy). Sin ideas se copia siempre la imagen.</summary>
-    public CopiaIdeas CopiarIdeas { get; set; } = CopiaIdeas.ImagenYTexto;
 
     /// <summary>Si los textos nuevos salen como etiqueta (fondo de color). Lo cambia el botón de la barra.</summary>
     public bool TextoConFondo { get; set; } = true;
@@ -48,6 +33,9 @@ sealed class AppSettings
 
     /// <summary>Ctrl+C, el clic derecho y el botón "Copiar" cierran el editor después de copiar. Ctrl+Enter cierra siempre.</summary>
     public bool CerrarAlCopiar { get; set; } = true;
+
+    /// <summary>Preguntarle a la Store por una versión nueva al rato de arrancar y cada 6 horas (solo en el MSIX).</summary>
+    public bool BuscarActualizaciones { get; set; } = true;
 
     /// <summary>Atajo global del historial rápido (QuickHistoryWindow). null = sin atajo.</summary>
     public Hotkey AtajoHistorial { get; set; } = Hotkey.Default;

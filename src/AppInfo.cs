@@ -11,6 +11,30 @@ static class AppInfo
     public const string Subtitle = "anotador de capturas";
     public const string FullName = Name + " · " + Subtitle;
 
+    // Para «Acerca de» en Ajustes (los mismos datos que PRIVACIDAD.md)
+    public const string Author = "Omarqui Aybar";
+    public const string Email = "omarquiaybar@gmail.com";
+
+    /// <summary>
+    /// «1.1.3» en el MSIX (la versión del paquete; el .exe no la lleva). Sin paquete, «desarrollo»
+    /// con el commit del build, que el SDK agrega a la versión informativa («1.0.0+f0356c9…»).
+    /// </summary>
+    public static string VersionText
+    {
+        get
+        {
+            if (IsPackaged)
+            {
+                var v = Windows.ApplicationModel.Package.Current.Id.Version;
+                return $"{v.Major}.{v.Minor}.{v.Build}";
+            }
+            var info = System.Reflection.CustomAttributeExtensions
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>(typeof(AppInfo).Assembly)?.InformationalVersion ?? "";
+            int plus = info.IndexOf('+');
+            return plus >= 0 && info.Length > plus + 7 ? $"desarrollo (commit {info.Substring(plus + 1, 7)})" : "desarrollo";
+        }
+    }
+
     static Stream IconStream() => typeof(AppInfo).Assembly.GetManifestResourceStream("popete.ico");
 
     /// <summary>Ícono para la bandeja, en el tamaño que pide Windows (elige el mejor del .ico).</summary>
@@ -22,6 +46,20 @@ static class AppInfo
 
     /// <summary>Ícono para las ventanas WPF.</summary>
     public static readonly ImageSource WindowIcon = BitmapFrame.Create(IconStream(), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+
+    /// <summary>
+    /// El ícono grande (Acerca de): el cuadro del .ico más chico que cubra <paramref name="pixels"/>.
+    /// <see cref="WindowIcon"/> es el primer cuadro, uno pequeño, y estirado se ve borroso.
+    /// </summary>
+    public static ImageSource LargeIcon(int pixels)
+    {
+        using var s = IconStream();
+        var frames = new IconBitmapDecoder(s, BitmapCreateOptions.None, BitmapCacheOption.OnLoad).Frames;
+        var frame = frames.Where(f => f.PixelWidth >= pixels).OrderBy(f => f.PixelWidth).FirstOrDefault()
+            ?? frames.OrderByDescending(f => f.PixelWidth).First();
+        frame.Freeze();
+        return frame;
+    }
 
     static readonly string LocalAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
     static readonly string NewRoot = Path.Combine(LocalAppData, "Popete");

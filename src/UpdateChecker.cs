@@ -1,15 +1,29 @@
 // ----------------------------------------------------------------------------
-//  Aviso de versión nueva (solo instalada desde la Store)
+//  Versión nueva (solo instalada desde la Store)
 //
 //  Popete vive en la bandeja y arranca con Windows: casi nunca está cerrada, y la
 //  Store no actualiza una app mientras corre. Por eso le pregunta a la Store
-//  (StoreContext) al rato de arrancar y cada 6 horas. Si hay una versión nueva,
-//  muestra un globo en la bandeja (una vez por sesión) y "Actualizar Popete" arriba
-//  en su menú. Al elegirlo, cierra los editores (guardan lo pendiente), descarga e
-//  instala sin más preguntas, y Windows vuelve a abrir Popete
-//  (RegisterApplicationRestart). Si la Store no deja instalar así, abre la página
-//  de Popete en la Store, donde está el botón Actualizar.
+//  (StoreContext) al rato de arrancar y cada 6 horas (si AppSettings.BuscarActualizaciones).
+//  Si hay una versión nueva, muestra un globo en la bandeja (una vez por sesión) y
+//  "Actualizar Popete" arriba en su menú. Ajustes › Actualizaciones muestra el estado
+//  (State, Changed) y permite buscar a mano (CheckNow). Al instalar, cierra los
+//  editores (guardan lo pendiente), descarga e instala sin más preguntas, y Windows
+//  vuelve a abrir Popete (RegisterApplicationRestart). Si la Store no deja instalar
+//  así, abre la página de Popete en la Store, donde está el botón Actualizar.
 // ----------------------------------------------------------------------------
+enum UpdateState
+{
+    /// <summary>No es el MSIX de la Store (compilada desde el código): no hay a quién preguntar.</summary>
+    NotFromStore,
+    NotChecked,
+    Checking,
+    UpToDate,
+    Available,
+    /// <summary>La Store no respondió (sin conexión o paquete de prueba).</summary>
+    Failed,
+    Installing,
+}
+
 sealed class UpdateChecker
 {
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
@@ -17,6 +31,18 @@ sealed class UpdateChecker
 
     static readonly TimeSpan FirstCheck = TimeSpan.FromSeconds(30);
     static readonly TimeSpan Interval = TimeSpan.FromHours(6);
+
+    /// <summary>El de la bandeja (lo crea CaptureHost.CreateTray); null antes.</summary>
+    public static UpdateChecker Current { get; private set; }
+
+    /// <summary>Cada cambio de <see cref="State"/> (Ajustes lo muestra).</summary>
+    public static event Action Changed;
+
+    public UpdateState State { get; private set; } = AppInfo.IsPackaged ? UpdateState.NotChecked : UpdateState.NotFromStore;
+    public DateTime? LastCheck { get; private set; }
+
+    /// <summary>La versión nueva («1.1.4»), con <see cref="UpdateState.Available"/>.</summary>
+    public string AvailableVersion { get; private set; }
 
     readonly System.Windows.Forms.NotifyIcon _tray;
     readonly System.Windows.Forms.ToolStripMenuItem _item;
@@ -26,11 +52,11 @@ sealed class UpdateChecker
     IReadOnlyList<Windows.Services.Store.StorePackageUpdate> _updates;
     bool _notified;      // el globo sale una vez por sesión; la opción del menú queda
     bool _balloonIsOurs; // el clic en el globo es para actualizar (hay otros globos)
-    bool _installing;
 
     /// <summary>Agrega su opción (oculta hasta que haya versión nueva) arriba del menú de la bandeja.</summary>
     public UpdateChecker(System.Windows.Forms.NotifyIcon tray, System.Windows.Forms.ContextMenuStrip menu)
     {
+        Current = this;
         _tray = tray;
         _item = new System.Windows.Forms.ToolStripMenuItem("Actualizar Popete", null, (s, e) => Install())
         {
@@ -48,23 +74,43 @@ sealed class UpdateChecker
         _timer.Tick += async (s, e) =>
         {
             _timer.Interval = Interval;
-            await Check();
+            if (AppSettings.Current.BuscarActualizaciones) await Check(manual: false);
         };
         if (AppInfo.IsPackaged) _timer.Start(); // el .exe suelto no viene de la Store
     }
 
     Windows.Services.Store.StoreContext Store() => _store ??= Windows.Services.Store.StoreContext.GetDefault();
 
-    async System.Threading.Tasks.Task Check()
+    void SetState(UpdateState state)
     {
-        if (_installing) return;
+        State = state;
+        Changed?.Invoke();
+    }
+
+    /// <summary>«Buscar actualizaciones» en Ajustes: sin globo (ya se está mirando).</summary>
+    public System.Threading.Tasks.Task CheckNow() => Check(manual: true);
+
+    async System.Threading.Tasks.Task Check(bool manual)
+    {
+        if (!AppInfo.IsPackaged || State is UpdateState.Checking or UpdateState.Installing) return;
+        SetState(UpdateState.Checking);
         try
         {
             var updates = await Store().GetAppAndOptionalStorePackageUpdatesAsync().AsTask();
-            if (updates.Count == 0) return;
+            LastCheck = DateTime.Now;
+            if (updates.Count == 0)
+            {
+                _updates = null;
+                _item.Available = _separator.Available = false;
+                SetState(UpdateState.UpToDate);
+                return;
+            }
             _updates = updates;
+            var v = updates[0].Package.Id.Version;
+            AvailableVersion = $"{v.Major}.{v.Minor}.{v.Build}";
             _item.Available = _separator.Available = true;
-            if (_notified) return;
+            SetState(UpdateState.Available);
+            if (_notified || manual) return;
             _notified = true;
             _balloonIsOurs = true;
             _tray.ShowBalloonTip(10000, "Hay una versión nueva de Popete",
@@ -75,13 +121,15 @@ sealed class UpdateChecker
         {
             // Sin conexión, o un paquete que no se instaló desde la Store (de prueba): se
             // vuelve a intentar en la próxima vuelta, sin llenar errores.log
+            LastCheck = DateTime.Now;
+            SetState(UpdateState.Failed);
         }
     }
 
-    async void Install()
+    public async void Install()
     {
-        if (_installing || _updates == null) return;
-        _installing = true;
+        if (State == UpdateState.Installing || _updates == null) return;
+        SetState(UpdateState.Installing);
         try
         {
             var store = Store();
@@ -99,12 +147,12 @@ sealed class UpdateChecker
         {
             AppInfo.LogError(ex);
         }
-        _installing = false;
+        SetState(UpdateState.Available);
         OpenStorePage();
     }
 
     /// <summary>La página de Popete en la Store (por el nombre de familia del paquete).</summary>
-    static void OpenStorePage()
+    public static void OpenStorePage()
     {
         try
         {

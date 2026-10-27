@@ -14,8 +14,6 @@ sealed class SessionMeta
     public List<string> ExportSignatures { get; set; } = new List<string>();
     /// <summary>Recorte [x, y, ancho, alto] sobre original.png; null = sin recorte.</summary>
     public int[] Crop { get; set; }
-    /// <summary>Numerar trazos y textos; null = lo que diga AppSettings.NumerarPorDefecto.</summary>
-    public bool? Numerar { get; set; }
 }
 
 sealed class TextNote

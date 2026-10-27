@@ -1,13 +1,16 @@
-// ----------------------------------------------------------------------------
+﻿// ----------------------------------------------------------------------------
 //  Ventana de ajustes
 //
 //  Cada opción se guarda al tocarla (ajustes.json); no hay botón "Guardar".
-//  Las opciones son grupos de botones segmentados, con los mismos estilos que
-//  la barra del editor, para que respeten el tema claro/oscuro.
+//  Un menú a la izquierda lleva a cada sección (Ctrl+Tab también); la última
+//  es «Acerca de». Cada opción es una tarjeta; las elecciones son grupos de
+//  botones segmentados, con los mismos estilos que la barra del editor, para
+//  que respeten el tema claro/oscuro.
 // ----------------------------------------------------------------------------
 sealed class SettingsWindow : Window
 {
     static SettingsWindow _open;
+    static int _lastPage; // vuelve a abrir en la sección de la vez anterior (en esta sesión)
 
     /// <summary>Abre la ventana (una sola a la vez). <paramref name="owner"/> puede ser null (desde la bandeja).</summary>
     public static void Show(Window owner)
@@ -21,51 +24,26 @@ sealed class SettingsWindow : Window
         _open.Activate();
     }
 
-    readonly StackPanel _body = new StackPanel { Margin = new Thickness(24, 16, 24, 20) };
+    StackPanel _body; // la sección que se está armando: ahí van las filas
+    readonly List<(RadioButton item, FrameworkElement page)> _pages = new();
+    readonly StackPanel _nav = new StackPanel { Margin = new Thickness(12, 16, 12, 16) };
+    readonly ScrollViewer _content = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
 
     SettingsWindow()
     {
         Title = $"Ajustes — {AppInfo.Name}";
-        Width = 560;
-        SizeToContent = SizeToContent.Height;
-        ResizeMode = ResizeMode.NoResize;
+        Width = 800;
+        Height = 580;
+        MinWidth = 640;
+        MinHeight = 420;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Theme.Attach(this);
 
         var s = AppSettings.Current;
 
-        Section("Apariencia");
+        Page("General", Icons.Settings, "Apariencia y arranque de Popete.");
         Choice("Tema", new[] { ("Claro", ModoTema.Claro), ("Oscuro", ModoTema.Oscuro), ("Como Windows", ModoTema.Sistema) },
             s.Tema, v => Theme.SetMode(v));
-
-        Section("Editor");
-        Choice("Numerar todo en capturas nuevas", new[] { ("Sí", true), ("No", false) },
-            s.NumerarPorDefecto, v => Save(() => s.NumerarPorDefecto = v),
-            "Apagado, solo se numera lo que tiene idea. Cada captura puede cambiarlo con el botón «123» de la barra.");
-        IdeasHeaderRow();
-        Choice("Copiar una captura con ideas", new[] { ("Imagen y texto", CopiaIdeas.ImagenYTexto), ("Rutas", CopiaIdeas.Rutas) },
-            s.CopiarIdeas, v => Save(() => s.CopiarIdeas = v),
-            "Imagen y texto: en Claude Code, Ctrl+V pega las ideas y Alt+V la imagen. Rutas: la de la imagen y la de sus ideas en una línea; Claude Code adjunta la imagen con un solo Ctrl+V.");
-        Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
-            s.RotarColores, v => Save(() => s.RotarColores = v),
-            "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");
-        Choice("Tamaño de los números", new[] { ("Normal", 1.0), ("Grande", 1.5), ("Muy grande", 2.0), ("Enorme", 2.6) },
-            s.TamanoNumeros, v => Save(() => s.TamanoNumeros = v));
-        Choice("Lo recién dibujado queda seleccionado", new[] { ("No", 0), ("2 s", 2), ("3 s", 3), ("5 s", 5), ("10 s", 10) },
-            s.SegundosSeleccion, v => Save(() => s.SegundosSeleccion = v),
-            "Mientras está seleccionado, elegir color o grosor se le aplica.");
-        Choice("Grosor inicial", new[] { ("Fino", 2.0), ("Medio", 4.0), ("Grueso", 8.0) },
-            s.GrosorInicial, v => Save(() => s.GrosorInicial = v));
-        Choice("Cerrar el editor al copiar", new[] { ("Sí", true), ("No", false) },
-            s.CerrarAlCopiar, v => Save(() => s.CerrarAlCopiar = v),
-            "Con Ctrl+C, el clic derecho o el botón. Ctrl+Enter copia y cierra siempre.");
-        FolderRow();
-
-        Section("Historial");
-        HotkeyRow();
-        Choice("Conservar las últimas", AppSettings.MaxCapturasOpciones.Select(n => (n > 0 ? n.ToString() : "Todas", n)).ToArray(),
-            s.MaxCapturas, v => { Save(() => s.MaxCapturas = v); CaptureHost.PruneHistory(); },
-            "Las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.");
         Action<bool> selectStartup = null;
         selectStartup = Choice("Iniciar con Windows", new[] { ("Sí", true), ("No", false) },
             StartupHelper.IsEnabled(), v =>
@@ -74,24 +52,68 @@ sealed class SettingsWindow : Window
                 if (StartupHelper.Set(v) == v) return;
                 selectStartup(!v);
                 ConfirmDialog.Inform(this, "Iniciar con Windows", StartupHelper.BlockedMessage);
-            });
+            }, "Popete espera en la bandeja y abre el editor con cada captura.");
 
-        var folder = Ui.Btn("Abrir carpeta del historial", "Abrir en el Explorador", () =>
+        Page("Dibujo", Icons.Pen, "Cómo empiezan y se comportan los trazos en el editor.");
+        Choice("Grosor inicial", new[] { ("Fino", 2.0), ("Medio", 4.0), ("Grueso", 8.0) },
+            s.GrosorInicial, v => Save(() => s.GrosorInicial = v));
+        Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
+            s.RotarColores, v => Save(() => s.RotarColores = v),
+            "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");
+        Choice("Lo recién dibujado queda seleccionado", new[] { ("No", 0), ("2 s", 2), ("3 s", 3), ("5 s", 5), ("10 s", 10) },
+            s.SegundosSeleccion, v => Save(() => s.SegundosSeleccion = v),
+            "Mientras está seleccionado, elegir color o grosor se le aplica.");
+
+        Page("Ideas", Icons.Idea, "Las notas de cada número: no salen en la imagen y se copian junto a ella.");
+        IdeasHeaderRow();
+        Choice("Tamaño de los números", new[] { ("Normal", 1.0), ("Grande", 1.5), ("Muy grande", 2.0), ("Enorme", 2.6) },
+            s.TamanoNumeros, v => Save(() => s.TamanoNumeros = v),
+            "Solo llevan número los trazos y textos con idea.");
+
+        Page("Copiar y guardar", Icons.Copy, "Qué pasa al terminar con una captura.");
+        Choice("Cerrar el editor al copiar", new[] { ("Sí", true), ("No", false) },
+            s.CerrarAlCopiar, v => Save(() => s.CerrarAlCopiar = v),
+            "Con Ctrl+C, el clic derecho o el botón. Ctrl+Enter copia y cierra siempre.");
+        FolderRow();
+
+        Page("Historial", Icons.Recents, "Las capturas que Popete guarda para retomarlas.");
+        HotkeyRow();
+        Choice("Conservar las últimas", AppSettings.MaxCapturasOpciones.Select(n => (n > 0 ? n.ToString() : "Todas", n)).ToArray(),
+            s.MaxCapturas, v => { Save(() => s.MaxCapturas = v); CaptureHost.PruneHistory(); },
+            "Las más viejas se eliminan solas. Las capturas abiertas nunca se eliminan.");
+        ButtonRow("Carpeta del historial", History.Root, Ui.Btn("Abrir", "Abrir en el Explorador", () =>
         {
             History.EnsureRoot();
             Process.Start("explorer.exe", $"\"{History.Root}\"");
-        }, Icons.Folder);
-        folder.HorizontalAlignment = HorizontalAlignment.Left;
-        folder.Margin = new Thickness(0, 8, 0, 0);
-        _body.Children.Add(folder);
+        }, Icons.Folder));
 
-        var close = Ui.Btn("Cerrar", "Los cambios ya están guardados", Close, style: "EstiloPrimario");
-        close.HorizontalAlignment = HorizontalAlignment.Right;
-        close.Margin = new Thickness(0, 20, 0, 0);
-        _body.Children.Add(close);
+        Page("Actualizaciones", Icons.Refresh, "Las versiones nuevas llegan desde la Microsoft Store.");
+        UpdatesPage();
 
-        Content = _body;
-        PreviewKeyDown += (o, e) => { if (e.Key == Key.Escape) Close(); };
+        Page("Acerca de", Icons.Info, null);
+        AboutPage();
+
+        // Menú a la izquierda, sección a la derecha
+        var navBorder = new Border { Width = 210, BorderThickness = new Thickness(0, 0, 1, 0), Child = _nav };
+        navBorder.SetResourceReference(Border.BorderBrushProperty, "Borde");
+        var root = new DockPanel();
+        DockPanel.SetDock(navBorder, Dock.Left);
+        root.Children.Add(navBorder);
+        root.Children.Add(_content);
+        Content = root;
+
+        ShowPage(Math.Clamp(_lastPage, 0, _pages.Count - 1));
+        PreviewKeyDown += (o, e) =>
+        {
+            if (e.Handled) return; // grabando el atajo
+            if (e.Key == Key.Escape) Close();
+            else if (e.Key == Key.Tab && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                int step = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1;
+                ShowPage((_lastPage + step + _pages.Count) % _pages.Count);
+                e.Handled = true;
+            }
+        };
     }
 
     static void Save(Action change)
@@ -100,16 +122,240 @@ sealed class SettingsWindow : Window
         try { AppSettings.Current.Save(); } catch { /* se aplica igual en esta sesión */ }
     }
 
-    void Section(string title)
+    /// <summary>Empieza una sección: su entrada en el menú y su página, donde irán las filas que siguen.</summary>
+    void Page(string title, string icon, string description)
     {
-        var t = new TextBlock
+        _body = new StackPanel { Margin = new Thickness(28, 22, 28, 24), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
+        _body.Children.Add(new TextBlock { Text = title, FontSize = 22, FontWeight = FontWeights.SemiBold });
+        if (description != null)
         {
-            Text = title,
-            FontSize = 15,
-            FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, _body.Children.Count == 0 ? 0 : 18, 0, 6),
+            var d = new TextBlock { Text = description, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
+            d.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+            _body.Children.Add(d);
+        }
+        _body.Children.Add(new Border { Height = 14 });
+
+        var label = new StackPanel { Orientation = Orientation.Horizontal };
+        label.Children.Add(Ui.Icon(icon, 18));
+        label.Children.Add(new TextBlock { Text = title, Margin = new Thickness(12, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center });
+        var item = new RadioButton { Content = label, GroupName = "secciones" };
+        item.SetResourceReference(StyleProperty, "EstiloNavegacion");
+        int index = _pages.Count;
+        item.Checked += (o, e) => ShowPage(index);
+        _nav.Children.Add(item);
+        _pages.Add((item, _body));
+    }
+
+    void ShowPage(int index)
+    {
+        _lastPage = index;
+        var (item, page) = _pages[index];
+        item.IsChecked = true;
+        if (_content.Content != page)
+        {
+            _content.Content = page;
+            _content.ScrollToTop();
+        }
+    }
+
+    /// <summary>Una opción en su tarjeta (fondo de superficie y borde, como la Configuración de Windows).</summary>
+    void AddRow(UIElement row)
+    {
+        var card = new Border
+        {
+            Child = row,
+            Padding = new Thickness(16, 8, 16, 8),
+            Margin = new Thickness(0, 0, 0, 4),
+            CornerRadius = new CornerRadius(6),
+            BorderThickness = new Thickness(1),
         };
-        _body.Children.Add(t);
+        card.SetResourceReference(Border.BackgroundProperty, "Superficie");
+        card.SetResourceReference(Border.BorderBrushProperty, "Borde");
+        _body.Children.Add(card);
+    }
+
+    /// <summary>Fila con etiqueta, nota opcional (recortada con «…» si no entra) y un botón a la derecha.</summary>
+    void ButtonRow(string label, string note, Button button)
+    {
+        button.VerticalAlignment = VerticalAlignment.Center;
+        var labels = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
+        labels.Children.Add(new TextBlock { Text = label });
+        if (note != null)
+        {
+            var n = new TextBlock { Text = note, FontSize = 12, TextTrimming = TextTrimming.CharacterEllipsis, ToolTip = note, Margin = new Thickness(0, 2, 0, 0) };
+            n.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+            labels.Children.Add(n);
+        }
+        var row = new DockPanel { Margin = new Thickness(0, 6, 0, 6) };
+        DockPanel.SetDock(button, Dock.Right);
+        row.Children.Add(button);
+        row.Children.Add(labels);
+        AddRow(row);
+    }
+
+    // ------------------------------------------------------------------ actualizaciones
+    /// <summary>
+    /// Estado de UpdateChecker (al día, versión nueva, buscando, sin conexión) con su botón, que
+    /// se rehace en cada cambio; si buscar sola, y la página de la Store. Sin el MSIX lo explica.
+    /// </summary>
+    void UpdatesPage()
+    {
+        var s = AppSettings.Current;
+        var glyph = new ContentControl { Width = 32, Height = 32, Margin = new Thickness(0, 0, 14, 0), VerticalAlignment = VerticalAlignment.Center };
+        var title = new TextBlock { FontSize = 15, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+        var detail = new TextBlock { FontSize = 12, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) };
+        detail.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+        var action = new ContentControl { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16, 0, 0, 0) };
+
+        void Refresh()
+        {
+            var checker = UpdateChecker.Current;
+            var state = checker?.State ?? (AppInfo.IsPackaged ? UpdateState.NotChecked : UpdateState.NotFromStore);
+            string last = checker?.LastCheck is DateTime t
+                ? " · Última revisión: " + (t.Date == DateTime.Today ? "hoy" : t.ToString("d MMM")) + $" a las {t:HH:mm}"
+                : "";
+            string installed = $"Versión instalada: {AppInfo.VersionText}";
+            (string icon, string brush, string head, string body) = state switch
+            {
+                UpdateState.NotFromStore => (Icons.Info, "TextoSecundario", "Esta copia no viene de la Microsoft Store",
+                    $"{installed}. Se actualiza compilándola de nuevo desde el código."),
+                UpdateState.Checking => (Icons.Refresh, "Acento", "Buscando actualizaciones…", installed),
+                UpdateState.UpToDate => (Icons.Check, "Exito", "Popete está al día", installed + last),
+                UpdateState.Available => (Icons.Save, "Acento", $"Hay una versión nueva: {checker.AvailableVersion}",
+                    $"{installed}. Al actualizar, Popete se cierra y se vuelve a abrir solo; las capturas abiertas quedan guardadas."),
+                UpdateState.Installing => (Icons.Save, "Acento", "Descargando la versión nueva…", "Popete se va a cerrar y volver a abrir."),
+                UpdateState.Failed => (Icons.Info, "Error", "No se pudo consultar la Microsoft Store",
+                    "Revisa la conexión a internet e intenta de nuevo." + last),
+                _ => (Icons.Refresh, "TextoSecundario", "Todavía no se buscaron actualizaciones", installed),
+            };
+            var iconShape = Ui.Icon(icon, 32, 2);
+            iconShape.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, brush);
+            glyph.Content = iconShape;
+            title.Text = head;
+            detail.Text = body;
+
+            action.Content = state switch
+            {
+                UpdateState.Available => Ui.Btn("Actualizar ahora", "Descargar e instalar la versión nueva", () => checker.Install(), style: "EstiloPrimario"),
+                UpdateState.NotChecked or UpdateState.UpToDate or UpdateState.Failed =>
+                    Ui.Btn("Buscar actualizaciones", "Preguntarle ahora a la Microsoft Store", () => _ = checker?.CheckNow(), Icons.Refresh),
+                _ => null,
+            };
+        }
+
+        var texts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        texts.Children.Add(title);
+        texts.Children.Add(detail);
+        var status = new DockPanel { Margin = new Thickness(0, 10, 0, 10) };
+        DockPanel.SetDock(glyph, Dock.Left);
+        DockPanel.SetDock(action, Dock.Right);
+        status.Children.Add(glyph);
+        status.Children.Add(action);
+        status.Children.Add(texts);
+        AddRow(status);
+
+        Action onChanged = Refresh;
+        UpdateChecker.Changed += onChanged;
+        Closed += (o, e) => UpdateChecker.Changed -= onChanged;
+        Refresh();
+
+        if (!AppInfo.IsPackaged) return;
+        Choice("Buscar actualizaciones automáticamente", new[] { ("Sí", true), ("No", false) },
+            s.BuscarActualizaciones, v => Save(() => s.BuscarActualizaciones = v),
+            "Al rato de abrir Popete y cada 6 horas. Si hay una versión nueva, avisa en la bandeja.");
+        ButtonRow("Microsoft Store", "Novedades y reseñas de Popete",
+            Ui.Btn("Abrir", "La página de Popete en la Microsoft Store", UpdateChecker.OpenStorePage, Icons.Link));
+    }
+
+    // ------------------------------------------------------------------ acerca de
+    void AboutPage()
+    {
+        // Cabecera: ícono, nombre, subtítulo y versión
+        // 64 DIP: con escala de pantalla de hasta 200 %, el cuadro de 128 px o el de 256 px
+        var icon = new Image { Source = AppInfo.LargeIcon(128), Width = 64, Height = 64, Margin = new Thickness(0, 0, 18, 0) };
+        RenderOptions.SetBitmapScalingMode(icon, BitmapScalingMode.HighQuality);
+        var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+        names.Children.Add(new TextBlock { Text = AppInfo.Name, FontSize = 26, FontWeight = FontWeights.SemiBold });
+        var sub = new TextBlock { Text = $"{char.ToUpper(AppInfo.Subtitle[0])}{AppInfo.Subtitle[1..]} para Windows" };
+        sub.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+        names.Children.Add(sub);
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 18) };
+        header.Children.Add(icon);
+        header.Children.Add(names);
+        _body.Children.Insert(1, header); // debajo del título «Acerca de»
+
+        string version = AppInfo.VersionText;
+        string install = AppInfo.IsPackaged ? "Microsoft Store" : "Sin instalar (compilada desde el código)";
+        string runtime = $".NET {Environment.Version}";
+        string windows = $"Windows {Environment.OSVersion.Version}";
+
+        InfoRow("Versión", version);
+        InfoRow("Autor", AppInfo.Author);
+        LinkRow("Contacto", AppInfo.Email, "mailto:" + AppInfo.Email);
+        InfoRow("Instalación", install);
+        InfoRow("Sistema", $"{windows} · {runtime}");
+        ButtonRow("Datos de Popete", AppInfo.DataRoot, Ui.Btn("Abrir", "Abrir en el Explorador", () =>
+        {
+            Directory.CreateDirectory(AppInfo.DataRoot);
+            Process.Start("explorer.exe", $"\"{AppInfo.DataRoot}\"");
+        }, Icons.Folder));
+
+        // Acciones: copiar los datos para reportar un problema y, en el MSIX, la página de la Store
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 12, 0, 0) };
+        Button copy = null;
+        copy = Ui.Btn("Copiar información", "Versión y sistema, para reportar un problema", () =>
+        {
+            var text = $"{AppInfo.Name} {version} · {install} · {windows} · {runtime}";
+            copy.Content = Ui.Label(ClipboardHelper.SetText(text) ? "Copiada" : "No se pudo copiar", Icons.Check);
+        }, Icons.Copy);
+        actions.Children.Add(copy);
+        _body.Children.Add(actions);
+
+        var copyright = new TextBlock { Text = $"© {DateTime.Now.Year} {AppInfo.Author}", FontSize = 12, Margin = new Thickness(0, 20, 0, 0) };
+        copyright.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
+        _body.Children.Add(copyright);
+    }
+
+    /// <summary>Fila de dato: etiqueta a la izquierda y valor (seleccionable) a la derecha.</summary>
+    void InfoRow(string label, string value) => AddRow(DataRow(label, new TextBox
+    {
+        Text = value,
+        IsReadOnly = true,
+        BorderThickness = new Thickness(0),
+        Background = Brushes.Transparent,
+        TextAlignment = TextAlignment.Right,
+        Padding = new Thickness(0),
+    }));
+
+    void LinkRow(string label, string text, string url)
+    {
+        var link = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run(text)) { ToolTip = url };
+        link.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "Acento");
+        link.Click += (o, e) => Open(url);
+        AddRow(DataRow(label, new TextBlock(link) { TextAlignment = TextAlignment.Right }));
+    }
+
+    static DockPanel DataRow(string label, FrameworkElement value)
+    {
+        if (value is TextBox box)
+        {
+            box.SetResourceReference(ForegroundProperty, "Texto");
+            box.SetResourceReference(TextBoxBase.CaretBrushProperty, "Texto");
+        }
+        value.VerticalAlignment = VerticalAlignment.Center;
+        value.Margin = new Thickness(16, 0, 0, 0);
+        var name = new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center };
+        var row = new DockPanel { Margin = new Thickness(0, 4, 0, 4) };
+        DockPanel.SetDock(name, Dock.Left);
+        row.Children.Add(name);
+        row.Children.Add(value);
+        return row;
+    }
+
+    static void Open(string url)
+    {
+        try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
+        catch (Exception) { /* sin navegador o cliente de correo: no hay nada que hacer */ }
     }
 
     /// <summary>Una fila: etiqueta (y nota opcional) a la izquierda, opciones segmentadas a la derecha.</summary>
@@ -151,7 +397,7 @@ sealed class SettingsWindow : Window
         DockPanel.SetDock(group, Dock.Right);
         row.Children.Add(group);
         row.Children.Add(labels);
-        _body.Children.Add(row);
+        AddRow(row);
 
         return value =>
         {
@@ -238,7 +484,7 @@ sealed class SettingsWindow : Window
         DockPanel.SetDock(buttons, Dock.Right);
         row.Children.Add(buttons);
         row.Children.Add(labels);
-        _body.Children.Add(row);
+        AddRow(row);
     }
 
     /// <summary>Encabezado que va antes de la lista de ideas al copiar. Se guarda al salir del cuadro o al cerrar.</summary>
@@ -270,7 +516,7 @@ sealed class SettingsWindow : Window
         row.Children.Add(new TextBlock { Text = "Encabezado de las ideas" });
         row.Children.Add(note);
         row.Children.Add(box);
-        _body.Children.Add(row);
+        AddRow(row);
     }
 
     /// <summary>Carpeta que propone "Guardar como".</summary>
@@ -302,6 +548,6 @@ sealed class SettingsWindow : Window
         DockPanel.SetDock(change, Dock.Right);
         row.Children.Add(change);
         row.Children.Add(labels);
-        _body.Children.Add(row);
+        AddRow(row);
     }
 }
