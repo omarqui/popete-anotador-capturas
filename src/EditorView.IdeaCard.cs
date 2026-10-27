@@ -109,14 +109,111 @@ sealed partial class EditorView
         _ideaCardSide = -1;
         _ideaOverlay.Children.Add(_ideaCard);
         PlaceIdeaCard();
+        AnimateIdeaCardIn(target);
+        ShowIdeaHalo(target);
     }
 
+    /// <summary>
+    /// La tarjeta aparece desde su número: se desliza unos píxeles desde ese lado con un fundido.
+    /// Corto, para no frenar (se escribe desde el primer instante); sin animaciones si Windows las apagó.
+    /// </summary>
+    void AnimateIdeaCardIn(object target)
+    {
+        if (!SystemParameters.ClientAreaAnimation) return;
+        var anchor = _board.TranslatePoint(AutoNumberCenter(target), _ideaOverlay);
+        var center = new Point(Canvas.GetLeft(_ideaCard) + IdeaCardWidth / 2, Canvas.GetTop(_ideaCard) + _ideaCard.DesiredSize.Height / 2);
+        var from = anchor - center;
+        if (from.Length > 0) from *= 12 / from.Length;
+
+        var duration = TimeSpan.FromMilliseconds(160);
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        var slide = new TranslateTransform(from.X, from.Y);
+        _ideaCard.RenderTransform = slide;
+        slide.BeginAnimation(TranslateTransform.XProperty, new System.Windows.Media.Animation.DoubleAnimation(from.X, 0, duration) { EasingFunction = ease });
+        slide.BeginAnimation(TranslateTransform.YProperty, new System.Windows.Media.Animation.DoubleAnimation(from.Y, 0, duration) { EasingFunction = ease });
+        _ideaCard.BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+    }
+
+    /// <summary>Saca la tarjeta con un fundido corto (el foco ya volvió al lienzo; no recibe clics mientras se va).</summary>
     void HideIdeaCard()
     {
+        HideIdeaHalo();
         if (_ideaCard == null) return;
-        _ideaOverlay.Children.Remove(_ideaCard);
+        var card = _ideaCard;
         _ideaCard = null;
         _ideaDragFrom = null;
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            _ideaOverlay.Children.Remove(card);
+            return;
+        }
+        card.IsHitTestVisible = false;
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromMilliseconds(100));
+        fade.Completed += (s, e) => _ideaOverlay.Children.Remove(card);
+        card.BeginAnimation(OpacityProperty, fade);
+    }
+
+    // ------------------------------------------------------------------ el número mientras se escribe y al guardar
+    // Los dos van en _ideaLayer (fuera de _surface): nunca salen en la imagen, aunque se copie en medio.
+    System.Windows.Shapes.Ellipse _ideaHalo;
+
+    /// <summary>Anillo suave de acento alrededor del número (o de donde iría) mientras la tarjeta está abierta.</summary>
+    void ShowIdeaHalo(object target)
+    {
+        HideIdeaHalo();
+        _ideaHalo = new System.Windows.Shapes.Ellipse { IsHitTestVisible = false, Opacity = 0.85 };
+        _ideaHalo.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Acento");
+        _ideaLayer.Children.Add(_ideaHalo);
+        PlaceIdeaHalo(target);
+    }
+
+    /// <summary>Ubica el anillo; su grosor y separación miden lo mismo en pantalla a cualquier zoom.</summary>
+    void PlaceIdeaHalo(object target)
+    {
+        if (_ideaHalo == null || target == null || !IsAlive(target)) return;
+        double z = _zoom.ScaleX, radius = NumberRadius + 4 / z;
+        var c = AutoNumberCenter(target);
+        _ideaHalo.StrokeThickness = 2.5 / z;
+        _ideaHalo.Width = _ideaHalo.Height = 2 * radius;
+        Canvas.SetLeft(_ideaHalo, c.X - radius);
+        Canvas.SetTop(_ideaHalo, c.Y - radius);
+    }
+
+    void HideIdeaHalo()
+    {
+        if (_ideaHalo == null) return;
+        _ideaLayer.Children.Remove(_ideaHalo);
+        _ideaHalo = null;
+    }
+
+    /// <summary>Al guardar una idea: un anillo sale del número y se desvanece (confirma que quedó guardada).</summary>
+    void PulseNumber(object target)
+    {
+        if (!SystemParameters.ClientAreaAnimation || !IsAlive(target)) return;
+        double z = _zoom.ScaleX, r = NumberRadius;
+        var c = AutoNumberCenter(target);
+        var ring = new System.Windows.Shapes.Ellipse
+        {
+            Width = 2 * r,
+            Height = 2 * r,
+            StrokeThickness = 3 / z,
+            IsHitTestVisible = false,
+            RenderTransformOrigin = new Point(0.5, 0.5),
+        };
+        ring.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Acento");
+        Canvas.SetLeft(ring, c.X - r);
+        Canvas.SetTop(ring, c.Y - r);
+        var grow = new ScaleTransform(1, 1);
+        ring.RenderTransform = grow;
+        _ideaLayer.Children.Add(ring);
+
+        var duration = TimeSpan.FromMilliseconds(420);
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        grow.BeginAnimation(ScaleTransform.ScaleXProperty, new System.Windows.Media.Animation.DoubleAnimation(1, 1.9, duration) { EasingFunction = ease });
+        grow.BeginAnimation(ScaleTransform.ScaleYProperty, new System.Windows.Media.Animation.DoubleAnimation(1, 1.9, duration) { EasingFunction = ease });
+        var fade = new System.Windows.Media.Animation.DoubleAnimation(0.9, 0, duration);
+        fade.Completed += (s, e) => _ideaLayer.Children.Remove(ring);
+        ring.BeginAnimation(OpacityProperty, fade);
     }
 
     /// <summary>La × de la cabecera: quita la idea (con deshacer) y cierra.</summary>
@@ -138,6 +235,7 @@ sealed partial class EditorView
     void PlaceIdeaCard(bool rechoose = true)
     {
         if (_ideaCard == null || _ideaTarget == null || !IsAlive(_ideaTarget)) return;
+        PlaceIdeaHalo(_ideaTarget); // el zoom cambia su grosor
         const double margin = IdeaCardPlacement.Margin;
         double r = NumberRadius * _zoom.ScaleX;
         var anchor = _board.TranslatePoint(AutoNumberCenter(_ideaTarget), _ideaOverlay);

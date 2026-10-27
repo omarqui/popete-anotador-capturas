@@ -117,18 +117,20 @@ sealed partial class EditorView
         bool hadFocus = box.IsKeyboardFocusWithin;
         HideIdeaCard();
         if (hadFocus) Focus(); // las teclas vuelven al editor
-        if (IsAlive(target)) ChangeIdea(target, box.Text);
+        if (IsAlive(target) && ChangeIdea(target, box.Text) && Ideas.HasText(IdeaOf(target)))
+            PulseNumber(target); // quedó guardada (EditorView.IdeaCard.cs)
         RefreshGhost();
     }
 
-    /// <summary>Cambia la idea de <paramref name="target"/>, con deshacer.</summary>
-    void ChangeIdea(object target, string after)
+    /// <summary>Cambia la idea de <paramref name="target"/>, con deshacer. false si quedó igual.</summary>
+    bool ChangeIdea(object target, string after)
     {
         after = Ideas.HasText(after) ? after.Trim() : null;
         var before = IdeaOf(target);
-        if (before == after) return;
+        if (before == after) return false;
         SetIdeaRaw(target, after);
         PushUndo(new ActionChange(() => SetIdeaRaw(target, before), () => SetIdeaRaw(target, after)));
+        return true;
     }
 
     /// <summary>Teclas con el campo abierto (OnKeyDown la consulta primero): true = son del campo. Ver IdeaKeys.</summary>
