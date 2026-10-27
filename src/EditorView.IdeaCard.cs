@@ -3,8 +3,8 @@
 //
 //  El campo de la idea (_ideaBox, EditorView.Ideas.cs) va dentro de una tarjeta
 //  que flota sobre el lienzo, fuera del zoom: mide siempre lo mismo en pantalla.
-//  Aparece al lado de lo marcado sin taparlo (IdeaCardPlacement), nunca
-//  se sale de la vista y una línea fina la une al número. Se arrastra desde la
+//  Aparece cerca de su número sin tapar lo marcado (IdeaCardPlacement), nunca
+//  se sale de la vista; su cabecera dice de qué número es. Se arrastra desde la
 //  cabecera; lo movido solo dura mientras está abierta. Cabecera con el número
 //  y × para quitar la idea; texto guía y atajos al pie; crece hasta ~8 líneas.
 // ----------------------------------------------------------------------------
@@ -15,7 +15,6 @@ sealed partial class EditorView
 
     Canvas _ideaOverlay;                    // sobre el lienzo, al lado del puntero propio
     Border _ideaCard;                       // la tarjeta abierta, o null
-    System.Windows.Shapes.Line _ideaLink;   // del número a la tarjeta
     Vector _ideaCardShift;                  // lo que el usuario la arrastró desde su lugar
     int _ideaCardSide = -1;                 // IdeaCardPlacement: el lado elegido al abrirla
     Point? _ideaDragFrom;
@@ -24,8 +23,6 @@ sealed partial class EditorView
     Canvas BuildIdeaOverlay()
     {
         _ideaOverlay = new Canvas { ClipToBounds = true }; // sin fondo: solo la tarjeta recibe clics
-        _ideaLink = new System.Windows.Shapes.Line { StrokeThickness = 1.5, Opacity = 0.8, IsHitTestVisible = false, Visibility = Visibility.Collapsed };
-        _ideaOverlay.Children.Add(_ideaLink);
         _ideaOverlay.SizeChanged += (s, e) => PlaceIdeaCard();
         _scroll.ScrollChanged += (s, e) => PlaceIdeaCard();
         return _ideaOverlay;
@@ -108,7 +105,6 @@ sealed partial class EditorView
         _ideaCard.SetResourceReference(Border.BorderBrushProperty, "Borde");
         _ideaCard.SizeChanged += (s, e) => PlaceIdeaCard(rechoose: false); // crece con el texto, sin saltar de lado
 
-        _ideaLink.Stroke = new SolidColorBrush(color);
         _ideaCardShift = new Vector();
         _ideaCardSide = -1;
         _ideaOverlay.Children.Add(_ideaCard);
@@ -121,7 +117,6 @@ sealed partial class EditorView
         _ideaOverlay.Children.Remove(_ideaCard);
         _ideaCard = null;
         _ideaDragFrom = null;
-        _ideaLink.Visibility = Visibility.Collapsed;
     }
 
     /// <summary>La × de la cabecera: quita la idea (con deshacer) y cierra.</summary>
@@ -153,38 +148,34 @@ sealed partial class EditorView
         var marked = MarkedOnScreen(_ideaTarget, anchor, r);
 
         if (_ideaCardSide < 0 || (rechoose && _ideaCardShift.Length == 0))
-            _ideaCardSide = IdeaCardPlacement.Choose(marked, anchor, size, view);
+            _ideaCardSide = IdeaCardPlacement.Choose(marked, anchor, size, view, OtherMarksOnScreen(_ideaTarget));
         var p = IdeaCardPlacement.Position(_ideaCardSide, marked, anchor, size, view);
         double x = Math.Clamp(p.X + _ideaCardShift.X, margin, Math.Max(margin, view.Width - w - margin));
         double y = Math.Clamp(p.Y + _ideaCardShift.Y, margin, Math.Max(margin, view.Height - h - margin));
         Canvas.SetLeft(_ideaCard, x);
         Canvas.SetTop(_ideaCard, y);
-
-        // La línea va del borde del número al punto más cercano de la tarjeta
-        var near = new Point(Math.Clamp(anchor.X, x, x + w), Math.Clamp(anchor.Y, y, y + h));
-        var v = near - anchor;
-        if (v.Length <= r + 2)
-        {
-            _ideaLink.Visibility = Visibility.Collapsed; // la tarjeta está encima del número
-            return;
-        }
-        var from = anchor + v / v.Length * r;
-        _ideaLink.X1 = from.X;
-        _ideaLink.Y1 = from.Y;
-        _ideaLink.X2 = near.X;
-        _ideaLink.Y2 = near.Y;
-        _ideaLink.Visibility = Visibility.Visible;
     }
 
     /// <summary>Lo marcado (el trazo o el texto, con su número) en coordenadas de la vista.</summary>
     Rect MarkedOnScreen(object target, Point number, double r)
     {
+        var marked = BoundsOnScreen(target);
+        marked.Union(new Rect(number.X - r, number.Y - r, 2 * r, 2 * r));
+        return marked;
+    }
+
+    /// <summary>Los demás trazos y textos, para que la tarjeta tampoco los tape si puede.</summary>
+    List<Rect> OtherMarksOnScreen(object target) =>
+        _ink.Strokes.Where(s => s != target).Cast<object>()
+            .Concat(TextBlocks.Where(tb => tb != target))
+            .Select(BoundsOnScreen).ToList();
+
+    Rect BoundsOnScreen(object target)
+    {
         var bounds = target is Stroke s
             ? s.GetBounds()
             : new Rect(Canvas.GetLeft((TextBlock)target), Canvas.GetTop((TextBlock)target), ((TextBlock)target).ActualWidth, ((TextBlock)target).ActualHeight);
-        var marked = new Rect(_board.TranslatePoint(bounds.TopLeft, _ideaOverlay), _board.TranslatePoint(bounds.BottomRight, _ideaOverlay));
-        marked.Union(new Rect(number.X - r, number.Y - r, 2 * r, 2 * r));
-        return marked;
+        return new Rect(_board.TranslatePoint(bounds.TopLeft, _ideaOverlay), _board.TranslatePoint(bounds.BottomRight, _ideaOverlay));
     }
 
     void HookIdeaCardDrag(FrameworkElement header)
