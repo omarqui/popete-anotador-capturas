@@ -62,6 +62,10 @@ public class IdeaKeysTests
         => Assert.Equal(IdeaKeyResult.Escape, IdeaKeys.Decide(Key.Escape, None, pristine: true));
 
     [Fact]
+    public void Ctrl_Enter_con_texto_va_al_editor()
+        => Assert.Equal(IdeaKeyResult.PassToEditor, IdeaKeys.Decide(Key.Enter, Ctrl, pristine: false));
+
+    [Fact]
     public void Una_letra_escribe()
         => Assert.Equal(IdeaKeyResult.Type, IdeaKeys.Decide(Key.A, None, pristine: true));
 }

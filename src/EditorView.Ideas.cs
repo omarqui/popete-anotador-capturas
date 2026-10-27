@@ -54,6 +54,7 @@ sealed partial class EditorView
     TextBox _ideaBox;    // el campo abierto, o null
     object _ideaTarget;  // su trazo o texto
     bool _ideaPristine;  // se abrió vacío y no se escribió nada: los atajos siguen al editor (IdeaKeys)
+    bool _ideaOffered;   // se abrió solo después de un trazo (no lo pidió el usuario): sin número fantasma
 
     Canvas BuildIdeaLayer()
     {
@@ -73,14 +74,16 @@ sealed partial class EditorView
     /// <summary>Después de un trazo: se ofrece escribir su idea (las flechas unidas no llevan).</summary>
     void OfferIdea(Stroke s)
     {
-        if (!IsTiedArrow(s)) OpenIdea(s);
+        if (!IsTiedArrow(s)) OpenIdea(s, offered: true);
     }
 
     /// <summary>Abre el campo de la idea de <paramref name="target"/> junto a su número, con el foco puesto.</summary>
-    void OpenIdea(object target)
+    /// <param name="offered">Se abre solo después de un trazo: si se cierra vacío no debe dejar rastro, ni siquiera el fantasma.</param>
+    void OpenIdea(object target, bool offered = false)
     {
         CommitIdea();
         if (!IsAlive(target)) return;
+        _ideaOffered = offered;
         MarkTouched(); // escribiendo: aunque cambie de ventana, no se cierra solo
 
         // Mide lo mismo en pantalla a cualquier zoom (el campo está dentro del zoom)
@@ -111,7 +114,7 @@ sealed partial class EditorView
         double r = NumberRadius;
         Canvas.SetLeft(_ideaBox, c.X + r + 6 / z);
         Canvas.SetTop(_ideaBox, c.Y - r);
-        _ideaBox.LostKeyboardFocus += (s, e) => CommitIdea();
+        _ideaBox.LostKeyboardFocus += (s, e) => { if (s == _ideaBox) CommitIdea(); }; // no uno nuevo por un aviso tardío del viejo
         _ideaLayer.Children.Add(_ideaBox);
 
         var box = _ideaBox;
@@ -193,6 +196,7 @@ sealed partial class EditorView
 
     void ShowIdeasMenu()
     {
+        CommitIdea(); // la idea a medio escribir también entra en la lista
         var menu = new ContextMenu { PlacementTarget = _ideasButton, Placement = PlacementMode.Top };
         foreach (var (target, number) in Numbering())
         {
@@ -249,10 +253,11 @@ sealed partial class EditorView
             _ghost = null;
         }
 
-        // Un solo elemento elegido; si no, el del campo abierto
-        object target = _selection.Count + _selectedTexts.Count == 1
+        // Un solo elemento elegido a mano; si no, el del campo abierto a pedido. Lo recién dibujado
+        // (selección automática, campo ofrecido) no lo muestra: cerrado vacío, no deja rastro.
+        object target = !_selectionAuto && _selection.Count + _selectedTexts.Count == 1
             ? (object)_selection.FirstOrDefault() ?? _selectedTexts[0]
-            : _ideaTarget;
+            : _ideaOffered ? null : _ideaTarget;
         if (target == null || !IsAlive(target) || target is Stroke s && IsTiedArrow(s)) return;
         var (targets, candidates) = NumberCandidates();
         int index = targets.IndexOf(target);

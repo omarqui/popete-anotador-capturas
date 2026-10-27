@@ -264,7 +264,8 @@ sealed partial class EditorView : UserControl
             // lo devuelve a su lugar (NumberDown), y con un cuadro de texto abierto selecciona palabras.
             else if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && _editing == null && !_cropMode
                      && IsInside(e.OriginalSource, _scroll) && !IsInside(e.OriginalSource, _textLayer)
-                     && !IsInside(e.OriginalSource, _numbersLayer) && HandleAt(e.GetPosition(_ink)) == null
+                     && !IsInside(e.OriginalSource, _numbersLayer) && !IsInside(e.OriginalSource, _ideaLayer) // el campo: selecciona palabras
+                     && HandleAt(e.GetPosition(_ink)) == null
                      && StrokeUnder(e.GetPosition(_ink)) is Stroke hit)
             {
                 SelectOnly(hit);
@@ -274,8 +275,9 @@ sealed partial class EditorView : UserControl
         // Clic derecho en el lienzo: copiar (y cerrar, según el ajuste), como Ctrl+C
         PreviewMouseRightButtonUp += (s, e) =>
         {
-            // Con un texto o una idea a medio escribir, no (como cualquier cuadro de texto)
-            if (_editing != null || _ideaBox is { Text.Length: > 0 } || !IsInside(e.OriginalSource, _scroll)) return;
+            // Con un texto o una idea a medio escribir, no (como cualquier cuadro de texto); sobre el campo tampoco
+            if (_editing != null || _ideaBox is { Text.Length: > 0 } || IsInside(e.OriginalSource, _ideaLayer)
+                || !IsInside(e.OriginalSource, _scroll)) return;
             CopyAndMaybeClose();
             e.Handled = true;
         };

@@ -6,7 +6,8 @@
 //  Retroceso, flechas) y sus atajos con Ctrl siguen siendo del editor y lo
 //  cierran sin rastro: así no se corta el flujo de dibujar. Las letras, los
 //  dígitos, Ctrl+V y AltGr (Ctrl+Alt) escriben. En cuanto se escribe algo, aunque
-//  después se borre, es un cuadro de texto más: solo Enter y Esc lo cierran.
+//  después se borre, es un cuadro de texto más: solo Enter y Esc lo cierran,
+//  y Ctrl+Enter, que guarda la idea y copia y cierra como en el editor.
 //  Lo usa EditorView.IdeaKey; lo prueba tests\Popete.Tests.
 // ----------------------------------------------------------------------------
 enum IdeaKeyResult
@@ -45,6 +46,7 @@ static class IdeaKeys
         if (IsModifier(key)) return IdeaKeyResult.Type; // espera la tecla que sigue
         if (key == Key.Escape) return IdeaKeyResult.Escape;
         if (key == Key.Enter && mods == ModifierKeys.None) return IdeaKeyResult.Save;
+        if (key == Key.Enter && mods == ModifierKeys.Control) return IdeaKeyResult.PassToEditor; // guarda, copia y cierra
         if (!pristine) return IdeaKeyResult.Type;
 
         bool ctrl = mods.HasFlag(ModifierKeys.Control), alt = mods.HasFlag(ModifierKeys.Alt);

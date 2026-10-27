@@ -51,8 +51,9 @@ static class Ideas
             var prefix = $"{number}. ";
             var parts = idea.Trim().Replace("\r\n", "\n").Split('\n');
             lines.Add(prefix + parts[0].TrimEnd());
-            foreach (var part in parts.Skip(1))
-                lines.Add(part.Trim().Length == 0 ? "" : new string(' ', prefix.Length) + part.TrimEnd());
+            // Sin líneas en blanco adentro: separarían la lista y la IA las leería como otro punto
+            foreach (var part in parts.Skip(1).Where(p => p.Trim().Length > 0))
+                lines.Add(new string(' ', prefix.Length) + part.TrimEnd());
         }
         return string.Join(NewLine, lines);
     }

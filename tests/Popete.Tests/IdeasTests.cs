@@ -37,6 +37,18 @@ public class IdeasTests
         => Assert.Equal("12. a\r\n    b", Ideas.List(new[] { (12, "a\nb") }));
 
     [Fact]
+    public void List_quita_las_lineas_en_blanco_de_adentro()
+        => Assert.Equal("1. a\r\n   b", Ideas.List(new[] { (1, "a\n\n  \nb") }));
+
+    [Fact]
+    public void Assign_sin_candidatos()
+        => Assert.Empty(Ideas.Assign(new NumberCandidate[0], numberAll: true));
+
+    [Fact]
+    public void GhostNumber_de_uno_que_ya_tiene_idea_es_su_numero()
+        => Assert.Equal(2, Ideas.GhostNumber(new[] { new NumberCandidate(1, true), new NumberCandidate(2, true) }, 1));
+
+    [Fact]
     public void WithHeader_casos()
     {
         Assert.Null(Ideas.WithHeader(Ideas.DefaultHeader, ""));
