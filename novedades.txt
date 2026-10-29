@@ -1,7 +1,11 @@
-Novedades de la versión 1.3.0:
+Novedades de la versión 1.3.1:
 
-• Nuevo modo de trabajo «En el lugar» (Ajustes › General): con Win+Shift+S, Popete congela la pantalla, eliges el recuadro y anotas la captura justo donde estaba, a tamaño real y sin buscarla. Un clic afuera la copia y la cierra; «Abrir en pestaña» la pasa al editor con todo lo hecho. Viene apagado: Win+Shift+S sigue siendo de Recortes hasta que lo actives.
-• Popete se ve nítido en monitores con distinta escala.
+• «En el lugar» es ahora el modo de trabajo de fábrica: con Win+Shift+S anotas la captura justo donde estaba. Si prefieres Recortes y las pestañas, cámbialo en Ajustes › General › Modo de trabajo.
+• Barra más compacta y centrada sobre la captura: el color y el grosor se despliegan con un clic, lo de poco uso está en «⋯» y puedes moverla desde la agarradera.
+• Zoom en el lugar: Ctrl+rueda acerca o aleja sin mover el recuadro, y Ctrl+0 la devuelve a su tamaño real.
+• Después de usar un menú, Esc y las teclas de las herramientas responden enseguida.
+
+Versión 1.3.0: modo de trabajo «En el lugar» para anotar la captura donde estaba; Popete se ve nítido en monitores con distinta escala.
 
 Versión 1.2.1: ajuste «Llevan número» para numerar solo lo que tiene idea o todo.
 

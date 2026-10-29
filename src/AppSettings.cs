@@ -54,9 +54,12 @@ sealed class AppSettings
 
     /// <summary>
     /// Modo de trabajo. Con EnElLugar, Popete se queda con Win+Shift+S (KeyboardHook), elige el recuadro
-    /// él mismo (ScreenSnip) y la captura se anota donde estaba (InPlaceWindow). De fábrica, pestañas.
+    /// él mismo (ScreenSnip) y la captura se anota donde estaba (InPlaceWindow). De fábrica, en el lugar
+    /// (desde la 1.3.1). En el archivo va como "ModoDeTrabajo" a propósito: la 1.3.0 guardaba
+    /// "ModoTrabajo" con pestañas de fábrica, casi nadie lo eligió, y así todos pasan al modo nuevo.
     /// </summary>
-    public ModoTrabajo ModoTrabajo { get; set; } = ModoTrabajo.Pestanas;
+    [System.Text.Json.Serialization.JsonPropertyName("ModoDeTrabajo")]
+    public ModoTrabajo ModoTrabajo { get; set; } = ModoTrabajo.EnElLugar;
 
     /// <summary>Atajo global del historial rápido (QuickHistoryWindow). null = sin atajo.</summary>
     public Hotkey AtajoHistorial { get; set; } = Hotkey.Default;
