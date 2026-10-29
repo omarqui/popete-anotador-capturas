@@ -14,6 +14,11 @@ sealed partial class EditorView
 
     void BeginPan(Point p)
     {
+        if (InPlace)
+        {
+            _owner.OpenInTab(this); // en el lugar no hay desplazamiento: se pasa a una pestaña
+            return;
+        }
         _panStart = p;
         _panFromX = _scroll.HorizontalOffset;
         _panFromY = _scroll.VerticalOffset;

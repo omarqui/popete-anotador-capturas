@@ -69,6 +69,12 @@ sealed partial class EditorView
 
     void ToggleRecents(bool? show = null)
     {
+        if (InPlace)
+        {
+            _recentsButton.IsChecked = false;
+            _owner.OpenInTab(this); // los recientes son de la ventana de pestañas
+            return;
+        }
         bool on = show ?? _recents.Visibility != Visibility.Visible;
         _recentsShown = on;
         _recents.Visibility = on ? Visibility.Visible : Visibility.Collapsed;
@@ -159,7 +165,7 @@ sealed partial class EditorView
         var deletable = History.List().Where(s => !EditorShell.Keeps(s.Meta.Id)).ToList();
         if (deletable.Count == 0) return;
         var title = deletable.Count == 1 ? "¿Eliminar 1 captura?" : $"¿Eliminar {deletable.Count} capturas?";
-        if (!ConfirmDialog.Ask(_shell, title,
+        if (!ConfirmDialog.Ask(_owner.Window, title,
                 "Se borran del historial con sus anotaciones, y no se puede deshacer. Las que están abiertas se conservan.",
                 "Eliminar"))
             return;

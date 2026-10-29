@@ -20,6 +20,8 @@ sealed class QuickHistoryWindow : Window
     /// <summary>El atajo global: abre la ventana o, si ya está abierta, baja una.</summary>
     public static void OnHotkey(Hotkey hotkey)
     {
+        // Como Win+Shift+S: la captura en el lugar se copia y se cierra primero, y se pega en el programa de abajo
+        if (_open == null && !ComponentDispatcher.IsThreadModal) InPlaceWindow.FinishCurrent();
         if (_open != null)
         {
             _open.Step(+1);
@@ -36,9 +38,6 @@ sealed class QuickHistoryWindow : Window
 
     [DllImport("dwmapi.dll")]
     static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
-
-    [DllImport("user32.dll")]
-    static extern uint GetDpiForSystem();
 
     [DllImport("user32.dll")]
     static extern IntPtr GetForegroundWindow();
@@ -128,19 +127,20 @@ sealed class QuickHistoryWindow : Window
     // ------------------------------------------------------------------ construcción
     /// <summary>
     /// Ocupa <see cref="ScreenShare"/> del área de trabajo del monitor donde está el ratón y se centra en él.
-    /// La app usa el DPI del sistema (no hay manifiesto que pida otro modo), así que los píxeles de
-    /// Windows pasan a DIP con ese DPI en cualquier monitor.
+    /// Cada monitor tiene su escala (PerMonitorV2): se calcula en píxeles con la de ese monitor y
+    /// la ventana se fija en píxeles (Monitors.PlaceInPixels).
     /// </summary>
     void PlaceOnMouseMonitor()
     {
-        var work = System.Windows.Forms.Screen.FromPoint(System.Windows.Forms.Cursor.Position).WorkingArea;
-        double dpi = GetDpiForSystem() / 96.0;
-        double left = work.Left / dpi, top = work.Top / dpi, w = work.Width / dpi, h = work.Height / dpi;
+        var (cx, cy) = Monitors.Cursor();
+        var monitor = Monitors.At(cx, cy);
+        var work = monitor.Work;
+        double dpi = monitor.Scale;
+        double w = work.Width / dpi, h = work.Height / dpi;
         Width = Math.Min(w, Math.Max(MinWindowWidth, w * ScreenShare));
         Height = Math.Min(h, Math.Max(MinWindowHeight, h * ScreenShare));
-        WindowStartupLocation = WindowStartupLocation.Manual;
-        Left = left + (w - Width) / 2;
-        Top = top + (h - Height) / 2;
+        int pw = (int)Math.Round(Width * dpi), ph = (int)Math.Round(Height * dpi);
+        Monitors.PlaceInPixels(this, new Int32Rect(work.X + (work.Width - pw) / 2, work.Y + (work.Height - ph) / 2, pw, ph));
         // Lista, su borde, el marco de la ventana y los márgenes de la vista previa
         _previewDecodeWidth = (int)Math.Ceiling((Width - ListWidth - 3 - 2 * PreviewMargin) * dpi);
     }

@@ -25,21 +25,21 @@ sealed partial class EditorView
         _autoCloseTimer.Tick += (s, e) =>
         {
             _autoCloseTimer.Stop();
-            if (!_touched && !_shell.IsActive && _shell.OwnedWindows.Count == 0) Dismiss();
+            if (!_touched && !_owner.Window.IsActive && _owner.Window.OwnedWindows.Count == 0) Dismiss();
         };
         EventHandler deactivated = (s, e) => { if (!_touched) _autoCloseTimer.Start(); };
         EventHandler activated = (s, e) => _autoCloseTimer.Stop();
-        _shell.Deactivated += deactivated;
-        _shell.Activated += activated;
+        _owner.Window.Deactivated += deactivated;
+        _owner.Window.Activated += activated;
         Closed += (s, e) =>
         {
-            _shell.Deactivated -= deactivated;
-            _shell.Activated -= activated;
+            _owner.Window.Deactivated -= deactivated;
+            _owner.Window.Activated -= activated;
         };
         // Si Windows no le dio el foco a la ventana, cuenta como si ya se hubiera ido a otra
         Loaded += (s, e) => Dispatcher.InvokeAsync(() =>
         {
-            if (!_shell.IsActive && !_touched && !_closed) _autoCloseTimer.Start();
+            if (!_owner.Window.IsActive && !_touched && !_closed) _autoCloseTimer.Start();
         }, DispatcherPriority.ApplicationIdle);
     }
 

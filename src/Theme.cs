@@ -79,6 +79,7 @@ static class Theme
             r["Error"] = Solid(0xFF, 0x99, 0xA4);
             r["BarraTitulo"] = Solid(0x1C, 0x1D, 0x20); // más oscura que Fondo: la pestaña elegida se destaca
             r["Lienzo"] = DotGrid(Color.FromRgb(0x38, 0x3A, 0x40), Color.FromRgb(0x4A, 0x4C, 0x53));
+            r["FranjaLugar"] = Solid(0xFF, 0xFF, 0xFF, 0x70); // la franja de la captura en el lugar: clara en los dos temas, deja ver la pantalla
         }
         else
         {
@@ -97,6 +98,7 @@ static class Theme
             r["Error"] = Solid(0xC4, 0x2B, 0x1C);
             r["BarraTitulo"] = Solid(0xE4, 0xE6, 0xEA);
             r["Lienzo"] = DotGrid(Color.FromRgb(0xE6, 0xE8, 0xEC), Color.FromRgb(0xCD, 0xD1, 0xD8));
+            r["FranjaLugar"] = Solid(0xFF, 0xFF, 0xFF, 0xB0);
         }
         // El botón de cerrar la ventana se pone rojo al pasar, igual en los dos temas (como en Windows)
         r["CerrarVentana"] = Solid(0xC4, 0x2B, 0x1C);
@@ -127,9 +129,9 @@ static class Theme
         DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref dark, sizeof(int));
     }
 
-    static SolidColorBrush Solid(byte r, byte g, byte b)
+    static SolidColorBrush Solid(byte r, byte g, byte b, byte a = 0xFF)
     {
-        var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
+        var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
         brush.Freeze();
         return brush;
     }

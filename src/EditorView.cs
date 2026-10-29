@@ -21,7 +21,7 @@ sealed partial class EditorView : UserControl
         (Colors.White, "Blanco"),
     };
 
-    readonly EditorShell _shell;     // la ventana: dueña de los diálogos y de la salida rápida
+    IEditorHost _owner;              // la ventana que lo aloja (pestaña o en el lugar): dueña de los diálogos y de la salida rápida
     readonly Session _session;
     readonly BitmapSource _original; // la captura tal como llegó; nunca se modifica
     BitmapSource _image;             // lo que se ve y se exporta: la captura, recortada si hay recorte
@@ -76,9 +76,9 @@ sealed partial class EditorView : UserControl
     /// <summary>Después de guardar en el historial (la pestaña actualiza su miniatura).</summary>
     public event Action Saved;
 
-    public EditorView(EditorShell shell, Session session)
+    public EditorView(IEditorHost host, Session session)
     {
-        _shell = shell;
+        _owner = host;
         _session = session;
         _original = History.LoadImage(session.OriginalPath);
         int pw = _original.PixelWidth, ph = _original.PixelHeight;
@@ -146,7 +146,7 @@ sealed partial class EditorView : UserControl
         };
 
         // Borde punteado que marca hasta dónde se puede dibujar
-        var limit = new System.Windows.Shapes.Rectangle
+        _limit = new System.Windows.Shapes.Rectangle
         {
             RadiusX = 12,
             RadiusY = 12,
@@ -155,10 +155,10 @@ sealed partial class EditorView : UserControl
             IsHitTestVisible = false,
             Opacity = 0.7,
         };
-        limit.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "BordeFuerte");
+        _limit.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "BordeFuerte");
 
         _board = new Grid();
-        _board.Children.Add(limit);
+        _board.Children.Add(_limit);
         _board.Children.Add(_framed);
         _board.Children.Add(_surface);
         _board.Children.Add(BuildIdeaLayer()); // campo y marcas de las ideas: fuera de _surface, no se exportan
@@ -218,12 +218,12 @@ sealed partial class EditorView : UserControl
         };
 
         // ---- layout ----
-        var root = new DockPanel();
-        var toolbar = BuildToolbar();
+        var root = _root;
+        var toolbar = _toolbar = BuildToolbar();
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
-        var statusBar = BuildStatusBar();
+        var statusBar = _statusBar = BuildStatusBar();
         DockPanel.SetDock(statusBar, Dock.Bottom);
         root.Children.Add(statusBar);
 
@@ -232,7 +232,7 @@ sealed partial class EditorView : UserControl
         root.Children.Add(recents);
 
         // El puntero va en una capa sobre el lienzo, fuera del zoom
-        var canvasArea = new Grid();
+        var canvasArea = _canvasArea;
         canvasArea.Children.Add(_scroll);
         canvasArea.Children.Add(BuildPointerLayer());
         canvasArea.Children.Add(BuildIdeaOverlay()); // la tarjeta de la idea, fuera del zoom (EditorView.IdeaCard.cs)
@@ -350,7 +350,7 @@ sealed partial class EditorView : UserControl
     /// <summary>Salida rápida (copiar y cerrar, Esc, cierre automático): ver EditorShell.Dismiss.</summary>
     void Dismiss()
     {
-        if (!_closed) _shell.Dismiss(this);
+        if (!_closed) _owner.Dismiss(this);
     }
 
     // ------------------------------------------------------------------ persistencia
@@ -384,12 +384,13 @@ sealed partial class EditorView : UserControl
         Canvas.SetLeft(_board, -v.X);
         Canvas.SetTop(_board, -v.Y);
         UpdateFrameClip();
+        LayoutInPlace(); // en el lugar, la franja sigue a lo visible (al recortar)
     }
 
     /// <summary>Esquinas redondeadas de la captura; el radio se divide por el zoom para medir siempre lo mismo en pantalla.</summary>
     void UpdateFrameClip()
     {
-        double r = CornerRadiusOnScreen / _zoom.ScaleX;
+        double r = (InPlace ? 0 : CornerRadiusOnScreen) / _zoom.ScaleX; // en el lugar, la captura tal cual
         _frame.Clip = new RectangleGeometry(new Rect(0, 0, ShownImage.PixelWidth, ShownImage.PixelHeight), r, r);
     }
 
@@ -559,7 +560,7 @@ sealed partial class EditorView : UserControl
 
         int count = strokes.Count + elements.Count;
         var title = count == 1 ? "¿Quitar la anotación?" : $"¿Quitar las {count} anotaciones?";
-        if (!ConfirmDialog.Ask(_shell, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar"))
+        if (!ConfirmDialog.Ask(_owner.Window, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar"))
             return;
 
         _suppress = true;
@@ -589,7 +590,7 @@ sealed partial class EditorView : UserControl
         _zoomText.Text = $"{Math.Round(real * 100)}%";
         // Suavizar al agrandar deja borrosos el texto y los bordes de 1 px de una captura
         RenderOptions.SetBitmapScalingMode(_imageCtl,
-            real >= PixelZoom * 0.999 ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
+            real >= PixelZoom * 0.999 || InPlace ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
 
         UpdateFrameClip();
         UpdateSelectionVisual();
@@ -597,8 +598,24 @@ sealed partial class EditorView : UserControl
         PlaceIdeaCard();
     }
 
+    /// <summary>
+    /// La ventana pasó a un monitor con otra escala: el zoom (en DIP) es el mismo, pero lo que mide en
+    /// píxeles de pantalla no. Se rehace la etiqueta, el modo de dibujo de la captura y el puntero.
+    /// </summary>
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        if (InPlace) LayoutInPlace(); // la captura sigue a 1 píxel por píxel y en su lugar
+        else SetZoom(_zoom.ScaleX);
+    }
+
     void FitZoom()
     {
+        if (InPlace)
+        {
+            LayoutInPlace(); // en el lugar no hay ajuste: siempre tamaño real
+            return;
+        }
         double availW = Math.Max(100, _scroll.ActualWidth - 2 * ViewMargin - 20);
         double availH = Math.Max(100, _scroll.ActualHeight - 2 * ViewMargin - 20);
         double fit = Math.Min(availW / ShownImage.PixelWidth, availH / ShownImage.PixelHeight);
@@ -610,6 +627,11 @@ sealed partial class EditorView : UserControl
     /// <summary>Pasa al nivel siguiente (+1) o anterior (−1) de <see cref="ZoomLevels"/>; desde un zoom libre (Ajustar), al más cercano en esa dirección.</summary>
     void StepZoom(int direction)
     {
+        if (InPlace)
+        {
+            _owner.OpenInTab(this); // en el lugar no hay zoom: se pasa a una pestaña
+            return;
+        }
         double dpi = DpiScale(), real = _zoom.ScaleX * dpi;
         double next = direction > 0
             ? ZoomLevels.FirstOrDefault(l => l > real * 1.001, real)
@@ -649,13 +671,13 @@ sealed partial class EditorView : UserControl
             {
                 case Key.Z: Undo(); break;
                 case Key.Y: Redo(); break;
-                case Key.C: CopyAndMaybeClose(); break;
+                case Key.C: CopyAndMaybeClose(fromKeyboard: true); break;
                 case Key.S: Save(); break;
                 case Key.Enter: if (CopyToClipboard()) Dismiss(); break;
                 case Key.H: ToggleRecents(); break;
                 case Key.A: SelectAll(); break;
-                case Key.OemComma: SettingsWindow.Show(_shell); break;
-                case Key.D0: case Key.NumPad0: FitZoom(); break;
+                case Key.OemComma: SettingsWindow.Show(_owner.Window); break;
+                case Key.D0: case Key.NumPad0: if (InPlace) _owner.OpenInTab(this); else FitZoom(); break;
                 case Key.OemPlus: case Key.Add: StepZoom(1); break;
                 case Key.OemMinus: case Key.Subtract: StepZoom(-1); break;
                 default: return;

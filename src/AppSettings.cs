@@ -3,6 +3,9 @@
 // ----------------------------------------------------------------------------
 enum ModoTema { Sistema, Claro, Oscuro }
 
+/// <summary>Pestanas: Win+Shift+S es de Recortes y la captura abre en una pestaña. EnElLugar: Popete captura y se anota sobre la pantalla.</summary>
+enum ModoTrabajo { Pestanas, EnElLugar }
+
 sealed class AppSettings
 {
     /// <summary>Tema de la interfaz. "Sistema" sigue al de Windows.</summary>
@@ -48,6 +51,12 @@ sealed class AppSettings
     /// mostrarlas (WhatsNewWindow). null = Popete 1.1.3 o anterior, o una instalación nueva.
     /// </summary>
     public string UltimaVersionVista { get; set; }
+
+    /// <summary>
+    /// Modo de trabajo. Con EnElLugar, Popete se queda con Win+Shift+S (KeyboardHook), elige el recuadro
+    /// él mismo (ScreenSnip) y la captura se anota donde estaba (InPlaceWindow). De fábrica, pestañas.
+    /// </summary>
+    public ModoTrabajo ModoTrabajo { get; set; } = ModoTrabajo.Pestanas;
 
     /// <summary>Atajo global del historial rápido (QuickHistoryWindow). null = sin atajo.</summary>
     public Hotkey AtajoHistorial { get; set; } = Hotkey.Default;

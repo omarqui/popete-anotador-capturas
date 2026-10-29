@@ -95,11 +95,12 @@ sealed partial class EditorView
     /// <summary>
     /// Ctrl+C, el clic derecho y el botón: copia y, si el ajuste lo pide, cierra. Si no cierra,
     /// cuenta como tocada: una captura nueva tampoco se cierra sola al irse a pegarla.
+    /// En el lugar, el clic derecho y el botón cierran siempre; Ctrl+C sigue el ajuste.
     /// </summary>
-    void CopyAndMaybeClose()
+    void CopyAndMaybeClose(bool fromKeyboard = false)
     {
         if (!CopyToClipboard()) return;
-        if (AppSettings.Current.CerrarAlCopiar) CloseAfterFlash();
+        if (AppSettings.Current.CerrarAlCopiar || InPlace && !fromKeyboard) CloseAfterFlash();
         else MarkTouched();
     }
 
@@ -143,7 +144,7 @@ sealed partial class EditorView
             FileName = $"Captura {DateTime.Now:yyyy-MM-dd HHmmss}.png",
             InitialDirectory = AppSettings.Current.CarpetaGuardarEfectiva,
         };
-        if (dlg.ShowDialog(_shell) != true) return;
+        if (dlg.ShowDialog(_owner.Window) != true) return;
 
         var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
         BitmapEncoder enc = ext is ".jpg" or ".jpeg"

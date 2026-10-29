@@ -35,5 +35,5 @@ sealed partial class EditorView
     }
 
     /// <summary>Abre <paramref name="session"/> en lugar de esta captura, en la misma posición de la barra.</summary>
-    public void ReplaceWith(Session session) => _shell.Replace(this, session);
+    public void ReplaceWith(Session session) => _owner.Replace(this, session);
 }

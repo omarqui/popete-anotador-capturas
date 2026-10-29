@@ -42,6 +42,12 @@ sealed class SettingsWindow : Window
         var s = AppSettings.Current;
 
         Page("General", Icons.Settings, "Apariencia y arranque de Popete.");
+        Choice("Modo de trabajo", new[] { ("En pestañas", ModoTrabajo.Pestanas), ("En el lugar", ModoTrabajo.EnElLugar) },
+            s.ModoTrabajo, v => Save(() => s.ModoTrabajo = v),
+            CaptureHost.SnipHookFailed
+                ? "No se pudo tomar Win+Shift+S: sigue abriendo Recortes de Windows y la captura se abre en una pestaña."
+                : "En el lugar: Win+Shift+S abre la selección de Popete y la captura se anota donde estaba, sobre la pantalla. "
+                  + "En pestañas: Win+Shift+S es de Recortes de Windows y la captura se abre en el editor.");
         Choice("Tema", new[] { ("Claro", ModoTema.Claro), ("Oscuro", ModoTema.Oscuro), ("Como Windows", ModoTema.Sistema) },
             s.Tema, v => Theme.SetMode(v));
         Action<bool> selectStartup = null;

@@ -15,7 +15,7 @@
 //  (Dismiss). Así, una captura nueva que abrió la ventana se copia y se vuelve
 //  al programa de antes, como cuando cada captura era su propia ventana.
 // ----------------------------------------------------------------------------
-sealed partial class EditorShell : Window
+sealed partial class EditorShell : Window, IEditorHost
 {
     /// <summary>Una pestaña: su captura, su cabecera y, desde que se eligió por primera vez, su editor.</summary>
     sealed class Tab
@@ -101,6 +101,42 @@ sealed partial class EditorShell : Window
              ?? saved.OrderByDescending(s => s.Meta.Updated).First());
         return true;
     }
+
+    /// <summary>
+    /// La captura en el lugar pasa a una pestaña con su mismo editor, tal como está (deshacer,
+    /// selección e idea abierta incluidos). Abre la ventana si estaba cerrada.
+    /// </summary>
+    public static void Adopt(EditorView view)
+    {
+        bool created = _current == null;
+        var shell = created ? Create(view.Session) : _current;
+        var tab = shell.Find(view.Session.Meta.Id);
+        if (tab?.View != null)
+        {
+            // Otro editor de la misma captura (raro): gana este. Sin CloseTab, que con la última cierra la ventana
+            tab.View.PrepareClose();
+            if (shell._selected == tab) shell._selected = null;
+            shell.RemoveTab(tab);
+            tab.View.NotifyClosed();
+            tab = null;
+        }
+        tab ??= shell.AddTab(view.Session, shell._tabs.Count);
+        tab.Engaged = true;
+        var before = shell._selected ?? shell._restoredActive;
+        tab.ReturnTo = before != tab ? before : null;
+        view.MoveTo(shell);
+        tab.View = view;
+        shell.Mount(tab);
+        shell.Select(tab, byUser: false, keepStyle: true);
+        if (created) shell.Show();
+        shell.BringToFront();
+        shell.SaveState();
+    }
+
+    // IEditorHost: una pestaña
+    Window IEditorHost.Window => this;
+    bool IEditorHost.InPlace => false;
+    void IEditorHost.OpenInTab(EditorView view) { } // ya está en una
 
     public static bool IsOpen(string id) => _current?.Find(id) != null;
 
@@ -263,7 +299,8 @@ sealed partial class EditorShell : Window
     /// </summary>
     /// <param name="byUser">La eligió el usuario (no es solo la que quedó al cerrar otra).</param>
     /// <param name="styleFrom">De quién toma herramienta, colores y grosor si no hay una elegida (se acaba de cerrar).</param>
-    bool Select(Tab tab, bool byUser, EditorView styleFrom = null)
+    /// <param name="keepStyle">Conserva su herramienta, colores y grosor (la captura que llega del lugar, tal como estaba).</param>
+    bool Select(Tab tab, bool byUser, EditorView styleFrom = null, bool keepStyle = false)
     {
         if (byUser) tab.Engaged = true;
         if (tab == _selected) return true;
@@ -282,10 +319,8 @@ sealed partial class EditorShell : Window
                 ConfirmDialog.Inform(IsVisible ? this : null, "No se pudo abrir la captura", ex.Message);
                 return false;
             }
-            tab.View.Saved += () => LoadThumb(tab); // la miniatura de la pestaña sigue a las anotaciones
             if (tab.AutoClose) tab.View.EnableAutoClose();
-            tab.View.Visibility = Visibility.Collapsed;
-            _content.Children.Add(tab.View);
+            Mount(tab);
         }
 
         var previous = _selected;
@@ -296,11 +331,19 @@ sealed partial class EditorShell : Window
         }
         _selected = tab;
         tab.View.Visibility = Visibility.Visible;
-        tab.View.OnSelected(previous?.View ?? styleFrom);
+        tab.View.OnSelected(keepStyle ? null : previous?.View ?? styleFrom);
         RefreshHeaders();
         BringHeaderIntoView(tab);
         UpdateTitle();
         return true;
+    }
+
+    /// <summary>Pone el editor ya creado de <paramref name="tab"/> en la ventana, oculto hasta que se elija.</summary>
+    void Mount(Tab tab)
+    {
+        tab.View.Saved += () => LoadThumb(tab); // la miniatura de la pestaña sigue a las anotaciones
+        tab.View.Visibility = Visibility.Collapsed;
+        _content.Children.Add(tab.View);
     }
 
     /// <summary>

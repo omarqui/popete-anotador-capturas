@@ -19,6 +19,11 @@
     <EnableDefaultNoneItems>false</EnableDefaultNoneItems>
     <!-- Ícono del .exe. Se genera desde assets\popete.svg con tools\generar-icono.ps1 -->
     <ApplicationIcon>..\assets\popete.ico</ApplicationIcon>
+    <!-- PerMonitorV2: cada monitor con su escala (la captura en el lugar necesita píxeles exactos) -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- WFO0003 pide fijar el DPI con Application.SetHighDpiMode de WinForms, pero la app es de WPF:
+         WinForms solo pone la bandeja, y el modo del proceso lo da el manifiesto. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

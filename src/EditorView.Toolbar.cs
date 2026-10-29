@@ -98,7 +98,7 @@ sealed partial class EditorView
 
         // Guardar como no tiene botón: queda con Ctrl+S.
         // "Copiar y cerrar" o "Copiar", según AppSettings.CerrarAlCopiar (UpdateCopyButton)
-        var copyClose = Ui.Btn("", "", CopyAndMaybeClose, Icons.Check, "EstiloPrimario");
+        var copyClose = Ui.Btn("", "", () => CopyAndMaybeClose(), Icons.Check, "EstiloPrimario");
         _copyButton = copyClose;
         _copyLabel = (TextBlock)((StackPanel)copyClose.Content).Children[1];
         UpdateCopyButton();
@@ -274,8 +274,11 @@ sealed partial class EditorView
     void UpdateCopyButton()
     {
         bool close = AppSettings.Current.CerrarAlCopiar;
-        _copyLabel.Text = close ? "Copiar y cerrar" : "Copiar";
-        _copyButton.ToolTip = close
+        // En el lugar, el botón y el clic derecho siempre cierran; Ctrl+C sigue el ajuste
+        _copyLabel.Text = close || InPlace ? "Copiar y cerrar" : "Copiar";
+        _copyButton.ToolTip = InPlace
+            ? "Copiar y cerrar (Ctrl+Enter, clic derecho en la captura o clic fuera)"
+            : close
             ? "Copiar y cerrar (Ctrl+C, Ctrl+Enter o clic derecho en la captura)"
             : "Copiar (Ctrl+C o clic derecho en la captura; Ctrl+Enter copia y cierra)";
     }
@@ -294,7 +297,7 @@ sealed partial class EditorView
         left.Children.Add(_saveText);
         left.Children.Add(_status);
 
-        var hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var hints = _hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–3", "Grosor"), ("Supr", "Borrar selección") })
         {
             hints.Children.Add(Ui.Keycap(key));
@@ -309,7 +312,13 @@ sealed partial class EditorView
         zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => StepZoom(1), style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "EstiloPlano"));
-        var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(_shell));
+        _zoomControls.AddRange(zoom.Children.Cast<UIElement>()); // en el lugar no hay zoom (EditorView.InPlace.cs)
+        _tabButton = Ui.Btn("Abrir en pestaña", "Pasar la captura al editor de pestañas, con todo lo hecho",
+            () => _owner.OpenInTab(this), Icons.Link, "EstiloPlano");
+        _tabButton.Margin = new Thickness(6, 0, 0, 0);
+        _tabButton.Visibility = Visibility.Collapsed;
+        zoom.Children.Add(_tabButton);
+        var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(_owner.Window));
         settings.Width = settings.Height = 28;
         settings.Margin = new Thickness(6, 0, 0, 0);
         zoom.Children.Add(settings);

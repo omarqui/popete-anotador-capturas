@@ -41,6 +41,7 @@ sealed class CaptureHost : IDisposable
     bool _paused;
     Hotkey _hotkey;        // el atajo del historial rápido registrado ahora (null = ninguno)
     bool _hotkeyPaused;    // Ajustes está grabando una combinación nueva
+    KeyboardHook _snipHook; // Win+Shift+S para Popete (modo de trabajo «En el lugar»)
 
     public CaptureHost(Application app)
     {
@@ -71,6 +72,13 @@ sealed class CaptureHost : IDisposable
         _current = this;
         RegisterQuickHistoryHotkey();
         AppSettings.Changed += RegisterQuickHistoryHotkey;
+        ScreenSnip.SelectingChanged += OnSnipSelecting;
+        UpdateSnipHook();
+        AppSettings.Changed += UpdateSnipHook;
+        if (SnipHookFailed)
+            _tray.ShowBalloonTip(4000, AppInfo.Name,
+                "No se pudo tomar Win+Shift+S: abre Recortes de Windows y la captura se abre en una pestaña.",
+                System.Windows.Forms.ToolTipIcon.Warning);
         if (HotkeyFailed)
             _tray.ShowBalloonTip(4000, AppInfo.Name,
                 $"Otro programa ya usa {AppSettings.Current.AtajoHistorial.Text}, el atajo del historial rápido. Elige otro en Ajustes.",
@@ -121,6 +129,39 @@ sealed class CaptureHost : IDisposable
             _hotkey = wanted;
         else
             HotkeyFailed = true;
+    }
+
+    // ------------------------------------------------------------------ Win+Shift+S (captura en el lugar)
+    /// <summary>Con el modo «En el lugar», Windows no dejó instalar el hook: Win+Shift+S sigue siendo de Recortes.</summary>
+    public static bool SnipHookFailed { get; private set; }
+
+    /// <summary>
+    /// Instala o quita el hook de Win+Shift+S según el modo de trabajo y la pausa (corre también en
+    /// cada AppSettings.Changed). Con el modo de pestañas no queda ningún hook.
+    /// </summary>
+    void UpdateSnipHook()
+    {
+        bool wanted = AppSettings.Current.ModoTrabajo == ModoTrabajo.EnElLugar && !_paused;
+        if (wanted == (_snipHook != null)) return;
+        if (wanted)
+        {
+            var hook = new KeyboardHook(ScreenSnip.Start, ScreenSnip.Cancel);
+            SnipHookFailed = !hook.Installed;
+            if (hook.Installed) _snipHook = hook;
+            else hook.Dispose();
+        }
+        else
+        {
+            ScreenSnip.Cancel();
+            _snipHook.Dispose();
+            _snipHook = null;
+            SnipHookFailed = false;
+        }
+    }
+
+    void OnSnipSelecting(bool selecting)
+    {
+        if (_snipHook != null) _snipHook.Selecting = selecting;
     }
 
     void TryOpenFromClipboard()
@@ -398,6 +439,7 @@ sealed class CaptureHost : IDisposable
         _paused = !_paused;
         _pauseItem.Text = _paused ? "Reanudar detección" : "Pausar detección";
         _tray.Text = _paused ? AppInfo.Name + " (en pausa)" : AppInfo.FullName;
+        UpdateSnipHook(); // en pausa, Win+Shift+S vuelve a ser de Recortes
     }
 
     void ToggleStartup()
@@ -413,6 +455,10 @@ sealed class CaptureHost : IDisposable
         if (_source != null)
         {
             AppSettings.Changed -= RegisterQuickHistoryHotkey;
+            AppSettings.Changed -= UpdateSnipHook;
+            ScreenSnip.SelectingChanged -= OnSnipSelecting;
+            _snipHook?.Dispose();
+            _snipHook = null;
             if (_hotkey != null) UnregisterHotKey(_source.Handle, QuickHistoryHotkeyId);
             _hotkey = null;
             RemoveClipboardFormatListener(_source.Handle);
