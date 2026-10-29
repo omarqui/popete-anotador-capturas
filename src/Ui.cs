@@ -113,6 +113,7 @@ static class Icons
     public const string TextLabel = "M5 5 H19 A2 2 0 0 1 21 7 V17 A2 2 0 0 1 19 19 H5 A2 2 0 0 1 3 17 V7 A2 2 0 0 1 5 5 Z M8 9 H16 M12 9 V15.5";
     public const string Shapes = "M3 12 H11 V20 H3 Z M21 7.5 A4.5 4.5 0 1 1 12 7.5 A4.5 4.5 0 1 1 21 7.5 Z M14 20 L17.5 14 L21 20 Z";
     public const string ChevronDown = "M7 10 L12 15 L17 10";
+    public const string ChevronRight = "M10 7 L15 12 L10 17";
     public const string Eraser = "M8 20 H20 M4.5 15.5 L13.5 6.5 L18.5 11.5 L10 20 H8 Z M9 11 L14 16";
     public const string Undo = "M9 14 L4 9 L9 4 M4 9 H14 A6 6 0 0 1 14 21 H11";
     public const string Redo = "M15 14 L20 9 L15 4 M20 9 H10 A6 6 0 0 0 10 21 H13";

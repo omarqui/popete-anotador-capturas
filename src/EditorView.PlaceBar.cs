@@ -22,7 +22,8 @@ sealed partial class EditorView
     Border _placeToolsSlot, _placeIdeasSlot, _placeMessage;
     ToggleButton _placeColorButton, _placeSizeButton;
     FrameworkElement _placeColors, _placeSizes;
-    System.Windows.Shapes.Ellipse _placeSizeDot;
+    System.Windows.Shapes.Ellipse _placeColorDot;
+    System.Windows.Shapes.Ellipse[] _placeColorMinis, _placeSizeDots;
 
     // Lo que la barra le pide prestado a la de la pestaña, para devolverlo en su lugar
     readonly List<(FrameworkElement element, Panel parent, int index, Thickness margin)> _borrowed =
@@ -70,15 +71,32 @@ sealed partial class EditorView
 
     void BuildPlaceBar()
     {
-        _placeRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 6, 6, 6) };
+        // Una fila de ~44 DIP: entra en la franja (48) arriba de la captura
+        _placeRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2, 3, 6, 3) };
 
         _placeRow.Children.Add(BuildGrip());
-        _placeRow.Children.Add(_placeToolsSlot = new Border { VerticalAlignment = VerticalAlignment.Center });
+        // El grupo de la pestaña mide 42 DIP de alto: aquí, un poco más chico (la escala queda en el hueco, no en el grupo)
+        _placeToolsSlot = new Border { VerticalAlignment = VerticalAlignment.Center, LayoutTransform = new ScaleTransform(0.86, 0.86) };
+        _placeRow.Children.Add(_placeToolsSlot);
         _placeRow.Children.Add(PlaceDivider());
 
-        // Color: el actual; un clic despliega los de la paleta en su lugar
-        _placeColorButton = new ToggleButton();
-        _placeColorButton.SetResourceReference(StyleProperty, "EstiloMuestra");
+        // Color: el actual y, chicos y apilados, otros tres de la paleta; un clic los despliega en su lugar
+        _placeColorDot = new System.Windows.Shapes.Ellipse { Width = 18, Height = 18, StrokeThickness = 1, VerticalAlignment = VerticalAlignment.Center };
+        _placeColorDot.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "BordeFuerte");
+        var minis = new Canvas { Width = 19, Height = 9, Margin = new Thickness(3, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        _placeColorMinis = new System.Windows.Shapes.Ellipse[3];
+        for (int i = 0; i < _placeColorMinis.Length; i++)
+        {
+            var mini = new System.Windows.Shapes.Ellipse { Width = 9, Height = 9, StrokeThickness = 1.5 };
+            mini.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Fondo"); // separa las fichas apiladas
+            Canvas.SetLeft(mini, i * 5);
+            minis.Children.Add(mini);
+            _placeColorMinis[i] = mini;
+        }
+        var colorPreview = new StackPanel { Orientation = Orientation.Horizontal };
+        colorPreview.Children.Add(_placeColorDot);
+        colorPreview.Children.Add(minis);
+        _placeColorButton = PickerButton(colorPreview);
         _placeColorButton.Click += (s, e) => TogglePicker(colors: true);
         var colors = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         foreach (var (c, name) in Palette)
@@ -95,15 +113,28 @@ sealed partial class EditorView
         _placeRow.Children.Add(_placeColorButton);
         _placeRow.Children.Add(_placeColors);
 
-        // Grosor: el actual; un clic despliega los tres
-        _placeSizeDot = new System.Windows.Shapes.Ellipse();
-        _placeSizeDot.SetBinding(System.Windows.Shapes.Shape.FillProperty, new System.Windows.Data.Binding
+        // Grosor: los tres en miniatura, el actual marcado y los otros tenues; un clic los despliega
+        var sizePreview = new StackPanel { Orientation = Orientation.Horizontal };
+        _placeSizeDots = new System.Windows.Shapes.Ellipse[SizePresets.Length];
+        for (int i = 0; i < SizePresets.Length; i++)
         {
-            Path = new PropertyPath(System.Windows.Documents.TextElement.ForegroundProperty),
-            RelativeSource = System.Windows.Data.RelativeSource.Self,
-        });
-        _placeSizeButton = new ToggleButton { Content = _placeSizeDot, Margin = new Thickness(2, 0, 0, 0) };
-        _placeSizeButton.SetResourceReference(StyleProperty, "EstiloSegmento");
+            var dot = new System.Windows.Shapes.Ellipse
+            {
+                Width = DotFor(SizePresets[i]),
+                Height = DotFor(SizePresets[i]),
+                Margin = new Thickness(i == 0 ? 0 : 3, 0, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            dot.SetBinding(System.Windows.Shapes.Shape.FillProperty, new System.Windows.Data.Binding
+            {
+                Path = new PropertyPath(System.Windows.Documents.TextElement.ForegroundProperty),
+                RelativeSource = System.Windows.Data.RelativeSource.Self,
+            });
+            sizePreview.Children.Add(dot);
+            _placeSizeDots[i] = dot;
+        }
+        _placeSizeButton = PickerButton(sizePreview);
+        _placeSizeButton.Margin = new Thickness(4, 0, 0, 0);
         _placeSizeButton.Click += (s, e) => TogglePicker(colors: false);
         var sizes = new List<UIElement>();
         string[] names = { "Fino", "Medio", "Grueso" };
@@ -136,6 +167,12 @@ sealed partial class EditorView
         _placeRow.Children.Add(PlaceIconBtn(Icons.Redo, "Rehacer (Ctrl+Y)", Redo));
         _placeRow.Children.Add(PlaceDivider());
         _placeRow.Children.Add(_placeIdeasSlot = new Border { VerticalAlignment = VerticalAlignment.Center });
+
+        // Solo con zoom: dice cuánto y devuelve la captura a su lugar (EditorView.PlaceZoom.cs)
+        _placeZoomButton = Ui.Btn("100 %", "Volver al tamaño real, en su lugar (Ctrl+0)", FitZoom, style: "EstiloPlano");
+        _placeZoomButton.Margin = new Thickness(0, 0, 4, 0);
+        _placeZoomButton.Visibility = Visibility.Collapsed;
+        _placeRow.Children.Add(_placeZoomButton);
 
         var more = PlaceIconBtn(Icons.More, "Más opciones", null);
         more.Click += (s, e) => ShowPlaceMenu(more);
@@ -224,6 +261,32 @@ sealed partial class EditorView
         return d;
     }
 
+    /// <summary>
+    /// Color o grosor contraído: un recuadro con borde, la vista previa y una flechita hacia la
+    /// derecha (hacia donde se despliega). Así se lee como algo que se abre, no como una muestra más.
+    /// </summary>
+    static ToggleButton PickerButton(UIElement preview)
+    {
+        var chevron = Ui.Icon(Icons.ChevronRight, 12, 2);
+        chevron.Margin = new Thickness(3, 0, 0, 0);
+        chevron.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "TextoSecundario");
+        var content = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        content.Children.Add(preview);
+        content.Children.Add(chevron);
+        var frame = new Border
+        {
+            Child = content,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(6, 0, 3, 0),
+            Height = 28,
+        };
+        frame.SetResourceReference(Border.BorderBrushProperty, "Borde");
+        var b = new ToggleButton { Content = frame, Width = double.NaN, Height = 30 };
+        b.SetResourceReference(StyleProperty, "EstiloSegmento");
+        return b;
+    }
+
     static Button PlaceIconBtn(string icon, string tip, Action action)
     {
         var b = Ui.IconBtn(icon, tip, action ?? (() => { }));
@@ -280,14 +343,18 @@ sealed partial class EditorView
     /// <summary>El botón contraído de color y el de grosor muestran lo actual (desde RefreshSwatches y RefreshSizes).</summary>
     void RefreshPlacePickers()
     {
-        if (_placeSizeDot == null) return; // la barra todavía no se armó (o se está armando)
+        if (_placeSizeDots == null) return; // la barra todavía no se armó (o se está armando)
         var current = CurrentColor;
-        _placeColorButton.Background = new SolidColorBrush(current);
+        _placeColorDot.Fill = new SolidColorBrush(current);
+        var others = Palette.Select(p => p.color).Where(c => c != current).ToArray();
+        for (int i = 0; i < _placeColorMinis.Length; i++) _placeColorMinis[i].Fill = new SolidColorBrush(others[i]);
         var name = Palette.FirstOrDefault(p => p.color == current).name ?? "Color";
-        _placeColorButton.ToolTip = $"{name} (clic para cambiar el color)";
+        _placeColorButton.ToolTip = $"{name} (clic para ver todos los colores)";
         System.Windows.Automation.AutomationProperties.SetName(_placeColorButton, $"Color: {name}");
-        _placeSizeDot.Width = _placeSizeDot.Height = DotFor(_size);
-        _placeSizeButton.ToolTip = $"Grosor: {_size} px (clic para cambiarlo; teclas 1–3)";
+        // El actual con el color del ícono; los otros dos, tenues
+        double dot = DotFor(_size);
+        foreach (var d in _placeSizeDots) d.Opacity = d.Width == dot ? 1 : 0.3;
+        _placeSizeButton.ToolTip = $"Grosor: {_size} px (clic para ver los tres; teclas 1–3)";
         System.Windows.Automation.AutomationProperties.SetName(_placeSizeButton, $"Grosor: {_size} px");
     }
 

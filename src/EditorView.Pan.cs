@@ -5,6 +5,8 @@
 //  Primero se usa el desplazamiento del ScrollViewer; lo que no alcanza (o
 //  todo, si la captura entra entera en la ventana) va a _panShift, una
 //  traslación del host que no toca el layout. "Ajustar" la vuelve a cero.
+//  En el lugar, solo con zoom, y mueve la captura dentro de su recuadro
+//  (EditorView.PlaceZoom.cs).
 // ----------------------------------------------------------------------------
 sealed partial class EditorView
 {
@@ -14,11 +16,7 @@ sealed partial class EditorView
 
     void BeginPan(Point p)
     {
-        if (InPlace)
-        {
-            _owner.OpenInTab(this); // en el lugar no hay desplazamiento: se pasa a una pestaña
-            return;
-        }
+        if (InPlace && !BeginPlacePan()) return; // en el lugar, solo con zoom (EditorView.PlaceZoom.cs)
         _panStart = p;
         _panFromX = _scroll.HorizontalOffset;
         _panFromY = _scroll.VerticalOffset;
@@ -32,6 +30,11 @@ sealed partial class EditorView
     bool PanMove(Point p)
     {
         if (_panStart is not Point start) return false;
+        if (InPlace)
+        {
+            PlacePanMove(p - start);
+            return true;
+        }
         var (sx, tx) = SplitPan(_panFromX, _panFromShiftX, p.X - start.X, _scroll.ScrollableWidth, _scroll.ViewportWidth);
         var (sy, ty) = SplitPan(_panFromY, _panFromShiftY, p.Y - start.Y, _scroll.ScrollableHeight, _scroll.ViewportHeight);
         _scroll.ScrollToHorizontalOffset(sx);

@@ -208,7 +208,8 @@ sealed partial class EditorView : UserControl
         _scroll.SetResourceReference(BackgroundProperty, "Lienzo");
         _scroll.PreviewMouseWheel += (s, e) =>
         {
-            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            if (InPlace) PlaceWheel(e); // en el lugar, la vista se mueve sin el ScrollViewer (EditorView.PlaceZoom.cs)
+            else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
                 StepZoom(e.Delta > 0 ? 1 : -1);
             else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
                 _scroll.ScrollToHorizontalOffset(_scroll.HorizontalOffset - e.Delta); // Shift+rueda: horizontal
@@ -589,8 +590,9 @@ sealed partial class EditorView : UserControl
         double real = z * DpiScale();
         _zoomText.Text = $"{Math.Round(real * 100)}%";
         // Suavizar al agrandar deja borrosos el texto y los bordes de 1 px de una captura
+        // En el lugar, a 100 % justo, también: es la pantalla tal cual
         RenderOptions.SetBitmapScalingMode(_imageCtl,
-            real >= PixelZoom * 0.999 || InPlace ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
+            real >= PixelZoom * 0.999 || InPlace && Math.Abs(real - 1) < 0.001 ? BitmapScalingMode.NearestNeighbor : BitmapScalingMode.HighQuality);
 
         UpdateFrameClip();
         UpdateSelectionVisual();
@@ -613,7 +615,8 @@ sealed partial class EditorView : UserControl
     {
         if (InPlace)
         {
-            LayoutInPlace(); // en el lugar no hay ajuste: siempre tamaño real
+            ResetPlaceView(); // en el lugar no hay ajuste: vuelve al tamaño real, en su lugar
+            LayoutInPlace();
             return;
         }
         double availW = Math.Max(100, _scroll.ActualWidth - 2 * ViewMargin - 20);
@@ -629,7 +632,7 @@ sealed partial class EditorView : UserControl
     {
         if (InPlace)
         {
-            _owner.OpenInTab(this); // en el lugar no hay zoom: se pasa a una pestaña
+            PlaceStepZoom(direction, PlaceCursor()); // dentro del recuadro (EditorView.PlaceZoom.cs)
             return;
         }
         double dpi = DpiScale(), real = _zoom.ScaleX * dpi;
@@ -677,7 +680,7 @@ sealed partial class EditorView : UserControl
                 case Key.H: ToggleRecents(); break;
                 case Key.A: SelectAll(); break;
                 case Key.OemComma: SettingsWindow.Show(_owner.Window); break;
-                case Key.D0: case Key.NumPad0: if (InPlace) _owner.OpenInTab(this); else FitZoom(); break;
+                case Key.D0: case Key.NumPad0: FitZoom(); break; // en el lugar, a 100 % y en su lugar
                 case Key.OemPlus: case Key.Add: StepZoom(1); break;
                 case Key.OemMinus: case Key.Subtract: StepZoom(-1); break;
                 default: return;
