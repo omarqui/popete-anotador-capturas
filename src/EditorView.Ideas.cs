@@ -230,6 +230,7 @@ sealed partial class EditorView
     {
         CommitIdea(); // la idea a medio escribir también entra en la lista
         var menu = new ContextMenu { PlacementTarget = _ideasButton, Placement = PlacementMode.Top };
+        RefocusAfter(menu);
         foreach (var (target, number) in Numbering())
         {
             var idea = IdeaOf(target);

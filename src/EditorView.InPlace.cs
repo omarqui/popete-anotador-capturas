@@ -3,10 +3,10 @@
 //
 //  El mismo editor, con otra cara: la captura en el rectángulo de la pantalla
 //  donde se tomó, a 1 píxel por píxel, sin esquinas ni sombra, con un borde de
-//  Acento y una franja angosta alrededor donde también se puede dibujar. La
-//  barra de herramientas y la de estado van juntas en una barra flotante
-//  (InPlaceLayout dice dónde). La tarjeta de las ideas se mueve por todo el
-//  monitor. No hay zoom ni desplazamiento: pedirlos pasa la captura a una
+//  Acento y una franja angosta alrededor donde también se puede dibujar. En
+//  lugar de las barras de la pestaña, una barra flotante más corta
+//  (EditorView.PlaceBar.cs; InPlaceLayout dice dónde). La tarjeta de las ideas
+//  se mueve por todo el monitor. No hay zoom ni desplazamiento: pedirlos pasa la captura a una
 //  pestaña (OpenInTab), y UseTabLayout devuelve el diseño de siempre.
 //
 //  Todo se calcula desde píxeles (la captura y el monitor) con la escala del
@@ -25,9 +25,6 @@ sealed partial class EditorView
     readonly Grid _canvasArea = new Grid();
     FrameworkElement _toolbar, _statusBar;
     System.Windows.Shapes.Rectangle _limit;
-    StackPanel _hints;
-    readonly List<UIElement> _zoomControls = new List<UIElement>();
-    Button _tabButton;
 
     // En el lugar
     bool _inPlace;
@@ -35,7 +32,6 @@ sealed partial class EditorView
     MonitorInfo _placeMonitor;
     Rect _placeBand;                 // la franja, en DIP de la ventana
     Canvas _placeRoot;
-    Border _floatingBar;
     System.Windows.Shapes.Rectangle _placeOutline;
     System.Windows.Media.Effects.Effect _frameShadow;
 
@@ -68,23 +64,7 @@ sealed partial class EditorView
             _host.HorizontalAlignment = HorizontalAlignment.Left;
             _host.VerticalAlignment = VerticalAlignment.Top;
             ResetPanShift();
-            _hints.Visibility = Visibility.Collapsed;
-            foreach (var c in _zoomControls) c.Visibility = Visibility.Collapsed;
-            _tabButton.Visibility = Visibility.Visible;
-
-            var bars = new StackPanel();
-            bars.Children.Add(_toolbar);
-            bars.Children.Add(_statusBar);
-            _floatingBar = new Border
-            {
-                Child = bars,
-                CornerRadius = new CornerRadius(8),
-                BorderThickness = new Thickness(1),
-                Effect = new System.Windows.Media.Effects.DropShadowEffect { BlurRadius = 18, ShadowDepth = 3, Opacity = 0.3 },
-            };
-            _floatingBar.SetResourceReference(Border.BackgroundProperty, "Fondo");
-            _floatingBar.SetResourceReference(Border.BorderBrushProperty, "BordeFuerte");
-            _floatingBar.SizeChanged += (s, e) => PlaceFloatingBar();
+            MountPlaceBar();
 
             _placeOutline = new System.Windows.Shapes.Rectangle { StrokeThickness = 2, IsHitTestVisible = false };
             _placeOutline.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, "Acento");
@@ -96,7 +76,6 @@ sealed partial class EditorView
             _placeRoot.Children.Add(_floatingBar);
             _placeRoot.Children.Add(_ideaOverlay); // la tarjeta de las ideas puede ir a cualquier parte del monitor
             Content = _placeRoot;
-            UpdateCopyButton();
         }
         LayoutInPlace();
         Dispatcher.InvokeAsync(() => Focus(), DispatcherPriority.Input);
@@ -108,9 +87,8 @@ sealed partial class EditorView
         if (!_inPlace) return;
         _inPlace = false;
         _placeRoot.Children.Clear();
-        ((StackPanel)_floatingBar.Child).Children.Clear();
         _placeRoot = null;
-        _floatingBar = null;
+        UnmountPlaceBar();
 
         _root.Children.Add(_toolbar);
         _root.Children.Add(_statusBar);
@@ -128,11 +106,7 @@ sealed partial class EditorView
         _host.HorizontalAlignment = HorizontalAlignment.Center;
         _host.VerticalAlignment = VerticalAlignment.Center;
         _host.Margin = new Thickness(ViewMargin);
-        _hints.Visibility = Visibility.Visible;
-        foreach (var c in _zoomControls) c.Visibility = Visibility.Visible;
-        _tabButton.Visibility = Visibility.Collapsed;
         Content = _root;
-        UpdateCopyButton();
         SetZoom(_zoom.ScaleX); // esquinas y modo de dibujo de la captura; FitZoom corre al cargarse en la pestaña
     }
 
@@ -179,7 +153,9 @@ sealed partial class EditorView
         var work = new Rect((w.X - m.X) / s, (w.Y - m.Y) / s, w.Width / s, w.Height / s);
         _floatingBar.MaxWidth = Math.Max(200, work.Width - 2 * BarGap);
         _floatingBar.Measure(new Size(_floatingBar.MaxWidth, double.PositiveInfinity));
-        var p = InPlaceLayout.Bar(_placeBand, _floatingBar.DesiredSize, work, BarGap);
+        var p = _barMoved // la arrastró el usuario: se queda ahí, entera en el área de trabajo
+            ? InPlaceLayout.Keep(_barWanted, _floatingBar.DesiredSize, work, BarGap)
+            : InPlaceLayout.Bar(_placeBand, _floatingBar.DesiredSize, work, BarGap);
         Canvas.SetLeft(_floatingBar, p.X);
         Canvas.SetTop(_floatingBar, p.Y);
     }

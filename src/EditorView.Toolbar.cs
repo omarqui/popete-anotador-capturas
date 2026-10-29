@@ -142,6 +142,7 @@ sealed partial class EditorView
 
         var menu = new ContextMenu { Placement = PlacementMode.Bottom, PlacementTarget = _moreButton };
         menu.Closed += (s, e) => UpdateMoreButton();
+        RefocusAfter(menu);
         _moreButton.Click += (s, e) =>
         {
             UpdateMoreButton(); // el clic no cambia la marca: la pone la herramienta activa
@@ -195,6 +196,19 @@ sealed partial class EditorView
         };
         hint.SetResourceReference(TextBlock.ForegroundProperty, "TextoSecundario");
         menu.Items.Add(new MenuItem { Header = hint, IsEnabled = false });
+    }
+
+    /// <summary>
+    /// Al cerrarse, el menú deja el foco en la ventana y no en el editor: las teclas siguientes
+    /// (Esc, las de las herramientas) no le llegarían hasta un clic en el lienzo. Si la ventana
+    /// sigue activa y nadie más tomó el foco (el campo de una idea, un diálogo), vuelve al editor.
+    /// </summary>
+    void RefocusAfter(ContextMenu menu)
+    {
+        menu.Closed += (s, e) => Dispatcher.InvokeAsync(() =>
+        {
+            if (_owner.Window.IsActive && !IsKeyboardFocusWithin) Focus();
+        }, DispatcherPriority.Input);
     }
 
     static Separator MenuSeparator()
@@ -274,11 +288,9 @@ sealed partial class EditorView
     void UpdateCopyButton()
     {
         bool close = AppSettings.Current.CerrarAlCopiar;
-        // En el lugar, el botón y el clic derecho siempre cierran; Ctrl+C sigue el ajuste
-        _copyLabel.Text = close || InPlace ? "Copiar y cerrar" : "Copiar";
-        _copyButton.ToolTip = InPlace
-            ? "Copiar y cerrar (Ctrl+Enter, clic derecho en la captura o clic fuera)"
-            : close
+        // En el lugar este botón no se ve: la barra flotante tiene su «Copiar» (EditorView.PlaceBar.cs)
+        _copyLabel.Text = close ? "Copiar y cerrar" : "Copiar";
+        _copyButton.ToolTip = close
             ? "Copiar y cerrar (Ctrl+C, Ctrl+Enter o clic derecho en la captura)"
             : "Copiar (Ctrl+C o clic derecho en la captura; Ctrl+Enter copia y cierra)";
     }
@@ -297,7 +309,7 @@ sealed partial class EditorView
         left.Children.Add(_saveText);
         left.Children.Add(_status);
 
-        var hints = _hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        var hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–3", "Grosor"), ("Supr", "Borrar selección") })
         {
             hints.Children.Add(Ui.Keycap(key));
@@ -312,12 +324,6 @@ sealed partial class EditorView
         zoom.Children.Add(Ui.Btn("+", "Acercar (Ctrl++)", () => StepZoom(1), style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("Ajustar", "Ajustar a la ventana (Ctrl+0)", FitZoom, style: "EstiloPlano"));
         zoom.Children.Add(Ui.Btn("1:1", "Tamaño real", () => SetZoom(1 / DpiScale()), style: "EstiloPlano"));
-        _zoomControls.AddRange(zoom.Children.Cast<UIElement>()); // en el lugar no hay zoom (EditorView.InPlace.cs)
-        _tabButton = Ui.Btn("Abrir en pestaña", "Pasar la captura al editor de pestañas, con todo lo hecho",
-            () => _owner.OpenInTab(this), Icons.Link, "EstiloPlano");
-        _tabButton.Margin = new Thickness(6, 0, 0, 0);
-        _tabButton.Visibility = Visibility.Collapsed;
-        zoom.Children.Add(_tabButton);
         var settings = Ui.IconBtn(Icons.Settings, "Ajustes", () => SettingsWindow.Show(_owner.Window));
         settings.Width = settings.Height = 28;
         settings.Margin = new Thickness(6, 0, 0, 0);
@@ -345,6 +351,7 @@ sealed partial class EditorView
     {
         _saveIcon.Visibility = ok ? Visibility.Visible : Visibility.Collapsed;
         _saveText.Text = text;
+        if (InPlace && !ok) _status.Text = text; // la barra en el lugar no muestra «Guardado», pero sí los errores
     }
 
     // ------------------------------------------------------------------ herramientas, color y grosor
@@ -436,12 +443,14 @@ sealed partial class EditorView
     {
         var current = CurrentColor;
         foreach (var (b, c) in _swatches) b.IsChecked = c == current;
+        RefreshPlacePickers();
     }
 
     void RefreshSizes()
     {
         foreach (var (b, s) in _sizeButtons) b.IsChecked = s == _size;
         _sizeText.Text = $"{_size} px";
+        RefreshPlacePickers();
     }
 
     DrawingAttributes MakeAttributes()

@@ -46,4 +46,20 @@ public class InPlaceLayoutTests
         var p = InPlaceLayout.Bar(band, Bar, Work, Gap);
         Assert.Equal(Work.Right - Gap - Bar.Width, p.X);
     }
+
+    [Fact]
+    public void La_barra_arrastrada_queda_donde_se_solto()
+        => Assert.Equal(new Point(300, 400), InPlaceLayout.Keep(new Point(300, 400), Bar, Work, Gap));
+
+    [Fact]
+    public void La_barra_arrastrada_no_se_sale_del_area_de_trabajo()
+    {
+        Assert.Equal(new Point(Work.Right - Gap - Bar.Width, Work.Bottom - Gap - Bar.Height),
+            InPlaceLayout.Keep(new Point(1500, 1000), Bar, Work, Gap)); // por la derecha y por abajo (la barra de tareas)
+        Assert.Equal(new Point(Gap, Gap), InPlaceLayout.Keep(new Point(-50, -20), Bar, Work, Gap));
+    }
+
+    [Fact]
+    public void Una_barra_mas_ancha_que_el_area_queda_pegada_a_la_izquierda()
+        => Assert.Equal(Gap, InPlaceLayout.Keep(new Point(500, 300), new Size(2000, 96), Work, Gap).X);
 }

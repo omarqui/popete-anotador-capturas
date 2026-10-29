@@ -130,6 +130,10 @@ static class Icons
     public const string Sun = "M16 12 A4 4 0 1 1 8 12 A4 4 0 1 1 16 12 Z M12 2 V4 M12 20 V22 M2 12 H4 M20 12 H22 M4.9 4.9 L6.3 6.3 M17.7 17.7 L19.1 19.1 M4.9 19.1 L6.3 17.7 M17.7 6.3 L19.1 4.9";
     public const string Recents = "M3 12 A9 9 0 1 0 6 5.3 M3 4 V8 H7 M12 7 V12 L15 14";
     public const string Close = "M6 6 L18 18 M18 6 L6 18";
+    /// <summary>Tres puntos (los trazos casi nulos con punta redonda se ven como puntos).</summary>
+    public const string More = "M6 12 L6.01 12 M12 12 L12.01 12 M18 12 L18.01 12";
+    /// <summary>Agarradera: dos columnas de tres puntos.</summary>
+    public const string Grip = "M9 6 L9.01 6 M9 12 L9.01 12 M9 18 L9.01 18 M15 6 L15.01 6 M15 12 L15.01 12 M15 18 L15.01 18";
     public const string Refresh = "M20 11 A8 8 0 1 0 18 17 M20 5 V11 H14";
     public const string Info = "M21 12 A9 9 0 1 1 3 12 A9 9 0 1 1 21 12 Z M12 11 V16.5 M12 7.6 V7.8";
     public const string Idea = "M9 18 H15 M10 21 H14 M9 15.5 A6 6 0 1 1 15 15.5 V16 H9 Z";
