@@ -533,6 +533,7 @@ sealed partial class EditorView : UserControl
         _suppress = true;
         try { item.Undo(); }
         finally { _suppress = false; }
+        if (item is ClearAllChange) _status.Text = ""; // ya no vale «Ctrl+Z las recupera»
         _redo.Push(item);
         SyncPendingCrop();
         MarkChanged();
@@ -562,14 +563,18 @@ sealed partial class EditorView : UserControl
 
         int count = strokes.Count + elements.Count;
         var title = count == 1 ? "¿Quitar la anotación?" : $"¿Quitar las {count} anotaciones?";
-        if (!ConfirmDialog.Ask(_owner.Window, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar"))
-            return;
+        bool confirmed = ConfirmDialog.Ask(_owner.Window, title, "Se borran todos los trazos y textos de esta captura. Se puede deshacer con Ctrl+Z.", "Quitar");
+        // Al cerrarse el diálogo el foco vuelve a la ventana, no siempre al editor (sobre todo desde el
+        // menú «⋯» en el lugar): sin esto, Ctrl+Z no llegaba y lo borrado parecía no poder recuperarse
+        Dispatcher.InvokeAsync(() => { if (_owner.Window.IsActive && !IsKeyboardFocusWithin) Focus(); }, DispatcherPriority.Input);
+        if (!confirmed) return;
 
         _suppress = true;
         _ink.Strokes.Clear();
         _textLayer.Children.Clear();
         _suppress = false;
         PushUndo(new ClearAllChange(_ink.Strokes, strokes, _textLayer, elements));
+        _status.Text = count == 1 ? "Se quitó la anotación · Ctrl+Z la recupera" : $"Se quitaron {count} anotaciones · Ctrl+Z las recupera";
     }
 
     // ------------------------------------------------------------------ zoom
