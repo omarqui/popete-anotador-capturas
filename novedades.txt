@@ -1,16 +1,16 @@
-Novedades de la versión 1.3.1:
+Novedades de la versión 1.4.0:
 
-• «En el lugar» es ahora el modo de trabajo de fábrica: con Win+Shift+S anotas la captura justo donde estaba. Si prefieres Recortes y las pestañas, cámbialo en Ajustes › General › Modo de trabajo.
-• Barra más compacta y centrada sobre la captura: el color y el grosor se despliegan con un clic, lo de poco uso está en «⋯» y puedes moverla desde la agarradera.
-• Zoom en el lugar: Ctrl+rueda acerca o aleja sin mover el recuadro, y Ctrl+0 la devuelve a su tamaño real.
-• Después de usar un menú, Esc y las teclas de las herramientas responden enseguida.
+• Cambia de herramienta sin dejar el teclado: Tab vuelve a la anterior (varios Tab recorren las tres últimas de dibujo), 1–9 eligen por su lugar en la barra y Espacio abre una paleta alrededor del puntero. El grosor pasó a − y +.
+• Ctrl+Z también devuelve el color, y los colores rotan en el orden de la barra, ahora con el amarillo.
+• Borrar todo con la papelera se deshace con Ctrl+Z.
+• Historial rápido: arrastra una captura a una carpeta o al escritorio para guardarla, elimínala con Supr y mueve la ventana desde el encabezado.
+• «Guardar como…» en el menú de cada pestaña.
+• Buzón de sugerencias: desde la bandeja o Ajustes › Acerca de, tu idea queda lista para enviarla en GitHub.
+
+Versión 1.3.1: «En el lugar» de fábrica, barra compacta que se puede mover y zoom en el lugar.
 
 Versión 1.3.0: modo de trabajo «En el lugar» para anotar la captura donde estaba; Popete se ve nítido en monitores con distinta escala.
 
-Versión 1.2.1: ajuste «Llevan número» para numerar solo lo que tiene idea o todo.
+Versión 1.2: ideas por número que no salen en la imagen y viajan como texto al copiar; Ajustes renovados; novedades después de actualizar; las copias de Excel o del navegador y los recortes diminutos ya no abren el editor.
 
-Versión 1.2: ideas por número que no salen en la imagen y viajan como texto al copiar; escribir sobre un trazo elegido abre su idea; Ajustes renovados con Acerca de y Actualizaciones; novedades después de actualizar; las copias de Excel o del navegador y los recortes diminutos ya no abren el editor.
-
-Versión 1.1.3: el historial rápido pega directo en el programa donde estabas y se abre más grande, en el monitor del ratón; zoom más nítido.
-
-Versión 1.1: pestañas en una sola ventana que se recuerdan al reabrir; historial rápido con Alt+`; ajuste «Cerrar el editor al copiar».
+Versión 1.1: pestañas en una sola ventana, historial rápido con Alt+` que pega directo donde estabas y ajuste «Cerrar el editor al copiar».
