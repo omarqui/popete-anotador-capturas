@@ -31,7 +31,7 @@ sealed class AppSettings
     /// <summary>Si los textos nuevos salen como etiqueta (fondo de color). Lo cambia el botón de la barra.</summary>
     public bool TextoConFondo { get; set; } = true;
 
-    /// <summary>Después de cada trazo, pasar al siguiente color (rojo → azul → verde → morado → naranja).</summary>
+    /// <summary>Después de cada trazo, pasar al siguiente color (rojo → amarillo → verde → azul → morado → naranja).</summary>
     public bool RotarColores { get; set; } = true;
 
     /// <summary>Multiplicador del tamaño de los números (1 = el tamaño original).</summary>

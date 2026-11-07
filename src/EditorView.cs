@@ -180,9 +180,10 @@ sealed partial class EditorView : UserControl
             _suppress = true;
             _ink.Strokes.Replace(e.Stroke, new StrokeCollection { stroke });
             _suppress = false;
-            PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
             SelectStrokes(new StrokeCollection { stroke }, auto: true);
-            AdvanceColor();
+            // La rotación va después de seleccionar (si no, RestoreDrawStyle la pisaría) y en el mismo
+            // paso de deshacer que el trazo: Ctrl+Z vuelve al color con el que se dibujó
+            PushUndo(Combine(new[] { new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()), AdvanceColor() }));
             OfferIdea(stroke);
         };
 

@@ -118,9 +118,9 @@ sealed partial class EditorView
         }
         else
         {
-            PushUndo(new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()));
             SelectStrokes(new StrokeCollection { stroke }, auto: true); // unos segundos, para cambiarle color o grosor
-            AdvanceColor();
+            // Rotación y trazo en un solo paso de deshacer (ver StrokeCollected en EditorView.cs)
+            PushUndo(Combine(new[] { new StrokeChange(_ink.Strokes, new StrokeCollection { stroke }, new StrokeCollection()), AdvanceColor() }));
             OfferIdea(stroke);
         }
         e.Handled = true;

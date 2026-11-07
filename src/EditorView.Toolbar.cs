@@ -412,21 +412,43 @@ sealed partial class EditorView
         UpdatePointer();
     }
 
-    // Rotación después de cada trazo: solo colores que se leen bien sobre capturas
-    // (sin amarillo, negro ni blanco en el lápiz). El resaltador rota aparte.
-    static readonly Color[] PenRotation = { Palette[0].color, Palette[3].color, Palette[2].color, Palette[4].color, Palette[5].color };
+    // Rotación después de cada trazo, en el orden de las muestras de la barra (el de Palette),
+    // sin negro ni blanco en el lápiz. El resaltador rota aparte.
+    // Rojo → amarillo → verde → azul → morado → naranja; amarillo → verde → azul.
+    static readonly Color[] PenRotation = { Palette[0].color, Palette[1].color, Palette[2].color, Palette[3].color, Palette[4].color, Palette[5].color };
     static readonly Color[] HighlightRotation = { Palette[1].color, Palette[2].color, Palette[3].color };
 
     /// <summary>
     /// Después de agregar un trazo, el color pasa al siguiente de la rotación (si está activado
-    /// en Ajustes). No toca el trazo recién hecho aunque siga seleccionado.
+    /// en Ajustes). No toca el trazo recién hecho aunque siga seleccionado. Devuelve el paso de
+    /// deshacer del cambio de color (null si no rota), para registrarlo junto con el trazo:
+    /// deshacer el trazo vuelve al color con el que se hizo y rehacerlo vuelve a rotar.
     /// </summary>
-    void AdvanceColor()
+    IUndo AdvanceColor()
     {
-        if (!AppSettings.Current.RotarColores) return;
-        var rotation = _tool == Tool.Highlighter ? HighlightRotation : PenRotation;
-        int i = Array.IndexOf(rotation, CurrentColor); // -1 si se eligió a mano uno fuera de la rotación → el primero
-        SetColor(rotation[(i + 1) % rotation.Length], applyToSelection: false);
+        if (!AppSettings.Current.RotarColores) return null;
+        bool highlight = _tool == Tool.Highlighter;
+        var rotation = highlight ? HighlightRotation : PenRotation;
+        var before = CurrentColor;
+        int i = Array.IndexOf(rotation, before); // -1 si se eligió a mano uno fuera de la rotación → el primero
+        var after = rotation[(i + 1) % rotation.Length];
+        SetColor(after, applyToSelection: false);
+        return new ActionChange(
+            () => SwapRotatedColor(highlight, after, before),
+            () => SwapRotatedColor(highlight, before, after));
+    }
+
+    /// <summary>
+    /// Pasa el color de una familia (lápiz/formas/texto o resaltador) de <paramref name="from"/> a
+    /// <paramref name="to"/>, solo si sigue siendo <paramref name="from"/>: si entretanto se eligió
+    /// otro a mano, deshacer el trazo no se lo pisa.
+    /// </summary>
+    void SwapRotatedColor(bool highlight, Color from, Color to)
+    {
+        if ((highlight ? _highlightColor : _penColor) != from) return;
+        if (highlight == (_tool == Tool.Highlighter)) SetColor(to, applyToSelection: false);
+        else if (highlight) _highlightColor = to;
+        else _penColor = to;
     }
 
     void SetSize(double size)

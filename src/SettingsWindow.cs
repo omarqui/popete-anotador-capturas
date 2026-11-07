@@ -65,7 +65,7 @@ sealed class SettingsWindow : Window
             s.GrosorInicial, v => Save(() => s.GrosorInicial = v));
         Choice("Cambiar de color después de cada trazo", new[] { ("Sí", true), ("No", false) },
             s.RotarColores, v => Save(() => s.RotarColores = v),
-            "Rojo → azul → verde → morado → naranja. El resaltador: amarillo → verde → azul.");
+            "Rojo → amarillo → verde → azul → morado → naranja. El resaltador: amarillo → verde → azul.");
         Choice("Lo recién dibujado queda seleccionado", new[] { ("No", 0), ("2 s", 2), ("3 s", 3), ("5 s", 5), ("10 s", 10) },
             s.SegundosSeleccion, v => Save(() => s.SegundosSeleccion = v),
             "Mientras está seleccionado, elegir color o grosor se le aplica.");
