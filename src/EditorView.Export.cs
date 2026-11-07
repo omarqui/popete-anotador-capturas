@@ -133,26 +133,45 @@ sealed partial class EditorView
         t.Start();
     }
 
-    void Save()
+    /// <summary>Guardar como: Ctrl+S, «⋯» en el lugar y el menú de la pestaña.</summary>
+    internal void Save()
     {
         MarkTouched(); // el diálogo de Windows le quita el foco: que no se cierre detrás
         CommitText();
         if (_cropMode) ConfirmCrop();
+        var path = SaveImageAs(_owner.Window, Render());
+        if (path != null) _status.Text = $"✓ Guardado en {path}";
+    }
+
+    /// <summary>
+    /// Pide dónde guardar <paramref name="image"/> (PNG o JPEG) y la guarda. Devuelve la ruta,
+    /// o null si se canceló o no se pudo (con aviso). La usan también las pestañas sin cargar.
+    /// </summary>
+    internal static string SaveImageAs(Window owner, BitmapSource image)
+    {
         var dlg = new SaveFileDialog
         {
             Filter = "Imagen PNG (*.png)|*.png|Imagen JPEG (*.jpg)|*.jpg",
             FileName = $"Captura {DateTime.Now:yyyy-MM-dd HHmmss}.png",
             InitialDirectory = AppSettings.Current.CarpetaGuardarEfectiva,
         };
-        if (dlg.ShowDialog(_owner.Window) != true) return;
+        if (dlg.ShowDialog(owner) != true) return null;
 
         var ext = Path.GetExtension(dlg.FileName).ToLowerInvariant();
         BitmapEncoder enc = ext is ".jpg" or ".jpeg"
             ? new JpegBitmapEncoder { QualityLevel = 92 }
             : new PngBitmapEncoder();
-        enc.Frames.Add(BitmapFrame.Create(Render()));
-        using (var fs = File.Create(dlg.FileName)) enc.Save(fs);
-
-        _status.Text = $"✓ Guardado en {dlg.FileName}";
+        enc.Frames.Add(BitmapFrame.Create(image));
+        try
+        {
+            using var fs = File.Create(dlg.FileName);
+            enc.Save(fs);
+        }
+        catch (Exception ex)
+        {
+            ConfirmDialog.Inform(owner, "No se pudo guardar", ex.Message);
+            return null;
+        }
+        return dlg.FileName;
     }
 }

@@ -161,6 +161,7 @@ sealed partial class EditorShell
         menu.Items.Add(Item("Cerrar las de la derecha", () => CloseOthers(tab, _tabs.Skip(index + 1).ToList()), enabled: index < _tabs.Count - 1));
         menu.Items.Add(Item("Cerrar todas", CloseAll));
         menu.Items.Add(new Separator());
+        menu.Items.Add(Item("Guardar como…", () => SaveTabAs(tab), tab == _selected ? "Ctrl+S" : null));
         menu.Items.Add(Item("Mostrar en el Explorador", () => ShowInExplorer(tab.Session)));
         menu.Items.Add(Item("Eliminar del historial…", () => DeleteTab(tab)));
     }
@@ -184,6 +185,22 @@ sealed partial class EditorShell
     {
         _clearOnClose = true;
         Close();
+    }
+
+    /// <summary>
+    /// Guardar como desde el menú de la pestaña. Con su editor cargado, la imagen de ahora (con
+    /// lo que falte guardar); si no (restaurada y nunca elegida), la del historial, sin cargarla.
+    /// </summary>
+    void SaveTabAs(Tab tab)
+    {
+        if (tab.View != null) { tab.View.Save(); return; }
+        var s = tab.Session;
+        try
+        {
+            var image = History.LoadImage(File.Exists(s.PreviewPath) ? s.PreviewPath : s.OriginalPath);
+            EditorView.SaveImageAs(this, image);
+        }
+        catch (Exception ex) { ConfirmDialog.Inform(this, "No se pudo guardar", ex.Message); }
     }
 
     static void ShowInExplorer(Session s)
