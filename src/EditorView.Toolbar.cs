@@ -15,7 +15,6 @@ sealed partial class EditorView
     readonly TextBlock _zoomText = new TextBlock { VerticalAlignment = VerticalAlignment.Center, MinWidth = 44, TextAlignment = TextAlignment.Center };
     FrameworkElement _saveIcon;
     ToggleButton _recentsButton;
-    Button _themeButton;
     Button _copyButton;
     TextBlock _copyLabel;
 
@@ -86,14 +85,7 @@ sealed partial class EditorView
         _recentsButton.Click += (s, e) => ToggleRecents(_recentsButton.IsChecked == true);
         right.Children.Add(_recentsButton);
 
-        _themeButton = Ui.IconBtn(Icons.Theme, "", Theme.Toggle);
-        UpdateThemeButton();
-        // El ícono muestra el tema al que se pasa: luna en claro, sol en oscuro
-        Action onThemeChanged = UpdateThemeButton;
-        Theme.Changed += onThemeChanged;
-        Closed += (s, e) => Theme.Changed -= onThemeChanged;
-        right.Children.Add(_themeButton);
-
+        // Sin botón de tema (2026-11-07): se cambia en Ajustes › General
         right.Children.Add(Ui.Divider());
 
         // Guardar como no tiene botón: queda con Ctrl+S.
@@ -274,14 +266,6 @@ sealed partial class EditorView
                 () => changed.ForEach(nt => nt.Fondo = on)));
             Dispatcher.InvokeAsync(UpdateSelectionVisual, DispatcherPriority.Loaded); // cambia de tamaño
         }
-    }
-
-    void UpdateThemeButton()
-    {
-        _themeButton.Content = Ui.Icon(Theme.IsDark ? Icons.Sun : Icons.Theme);
-        var tip = Theme.IsDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro";
-        _themeButton.ToolTip = tip;
-        System.Windows.Automation.AutomationProperties.SetName(_themeButton, tip);
     }
 
     /// <summary>El botón dice lo que hace según "Cerrar el editor al copiar" (cambia en caliente desde Ajustes).</summary>
