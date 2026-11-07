@@ -135,7 +135,7 @@ sealed partial class EditorView
 
     // ------------------------------------------------------------------ escribir sobre lo elegido
     // Con un solo trazo o texto elegido a mano, escribir abre su idea con lo tecleado: las letras
-    // dejan de cambiar de herramienta hasta soltarlo (Esc). 1–3 siguen siendo el grosor. Lo
+    // (y los números) dejan de cambiar de herramienta hasta soltarlo (Esc). − y + siguen siendo el grosor. Lo
     // recién dibujado no cuenta: su campo ya se ofrece solo.
 
     /// <summary>A qué elemento iría lo que se escriba, o null.</summary>
@@ -151,7 +151,7 @@ sealed partial class EditorView
         (key is >= Key.A and <= Key.Z or >= Key.D0 and <= Key.D9 or >= Key.NumPad0 and <= Key.NumPad9
             or Key.Space or >= Key.Oem1 and <= Key.Oem102 or Key.Multiply or Key.Add or Key.Subtract
             or Key.Decimal or Key.Divide)
-        && key is not (Key.D1 or Key.D2 or Key.D3 or Key.NumPad1 or Key.NumPad2 or Key.NumPad3)
+        && key is not (Key.OemMinus or Key.OemPlus or Key.Subtract or Key.Add)
         && TypingIdeaTarget() != null;
 
     void OnTextInput(object sender, TextCompositionEventArgs e)

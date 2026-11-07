@@ -14,8 +14,8 @@ sealed partial class EditorView
     static readonly (Tool tool, string icon, string name, string key, string tip)[] AllTools =
     {
         (Tool.Select, Icons.Select, "Seleccionar", "V", "clic en un trazo para cambiarle color o grosor; Supr lo borra"),
-        (Tool.Pen, Icons.Pen, "Lápiz", "P", "Tab alterna con la flecha"),
-        (Tool.Arrow, Icons.Arrow, "Flecha", "A", "sigue el mouse; casi recta se endereza; Shift: recta a 45°; Tab alterna con el lápiz"),
+        (Tool.Pen, Icons.Pen, "Lápiz", "P", null),
+        (Tool.Arrow, Icons.Arrow, "Flecha", "A", "sigue el mouse; casi recta se endereza; Shift: recta a 45°"),
         (Tool.Highlighter, Icons.Highlighter, "Resaltador", "H", null),
         (Tool.Line, Icons.Line, "Línea", "L", "Shift: a 45°"),
         (Tool.Rectangle, Icons.Rectangle, "Rectángulo", "R", "Shift: cuadrado"),
@@ -84,23 +84,33 @@ sealed partial class EditorView
             if (current >= 0) _toolPanel.Children.RemoveAt(current);
             _toolPanel.Children.Insert(i, desired[i]);
         }
-        foreach (var kv in _toolButtons) kv.Value.IsChecked = kv.Key == _tool;
+        foreach (var kv in _toolButtons)
+        {
+            kv.Value.IsChecked = kv.Key == _tool;
+            SetToolTip(kv.Value, kv.Key); // el número cambia con el orden de la barra
+        }
         UpdateMoreButton();
+    }
+
+    static void SetToolTip(ToggleButton b, Tool t)
+    {
+        var info = AllTools.First(a => a.tool == t);
+        var name = $"{info.name} ({ToolKeysText(t)})" + (info.tip != null ? " — " + info.tip : "");
+        b.ToolTip = name + "\nArrastra para cambiarla de lugar · clic derecho: pasarla a Otras herramientas";
+        System.Windows.Automation.AutomationProperties.SetName(b, name);
     }
 
     ToggleButton ToolButton(Tool t)
     {
         if (_toolButtons.TryGetValue(t, out var existing)) return existing;
         var info = AllTools.First(a => a.tool == t);
-        var name = $"{info.name} ({info.key})" + (info.tip != null ? " — " + info.tip : "");
         var b = new ToggleButton
         {
             Content = Ui.Icon(info.icon),
-            ToolTip = name + "\nArrastra para cambiarla de lugar · clic derecho: pasarla a Otras herramientas",
             Tag = t.ToString(),
             ContextMenu = BarContextMenu(t),
         };
-        System.Windows.Automation.AutomationProperties.SetName(b, name);
+        SetToolTip(b, t);
         b.SetResourceReference(StyleProperty, "EstiloHerramienta");
         b.Click += (s, e) => SetTool(t);
         _toolButtons[t] = b;

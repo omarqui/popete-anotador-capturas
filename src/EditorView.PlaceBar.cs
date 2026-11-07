@@ -147,7 +147,7 @@ sealed partial class EditorView
                 Path = new PropertyPath(System.Windows.Documents.TextElement.ForegroundProperty),
                 RelativeSource = System.Windows.Data.RelativeSource.Self,
             });
-            var tip = $"{names[i]}: {size} px ({i + 1})";
+            var tip = $"{names[i]}: {size} px (− y + cambian el grosor)";
             var b = new ToggleButton { Content = dot, ToolTip = tip };
             System.Windows.Automation.AutomationProperties.SetName(b, tip);
             b.SetResourceReference(StyleProperty, "EstiloSegmento");
@@ -354,7 +354,7 @@ sealed partial class EditorView
         // El actual con el color del ícono; los otros dos, tenues
         double dot = DotFor(_size);
         foreach (var d in _placeSizeDots) d.Opacity = d.Width == dot ? 1 : 0.3;
-        _placeSizeButton.ToolTip = $"Grosor: {_size} px (clic para ver los tres; teclas 1–3)";
+        _placeSizeButton.ToolTip = $"Grosor: {_size} px (clic para ver los tres; teclas − y +)";
         System.Windows.Automation.AutomationProperties.SetName(_placeSizeButton, $"Grosor: {_size} px");
     }
 

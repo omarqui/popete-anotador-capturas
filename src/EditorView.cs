@@ -279,6 +279,12 @@ sealed partial class EditorView : UserControl
         // Clic derecho en el lienzo: copiar (y cerrar, según el ajuste), como Ctrl+C
         PreviewMouseRightButtonUp += (s, e) =>
         {
+            if (PaletteOpen)
+            {
+                ClosePalette(apply: false); // con la paleta abierta, el clic derecho solo la cierra
+                e.Handled = true;
+                return;
+            }
             // Con un texto o una idea a medio escribir, no (como cualquier cuadro de texto); sobre el fantasma tampoco
             if (_editing != null || _ideaBox is { Text.Length: > 0 } || IsInside(e.OriginalSource, _ideaLayer)
                 || !IsInside(e.OriginalSource, _scroll)) return;
@@ -296,6 +302,8 @@ sealed partial class EditorView : UserControl
 
         // La pestaña se crea al elegirla: ya está visible cuando se carga
         Loaded += (s, e) => FitZoom();
+        // Otra ventana al frente (o el foco en otra parte) con la paleta de herramientas abierta: se cierra
+        IsKeyboardFocusWithinChanged += (s, e) => { if (!IsKeyboardFocusWithin) ClosePalette(apply: false); };
     }
 
     // ------------------------------------------------------------------ pestaña
@@ -653,12 +661,14 @@ sealed partial class EditorView : UserControl
     void OnKeyUp(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt) e.Handled = true;
+        PaletteKeyUp(e); // soltar Espacio elige en la paleta (EditorView.ToolKeys.cs)
     }
 
     void OnKeyDown(object sender, KeyEventArgs e)
     {
         if (_ideaBox != null && IdeaKey(e)) return; // escribiendo una idea
         if (_editing != null) return; // escribiendo texto
+        if (PaletteKeyDown(e)) return; // paleta de herramientas abierta
 
         if (e.Key == Key.System && e.SystemKey is Key.LeftAlt or Key.RightAlt)
         {
@@ -705,9 +715,11 @@ sealed partial class EditorView : UserControl
 
         if (Keyboard.Modifiers != ModifierKeys.None) return;
         if (TypesIdea(e.Key)) return; // sin manejar: llega como texto a OnTextInput
+        if (ToolByNumber(e.Key)) { e.Handled = true; return; } // 1–9 y 0: por su lugar en la barra
         switch (e.Key)
         {
-            case Key.Tab: SetTool(_tool == Tool.Pen ? Tool.Arrow : Tool.Pen); break; // alterna lápiz ↔ flecha
+            case Key.Tab: PreviousTool(); break; // la anterior; seguidos, las recientes (EditorView.ToolKeys.cs)
+            case Key.Space: if (!e.IsRepeat) OpenPalette(); break; // paleta radial
             case Key.V: SetTool(Tool.Select); break;
             case Key.P: SetTool(Tool.Pen); break;
             case Key.H: SetTool(Tool.Highlighter); break;
@@ -718,9 +730,8 @@ sealed partial class EditorView : UserControl
             case Key.T: SetTool(Tool.Text); break;
             case Key.E: SetTool(Tool.Eraser); break;
             case Key.C: SetTool(Tool.Crop); break;
-            case Key.D1: case Key.NumPad1: SetSize(SizePresets[0]); break;
-            case Key.D2: case Key.NumPad2: SetSize(SizePresets[1]); break;
-            case Key.D3: case Key.NumPad3: SetSize(SizePresets[2]); break;
+            case Key.OemMinus: case Key.Subtract: StepSize(-1); break; // grosor (con Ctrl es el zoom)
+            case Key.OemPlus: case Key.Add: StepSize(+1); break;
             case Key.Delete: case Key.Back: DeleteSelection(); break;
             case Key.Enter when _cropMode: ConfirmCrop(); break;
             case Key.Escape:

@@ -54,7 +54,7 @@ sealed partial class EditorView
                 Path = new PropertyPath(System.Windows.Documents.TextElement.ForegroundProperty),
                 RelativeSource = System.Windows.Data.RelativeSource.Self,
             });
-            var tip = $"{names[i]}: {size} px ({i + 1})";
+            var tip = $"{names[i]}: {size} px (− y + cambian el grosor)";
             var b = new ToggleButton { Content = dotEl, ToolTip = tip };
             System.Windows.Automation.AutomationProperties.SetName(b, tip);
             b.SetResourceReference(StyleProperty, "EstiloSegmento");
@@ -153,7 +153,7 @@ sealed partial class EditorView
         {
             var item = new MenuItem
             {
-                Header = MenuHeader(icon, name, key),
+                Header = MenuHeader(icon, name, ToolKeysText(tool)),
                 IsChecked = _tool == tool,
                 ToolTip = "Clic derecho: ponerla en la barra",
             };
@@ -294,7 +294,7 @@ sealed partial class EditorView
         left.Children.Add(_status);
 
         var hints = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Shift", "45° y cuadrados"), ("1–3", "Grosor"), ("Supr", "Borrar selección") })
+        foreach (var (key, text) in new[] { ("Ctrl+Z", "Deshacer"), ("Tab", "Herramienta anterior"), ("Espacio", "Herramientas"), ("− +", "Grosor"), ("Supr", "Borrar selección") })
         {
             hints.Children.Add(Ui.Keycap(key));
             var t = new TextBlock { Text = text, Margin = new Thickness(6, 0, 14, 0), VerticalAlignment = VerticalAlignment.Center };
@@ -350,6 +350,7 @@ sealed partial class EditorView
         CommitText();
         var previous = _tool;
         _tool = t;
+        TouchRecentTool(t); // para Tab (EditorView.ToolKeys.cs)
         foreach (var kv in _toolButtons) kv.Value.IsChecked = kv.Key == t;
         UpdateMoreButton();
         if (_cropMode && t != Tool.Crop) EndCropMode();      // aplica el marco si cambió
