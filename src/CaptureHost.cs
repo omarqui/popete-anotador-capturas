@@ -305,6 +305,7 @@ sealed class CaptureHost : IDisposable
         menu.Items.Add(_pauseItem);
         menu.Items.Add(_startupItem);
         menu.Items.Add("Ajustes…", null, (s, e) => SettingsWindow.Show(null));
+        menu.Items.Add("Enviar una sugerencia…", null, (s, e) => SuggestionWindow.Show(null));
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
         // "Iniciar con Windows" también se cambia desde Ajustes: se relee al abrir el menú
         menu.Opening += (s, e) => _startupItem.Checked = StartupHelper.IsEnabled();

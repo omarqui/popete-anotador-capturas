@@ -318,6 +318,7 @@ sealed class SettingsWindow : Window
         }, Icons.Copy);
         actions.Children.Add(copy);
         actions.Children.Add(Ui.Btn("Novedades", "Lo nuevo de esta versión", () => WhatsNewWindow.Show(this), Icons.Info));
+        actions.Children.Add(Ui.Btn("Enviar una sugerencia", "Abre un issue en GitHub con tu idea ya escrita", () => SuggestionWindow.Show(this), Icons.Idea));
         _body.Children.Add(actions);
 
         var copyright = new TextBlock { Text = $"© {DateTime.Now.Year} {AppInfo.Author}", FontSize = 12, Margin = new Thickness(0, 20, 0, 0) };
