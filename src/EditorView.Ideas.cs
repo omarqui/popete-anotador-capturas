@@ -53,6 +53,7 @@ sealed partial class EditorView
     Canvas _ideaMarks;   // marcas de "este número tiene idea"; no reciben clics
     TextBox _ideaBox;    // el campo abierto, o null
     object _ideaTarget;  // su trazo o texto
+    string _ideaBefore;  // la idea que tenía al abrir el campo: el deshacer va de esta a la final
     bool _ideaPristine;  // se abrió vacío y no se escribió nada: los atajos siguen al editor (IdeaKeys)
     bool _ideaOffered;   // se abrió solo después de un trazo (no lo pidió el usuario): sin número fantasma
 
@@ -87,6 +88,7 @@ sealed partial class EditorView
         MarkTouched(); // escribiendo: aunque cambie de ventana, no se cierra solo
 
         _ideaTarget = target;
+        _ideaBefore = IdeaOf(target);
         _ideaBox = new TextBox
         {
             TextWrapping = TextWrapping.Wrap,
@@ -97,13 +99,32 @@ sealed partial class EditorView
         _ideaBox.SetResourceReference(ForegroundProperty, "Texto");
         _ideaBox.CaretIndex = _ideaBox.Text.Length;
         _ideaPristine = _ideaBox.Text.Length == 0;
-        _ideaBox.TextChanged += (s, e) => _ideaPristine = false;
+        _ideaBox.TextChanged += (s, e) =>
+        {
+            _ideaPristine = false;
+            if (s == _ideaBox) ApplyIdeaLive();
+        };
         _ideaBox.LostKeyboardFocus += (s, e) => { if (s == _ideaBox) CommitIdea(); }; // no uno nuevo por un aviso tardío del viejo
         ShowIdeaCard(_ideaBox, target); // la tarjeta flotante (EditorView.IdeaCard.cs)
 
         var box = _ideaBox;
         Dispatcher.InvokeAsync(() => { if (_ideaBox == box) box.Focus(); }, DispatcherPriority.Input);
         RefreshGhost();
+    }
+
+    /// <summary>
+    /// Mientras se escribe, lo escrito ya es la idea del elemento y entra en el guardado automático
+    /// (800 ms después de la última tecla): ni un cierre inesperado de Popete lo pierde. Sin deshacer:
+    /// CommitIdea lo registra entero, de la idea de antes a la final.
+    /// </summary>
+    void ApplyIdeaLive()
+    {
+        if (_ideaBox == null || !IsAlive(_ideaTarget)) return;
+        var text = _ideaBox.Text;
+        var idea = Ideas.HasText(text) ? text.Trim() : null;
+        if (IdeaOf(_ideaTarget) == idea) return;
+        SetIdeaRaw(_ideaTarget, idea);
+        MarkChanged(); // rehace los números y programa el guardado
     }
 
     /// <summary>Cierra el campo y guarda lo escrito (con deshacer). Vacío y sin idea antes: no deja rastro.</summary>
@@ -117,8 +138,14 @@ sealed partial class EditorView
         bool hadFocus = box.IsKeyboardFocusWithin;
         HideIdeaCard();
         if (hadFocus) Focus(); // las teclas vuelven al editor
-        if (IsAlive(target) && ChangeIdea(target, box.Text) && Ideas.HasText(IdeaOf(target)))
-            PulseNumber(target); // quedó guardada (EditorView.IdeaCard.cs)
+        if (IsAlive(target))
+        {
+            SetIdeaRaw(target, _ideaBefore); // lo aplicado al escribir: el deshacer va de la de antes a la final
+            if (ChangeIdea(target, box.Text) && Ideas.HasText(IdeaOf(target)))
+                PulseNumber(target); // quedó guardada (EditorView.IdeaCard.cs)
+            else
+                RefreshNumbers(); // quedó como estaba: sin el número que pudo tomar mientras se escribía
+        }
         RefreshGhost();
     }
 

@@ -5,8 +5,9 @@
 //  que flota sobre el lienzo, fuera del zoom: mide siempre lo mismo en pantalla.
 //  Aparece cerca de su número sin tapar lo marcado (IdeaCardPlacement), nunca
 //  se sale de la vista; su cabecera dice de qué número es. Se arrastra desde la
-//  cabecera; lo movido solo dura mientras está abierta. Cabecera con el número
-//  y × para quitar la idea; texto guía y atajos al pie; crece hasta ~8 líneas.
+//  cabecera; lo movido solo dura mientras está abierta. Cabecera con el número,
+//  papelera (quitar la idea) y × (cerrar guardando); texto guía y atajos al pie;
+//  crece hasta ~8 líneas. Lo escrito se guarda solo mientras se escribe (ApplyIdeaLive).
 // ----------------------------------------------------------------------------
 sealed partial class EditorView
 {
@@ -47,14 +48,20 @@ sealed partial class EditorView
         chip.VerticalAlignment = VerticalAlignment.Center;
         var title = new TextBlock { Text = "Idea", FontWeight = FontWeights.SemiBold, Margin = new Thickness(8, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
         title.SetResourceReference(TextBlock.ForegroundProperty, "Texto");
-        var remove = Ui.IconBtn(Icons.Close, "Quitar la idea (Ctrl+Z la devuelve)", RemoveIdea);
-        remove.Width = remove.Height = 26;
-        remove.Focusable = false; // no le quita el foco al campo
+        // La × cierra guardando lo escrito, como Enter; quitar la idea es la papelera
+        var close = Ui.IconBtn(Icons.Close, "Cerrar (lo escrito queda guardado)", CommitIdea);
+        var remove = Ui.IconBtn(Icons.Trash, "Quitar la idea (Ctrl+Z la devuelve)", RemoveIdea);
+        foreach (var b in new[] { close, remove })
+        {
+            b.Width = b.Height = 26;
+            b.Focusable = false; // no le quita el foco al campo
+            DockPanel.SetDock(b, Dock.Right);
+        }
         var header = new DockPanel { Background = Brushes.Transparent, Cursor = Cursors.SizeAll, Margin = new Thickness(10, 6, 4, 0) };
         header.ToolTip = "Arrastra para moverla";
         DockPanel.SetDock(chip, Dock.Left);
-        DockPanel.SetDock(remove, Dock.Right);
         header.Children.Add(chip);
+        header.Children.Add(close);
         header.Children.Add(remove);
         header.Children.Add(title);
         HookIdeaCardDrag(header);
@@ -218,7 +225,7 @@ sealed partial class EditorView
         ring.BeginAnimation(OpacityProperty, fade);
     }
 
-    /// <summary>La × de la cabecera: quita la idea (con deshacer) y cierra.</summary>
+    /// <summary>La papelera de la cabecera: quita la idea (con deshacer) y cierra.</summary>
     void RemoveIdea()
     {
         if (_ideaBox == null) return;
